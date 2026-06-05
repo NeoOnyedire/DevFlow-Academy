@@ -122,7 +122,7 @@ export default function AuthModal() {
           </div>
           <div>
             <h3 className="font-display font-bold text-white text-xl">
-              {isLogin ? 'Welcome Back' : 'Join DevFlow'}
+              {isLogin ? 'Welcome Back' : 'Join DevFlow Academy'}
             </h3>
             <p className="text-white/50 text-sm">
               {isLogin ? 'Login to access your lessons' : 'Create a free account to start learning'}

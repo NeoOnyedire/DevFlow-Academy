@@ -164,7 +164,7 @@ export default function LearnGridSection({ className = '' }: Props) {
 
       {/* ---- HEADING (left side desktop, top on mobile) ---- */}
       <div ref={headingRef} className="absolute left-[6vw] top-[8vh] max-w-[80vw] md:max-w-none">
-        <h2 className="font-display font-bold text-white leading-[0.92] tracking-[0.02em]"
+        <h2 className="font-display font-bold text-white heading-responsive tracking-[0.02em]"
           style={{ fontSize: 'clamp(36px, 6vw, 92px)' }}>
           From Push to<br className="hidden md:block" /> Production
         </h2>

@@ -99,7 +99,7 @@ export default function DashboardSection({ className = '' }: Props) {
             <div className="w-16 h-16 rounded-full bg-[#4A2F2F] flex items-center justify-center mx-auto mb-5">
               <Lock className="w-8 h-8 text-white/40" />
             </div>
-            <h2 className="font-display font-bold leading-[0.92] tracking-[0.02em] mb-4"
+            <h2 className="font-display font-bold heading-responsive tracking-[0.02em] mb-4"
               style={{ fontSize: 'clamp(36px, 6vw, 72px)', color: '#2A2A2A' }}>
               Track Your Progress
             </h2>
@@ -128,7 +128,7 @@ export default function DashboardSection({ className = '' }: Props) {
     >
       {/* Heading */}
       <div ref={headingRef} className="px-[6vw] mb-8">
-        <h2 className="font-display font-bold text-white leading-[0.92] tracking-[0.02em] mb-4"
+        <h2 className="font-display font-bold text-white heading-responsive tracking-[0.02em] mb-4"
           style={{ fontSize: 'clamp(36px, 6vw, 92px)' }}>
           Your Progress
         </h2>

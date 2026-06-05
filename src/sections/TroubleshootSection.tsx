@@ -164,7 +164,7 @@ export default function TroubleshootSection({ className = '' }: Props) {
 
       {/* Heading — right side (full width on mobile) */}
       <div ref={headingRef} className="absolute left-[6vw] md:left-[56vw] top-[10vh] md:top-[18vh]">
-        <h2 className="font-display font-bold text-white leading-[0.92] tracking-[0.02em]"
+        <h2 className="font-display font-bold text-white heading-responsive tracking-[0.02em]"
           style={{ fontSize: 'clamp(36px, 6vw, 92px)' }}>
           Find Your Fix<br />Fast
         </h2>

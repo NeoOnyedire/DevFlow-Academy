@@ -3,7 +3,7 @@
  * Navigation.tsx
  * ============================================================================
  *
- * Top navigation bar with DevFlow branding, section links, and auth controls.
+ * Top navigation bar with DevFlow Academy branding, section links, and auth controls.
  * Appears after scrolling past the hero section.
  *
  * Features:
@@ -44,7 +44,7 @@ export default function Navigation() {
       >
         <GitBranch className="w-5 h-5 md:w-6 md:h-6 text-[#F7B731] transition-transform group-hover:rotate-12" />
         <span className="font-display text-lg md:text-xl font-semibold text-white tracking-wide">
-          DevFlow
+          DevFlow Academy
         </span>
       </button>
 

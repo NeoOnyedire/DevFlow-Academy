@@ -178,7 +178,7 @@ export default function CommitScenesSection({ className = '' }: Props) {
     >
       {/* ---- LEFT HEADING BLOCK ---- */}
       <div ref={headingRef} className="absolute left-[6vw] top-[8vh] md:top-[10vh]">
-        <h2 className="font-display font-bold text-white leading-[0.92] tracking-[0.02em]"
+        <h2 className="font-display font-bold text-white heading-responsive tracking-[0.02em]"
           style={{ fontSize: 'clamp(36px, 6vw, 92px)' }}>
           What Do You Do?
         </h2>

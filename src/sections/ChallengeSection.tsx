@@ -137,7 +137,7 @@ export default function ChallengeSection({ className = '' }: Props) {
 
       {/* Right content area */}
       <div ref={contentRef} className="absolute left-[6vw] md:left-[56vw] right-[6vw] top-[8vh] md:top-[16vh]">
-        <h2 className="font-display font-bold text-white leading-[0.92] tracking-[0.02em] mb-3 md:mb-4"
+        <h2 className="font-display font-bold text-white heading-responsive tracking-[0.02em] mb-3 md:mb-4"
           style={{ fontSize: 'clamp(36px, 6vw, 92px)' }}>
           Repo Royale
         </h2>

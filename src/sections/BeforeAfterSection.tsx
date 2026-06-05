@@ -123,7 +123,7 @@ export default function BeforeAfterSection({ className = '' }: Props) {
     >
       {/* Centered headline */}
       <div ref={headlineRef} className="absolute left-1/2 -translate-x-1/2" style={{ top: '6vh' }}>
-        <h2 className="font-display font-bold text-white leading-[0.92] tracking-[0.02em] text-center"
+        <h2 className="font-display font-bold text-white heading-responsive tracking-[0.02em] text-center"
           style={{ fontSize: 'clamp(36px, 6vw, 92px)' }}>
           Do's & Don'ts
         </h2>

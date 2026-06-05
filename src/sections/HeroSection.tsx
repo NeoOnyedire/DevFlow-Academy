@@ -176,11 +176,11 @@ export default function HeroSection({ className = '' }: Props) {
 
       {/* ---- HEADLINE GROUP ---- */}
       <div className="absolute left-[6vw] top-[10vh] w-[88vw] md:w-[70vw]">
-        <div ref={h1Line1Ref} className="font-display font-bold text-white leading-[0.92] tracking-[0.02em]"
+        <div ref={h1Line1Ref} className="font-display font-bold text-white heading-responsive tracking-[0.02em]"
           style={{ fontSize: 'clamp(42px, 9vw, 132px)' }}>
           Git yourself
         </div>
-        <div ref={h1Line2Ref} className="font-display font-bold text-white leading-[0.92] tracking-[0.02em]"
+        <div ref={h1Line2Ref} className="font-display font-bold text-white heading-responsive tracking-[0.02em]"
           style={{ fontSize: 'clamp(42px, 9vw, 132px)' }}>
           Repo-Ready.
         </div>

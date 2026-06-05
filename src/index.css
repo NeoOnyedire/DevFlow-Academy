@@ -25,7 +25,7 @@
     --ring: 240 5.9% 10%;
     --radius: 0.625rem;
 
-    /* DevFlow Custom Colors */
+    /* DevFlow Academy Custom Colors */
     --espresso: #6B4C4C;
     --sun-yellow: #F7B731;
     --rose-punch: #FF4D6D;
@@ -39,14 +39,21 @@
   }
 
   html {
-    scroll-behavior: auto;
+    scroll-behavior: smooth;
+    touch-action: pan-y;
+    overflow-x: hidden;
   }
 
   body {
+    min-height: 100vh;
+    margin: 0;
     font-family: 'Inter', sans-serif;
     background-color: var(--espresso);
     color: #FFFFFF;
     overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    -moz-osx-font-smoothing: grayscale;
+    -webkit-font-smoothing: antialiased;
   }
 }
 
@@ -73,8 +80,8 @@
   }
 
   .section-pinned {
-    width: 100vw;
-    height: 100vh;
+    width: 100%;
+    min-height: 100vh;
     overflow: hidden;
     position: relative;
   }
@@ -122,6 +129,16 @@
   .icon-circle {
     border-radius: 50%;
     border: 3px solid rgba(255,255,255,0.25);
+  }
+
+  .heading-responsive {
+    line-height: 1.04;
+  }
+
+  @media (min-width: 768px) {
+    .heading-responsive {
+      line-height: 0.92;
+    }
   }
 
   .label-tag {

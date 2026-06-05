@@ -126,7 +126,7 @@ export default function FooterSection({ className = '' }: Props) {
       {/* Left heading and CTAs */}
       <div className="px-[6vw] md:absolute md:left-[6vw] md:top-[10vh] md:w-[44vw]">
         <div ref={leftRef}>
-          <h2 className="font-display font-bold leading-[0.92] tracking-[0.02em] mb-4 md:mb-6"
+          <h2 className="font-display font-bold heading-responsive tracking-[0.02em] mb-4 md:mb-6"
             style={{ fontSize: 'clamp(36px, 6vw, 72px)', color: '#2A2A2A' }}>
             Start Your<br />Streak
           </h2>
@@ -180,7 +180,7 @@ export default function FooterSection({ className = '' }: Props) {
             </span>
             <Heart className="w-3 h-3 text-rose-punch fill-rose-punch" />
             <span className="font-accent text-xs uppercase tracking-[0.14em]" style={{ color: '#2A2A2A80' }}>
-              by DevFlow
+              by DevFlow Academy
             </span>
           </div>
         </div>
