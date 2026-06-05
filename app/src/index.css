@@ -1,0 +1,171 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 240 10% 3.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 3.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 3.9%;
+    --primary: 240 5.9% 10%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 240 4.8% 95.9%;
+    --secondary-foreground: 240 5.9% 10%;
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+    --accent: 240 4.8% 95.9%;
+    --accent-foreground: 240 5.9% 10%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+    --ring: 240 5.9% 10%;
+    --radius: 0.625rem;
+
+    /* DevFlow Custom Colors */
+    --espresso: #6B4C4C;
+    --sun-yellow: #F7B731;
+    --rose-punch: #FF4D6D;
+    --lime: #3CCF4A;
+    --card-dark: #4A2F2F;
+    --card-light: #FFF6E7;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    scroll-behavior: auto;
+  }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background-color: var(--espresso);
+    color: #FFFFFF;
+    overflow-x: hidden;
+  }
+}
+
+@layer components {
+  .font-display {
+    font-family: 'Fredoka', sans-serif;
+  }
+
+  .font-accent {
+    font-family: 'Space Grotesk', sans-serif;
+  }
+
+  .grain-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0.06;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  }
+
+  .section-pinned {
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .bg-espresso {
+    background-color: var(--espresso);
+  }
+
+  .bg-sun-yellow {
+    background-color: var(--sun-yellow);
+  }
+
+  .text-rose-punch {
+    color: var(--rose-punch);
+  }
+
+  .bg-rose-punch {
+    background-color: var(--rose-punch);
+  }
+
+  .bg-lime {
+    background-color: var(--lime);
+  }
+
+  .bg-card-dark {
+    background-color: var(--card-dark);
+  }
+
+  .bg-card-light {
+    background-color: var(--card-light);
+  }
+
+  .card-radius {
+    border-radius: 28px;
+  }
+
+  .card-shadow {
+    box-shadow: 0 22px 50px rgba(0,0,0,0.22);
+  }
+
+  .card-outline {
+    border: 3px solid rgba(255,255,255,0.22);
+  }
+
+  .icon-circle {
+    border-radius: 50%;
+    border: 3px solid rgba(255,255,255,0.25);
+  }
+
+  .label-tag {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 600;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+}
+
+/**
+ * ============================================================================
+ * Keyframe Animations
+ * ============================================================================
+ * Used by modal components for entrance transitions.
+ */
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(40px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  /** Thin scrollbar styling for horizontal scroll sections */
+  .scrollbar-thin::-webkit-scrollbar {
+    height: 4px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.2);
+    border-radius: 4px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background: rgba(255,255,255,0.3);
+  }
+}
