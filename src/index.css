@@ -51,6 +51,8 @@
     background-color: var(--espresso);
     color: #FFFFFF;
     overflow-x: hidden;
+    overscroll-behavior-y: contain;
+    text-rendering: optimizeLegibility;
     -webkit-overflow-scrolling: touch;
     -moz-osx-font-smoothing: grayscale;
     -webkit-font-smoothing: antialiased;
@@ -137,7 +139,7 @@
 
   @media (min-width: 768px) {
     .heading-responsive {
-      line-height: 0.92;
+      line-height: 1.02;
     }
   }
 

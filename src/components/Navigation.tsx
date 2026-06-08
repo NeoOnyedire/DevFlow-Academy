@@ -16,20 +16,28 @@
  */
 
 import { useState, useCallback } from 'react'
+import gsap from 'gsap'
+import ScrollToPlugin from 'gsap/ScrollToPlugin'
 import { useAuth } from '../context/AuthContext'
 import { useApp } from '../context/AppContext'
 import { GitBranch, LogIn, LogOut, Menu, X, GraduationCap } from 'lucide-react'
+
+gsap.registerPlugin(ScrollToPlugin)
 
 export default function Navigation() {
   const { user, isLoggedIn, logout, openAuthModal } = useAuth()
   const { openCurriculum } = useApp()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
-  /** Smooth scroll to a section by its ID */
+  /** Scroll to section using GSAP (respects snap points) */
   const scrollToSection = useCallback((sectionId: string) => {
     const el = document.getElementById(sectionId)
     if (el) {
-      el.scrollIntoView({ behavior: 'smooth' })
+      gsap.to(window, {
+        scrollTo: { y: el, offsetY: 80 },
+        duration: 0.6,
+        ease: 'power2.out',
+      })
       setMobileMenuOpen(false)
     }
   }, [])

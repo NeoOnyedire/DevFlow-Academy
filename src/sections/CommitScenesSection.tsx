@@ -96,6 +96,11 @@ export default function CommitScenesSection({ className = '' }: Props) {
           end: '+=130%',
           pin: true,
           scrub: 0.6,
+          snap: {
+            snapTo: 0.5,
+            duration: 0.5,
+            ease: 'power2.out',
+          },
         }
       })
 

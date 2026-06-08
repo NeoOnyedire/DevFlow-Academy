@@ -11,7 +11,6 @@
  * - AppProvider: manages curriculum, reviews, progress
  * - Pinned sections (1-5): full-viewport with GSAP ScrollTrigger
  * - Flowing sections (6-8): normal scroll with reveal animations
- * - Global snap: ensures users land on section centers, not mid-animation
  * - Floating modals: AuthModal, CurriculumPanel, ReviewModal (portal-like)
  *
  * Section order:
@@ -60,54 +59,12 @@ function AppInner() {
   const navRef = useRef<HTMLDivElement>(null)
 
   /**
-   * Global scroll snap configuration.
-   * Creates a ScrollTrigger snap that only activates inside pinned sections.
-   * Users land on the "settle" center of each pinned section, never mid-animation.
-   * Flowing sections allow free scroll.
+   * Refresh ScrollTrigger after the page mounts.
+   * This helps pinned section boundaries settle cleanly without forcing a snap.
    */
   useEffect(() => {
-    // Delay to ensure all section ScrollTriggers are registered
     const timer = setTimeout(() => {
-      const pinned = ScrollTrigger.getAll()
-        .filter(st => st.vars.pin)
-        .sort((a, b) => a.start - b.start)
-
-      const maxScroll = ScrollTrigger.maxScroll(window)
-      if (!maxScroll || pinned.length === 0) return
-
-      // Build ranges for each pinned section (normalized 0-1)
-      const pinnedRanges = pinned.map(st => ({
-        start: st.start / maxScroll,
-        end: (st.end ?? st.start) / maxScroll,
-        center: (st.start + ((st.end ?? st.start) - st.start) * 0.5) / maxScroll,
-      }))
-
-      // Create the global snap ScrollTrigger
-      const globalSnap = ScrollTrigger.create({
-        snap: {
-          snapTo: (value: number) => {
-            // Only snap if inside a pinned range (with 2% buffer)
-            const inPinned = pinnedRanges.some(
-              r => value >= r.start - 0.02 && value <= r.end + 0.02
-            )
-            if (!inPinned) return value // flowing section: free scroll
-
-            // Find the nearest pinned section center
-            const target = pinnedRanges.reduce((closest, r) =>
-              Math.abs(r.center - value) < Math.abs(closest - value) ? r.center : closest,
-              pinnedRanges[0]?.center ?? 0
-            )
-            return target
-          },
-          duration: { min: 0.15, max: 0.35 },
-          delay: 0,
-          ease: 'power2.out',
-        }
-      })
-
-      return () => {
-        globalSnap.kill()
-      }
+      ScrollTrigger.refresh()
     }, 500)
 
     return () => clearTimeout(timer)

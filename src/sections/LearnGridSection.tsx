@@ -70,7 +70,12 @@ export default function LearnGridSection({ className = '' }: Props) {
           start: 'top top',
           end: '+=130%',
           pin: true,
-          scrub: 0.6,
+          scrub: 0.8,
+          snap: {
+            snapTo: [0.5],
+            duration: 0.35,
+            ease: 'power2.out',
+          },
         }
       })
 
@@ -78,14 +83,14 @@ export default function LearnGridSection({ className = '' }: Props) {
       // Heading slides in from left
       scrollTl
         .fromTo(headingRef.current,
-          { x: '-60vw', rotate: -3, opacity: 0 },
-          { x: 0, rotate: 0, opacity: 1, ease: 'none' },
+          { x: '-40vw', rotate: -2, opacity: 0 },
+          { x: 0, rotate: 0, opacity: 1, ease: 'power1.out' },
           0.05
         )
         // Subheading fades up
         .fromTo(subRef.current,
-          { y: '18vh', opacity: 0 },
-          { y: 0, opacity: 1, ease: 'none' },
+          { y: '12vh', opacity: 0 },
+          { y: 0, opacity: 1, ease: 'power1.out' },
           0.12
         )
 
@@ -94,8 +99,8 @@ export default function LearnGridSection({ className = '' }: Props) {
         if (!card) return
         const startTime = 0.08 + i * 0.04
         scrollTl.fromTo(card,
-          { x: '60vw', rotate: 18, scale: 0.88, opacity: 0 },
-          { x: 0, rotate: lessons[i].rotate, scale: 1, opacity: 1, ease: 'none' },
+          { x: '40vw', rotate: 12, scale: 0.92, opacity: 0 },
+          { x: 0, rotate: lessons[i].rotate, scale: 1, opacity: 1, ease: 'power1.out' },
           startTime
         )
       })
@@ -106,7 +111,7 @@ export default function LearnGridSection({ className = '' }: Props) {
       scrollTl
         .fromTo(headingRef.current,
           { x: 0, opacity: 1 },
-          { x: '-40vw', opacity: 0, ease: 'power2.in' },
+          { x: '-24vw', opacity: 0, ease: 'power2.in' },
           0.70
         )
         .fromTo(subRef.current,
@@ -115,20 +120,20 @@ export default function LearnGridSection({ className = '' }: Props) {
           0.72
         )
 
-      // Each card exits in a different direction for visual interest
+      // Each card exits with a softer, more subtle pass-through motion
       const exitOffsets = [
-        { x: '-25vw', y: '18vh', r: -6 },
-        { x: '-12vw', y: '-10vh', r: 4 },
-        { x: '10vw', y: '10vh', r: -2 },
-        { x: '22vw', y: '-16vh', r: 5 },
-        { x: '30vw', y: '22vh', r: -3 },
+        { x: '-18vw', y: '10vh', r: -5 },
+        { x: '-10vw', y: '-8vh', r: 4 },
+        { x: '10vw', y: '8vh', r: -3 },
+        { x: '18vw', y: '-10vh', r: 5 },
+        { x: '22vw', y: '14vh', r: -4 },
       ]
 
       cardsRef.current.forEach((card, i) => {
         if (!card) return
         scrollTl.fromTo(card,
           { x: 0, y: 0, rotate: lessons[i].rotate, opacity: 1 },
-          { x: exitOffsets[i].x, y: exitOffsets[i].y, rotate: lessons[i].rotate + (exitOffsets[i].r > 0 ? 6 : -6), opacity: 0, ease: 'power2.in' },
+          { x: exitOffsets[i].x, y: exitOffsets[i].y, rotate: lessons[i].rotate + (exitOffsets[i].r > 0 ? 4 : -4), opacity: 0, ease: 'power2.in' },
           0.70
         )
       })
@@ -165,20 +170,20 @@ export default function LearnGridSection({ className = '' }: Props) {
       {/* ---- HEADING (left side desktop, top on mobile) ---- */}
       <div ref={headingRef} className="absolute left-[6vw] top-[8vh] max-w-[80vw] md:max-w-none">
         <h2 className="font-display font-bold text-white heading-responsive tracking-[0.02em]"
-          style={{ fontSize: 'clamp(36px, 6vw, 92px)' }}>
+          style={{ fontSize: 'clamp(32px, 5.5vw, 76px)' }}>
           From Push to<br className="hidden md:block" /> Production
         </h2>
       </div>
 
       {/* ---- SUBHEADING ---- */}
-      <div ref={subRef} className="absolute left-[6vw] top-[22vh] md:top-[28vh] max-w-[70vw] md:max-w-[36vw]">
+      <div ref={subRef} className="absolute left-[6vw] top-[28vh] md:top-[30vh] max-w-[70vw] md:max-w-[48vw]">
         <p className="text-white/80 font-accent text-xs md:text-sm uppercase tracking-[0.14em]">
           8 modules. Zero jargon. All action. All free.
         </p>
       </div>
 
       {/* ---- LESSON CARDS (desktop: fanned absolute layout) ---- */}
-      <div className="absolute hidden md:block" style={{ right: '4vw', top: '10vh', width: '52vw', height: '80vh' }}>
+      <div className="absolute hidden md:block" style={{ right: '4vw', top: '12vh', width: '52vw', height: '72vh' }}>
         {lessons.map((lesson, i) => {
           const Icon = lesson.icon
           // Each card has a unique position for the fanned layout

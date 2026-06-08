@@ -65,6 +65,11 @@ export default function TroubleshootSection({ className = '' }: Props) {
           end: '+=130%',
           pin: true,
           scrub: 0.6,
+          snap: {
+            snapTo: [0.5],
+            duration: 0.35,
+            ease: 'power2.out',
+          },
         }
       })
 
@@ -72,20 +77,20 @@ export default function TroubleshootSection({ className = '' }: Props) {
       scrollTl
         // Photo card slides in from left
         .fromTo(photoRef.current,
-          { x: '-70vw', rotate: -8, scale: 0.92, opacity: 0 },
-          { x: 0, rotate: 0, scale: 1, opacity: 1, ease: 'none' },
+          { x: '-55vw', rotate: -8, scale: 0.92, opacity: 0 },
+          { x: 0, rotate: 0, scale: 1, opacity: 1, ease: 'power1.out' },
           0.06
         )
         // Heading slides in from right
         .fromTo(headingRef.current,
-          { x: '55vw', opacity: 0 },
-          { x: 0, opacity: 1, ease: 'none' },
+          { x: '45vw', opacity: 0 },
+          { x: 0, opacity: 1, ease: 'power1.out' },
           0.08
         )
         // Subheading fades up
         .fromTo(subRef.current,
-          { y: '20vh', opacity: 0 },
-          { y: 0, opacity: 1, ease: 'none' },
+          { y: '14vh', opacity: 0 },
+          { y: 0, opacity: 1, ease: 'power1.out' },
           0.14
         )
 
@@ -152,7 +157,7 @@ export default function TroubleshootSection({ className = '' }: Props) {
       <div
         ref={photoRef}
         className="absolute card-radius card-shadow overflow-hidden card-outline hidden md:block"
-        style={{ left: '6vw', top: '16vh', width: '40vw', height: '68vh' }}
+        style={{ left: '6vw', top: '18vh', width: '36vw', height: '60vh' }}
       >
         <img
           src="/troubleshoot_photo.jpg"
@@ -163,22 +168,22 @@ export default function TroubleshootSection({ className = '' }: Props) {
       </div>
 
       {/* Heading — right side (full width on mobile) */}
-      <div ref={headingRef} className="absolute left-[6vw] md:left-[56vw] top-[10vh] md:top-[18vh]">
+      <div ref={headingRef} className="absolute left-[6vw] md:left-[52vw] top-[10vh] md:top-[18vh] max-w-[80vw] md:max-w-[40vw]">
         <h2 className="font-display font-bold text-white heading-responsive tracking-[0.02em]"
-          style={{ fontSize: 'clamp(36px, 6vw, 92px)' }}>
+          style={{ fontSize: 'clamp(34px, 5vw, 84px)' }}>
           Find Your Fix<br />Fast
         </h2>
       </div>
 
       {/* Subheading */}
-      <div ref={subRef} className="absolute left-[6vw] md:left-[56vw] top-[26vh] md:top-[38vh] max-w-[80vw] md:max-w-[34vw]">
+      <div ref={subRef} className="absolute left-[6vw] md:left-[52vw] top-[28vh] md:top-[36vh] max-w-[80vw] md:max-w-[40vw]">
         <p className="text-white/80 leading-relaxed" style={{ fontSize: 'clamp(14px, 1.2vw, 18px)' }}>
           Search symptoms. Get answers. Real workplace errors, explained like a teammate would. Free video solutions from expert educators.
         </p>
       </div>
 
       {/* Emoji riddle */}
-      <div ref={emojiRef} className="absolute left-[6vw] md:left-[56vw] top-[42vh] md:top-[50vh] max-w-[80vw] md:max-w-[34vw]">
+      <div ref={emojiRef} className="absolute left-[6vw] md:left-[52vw] top-[44vh] md:top-[52vh] max-w-[80vw] md:max-w-[40vw]">
         <div className="bg-white/10 backdrop-blur-sm card-radius px-4 md:px-6 py-3 md:py-4 card-outline inline-flex items-center gap-2 md:gap-3">
           {EMOJIS.map((emoji, i) => (
             <span
@@ -197,7 +202,7 @@ export default function TroubleshootSection({ className = '' }: Props) {
       </div>
 
       {/* CTA button */}
-      <div ref={ctaRef} className="absolute left-[6vw] md:left-[56vw] top-[58vh] md:top-[68vh]">
+      <div ref={ctaRef} className="absolute left-[6vw] md:left-[52vw] top-[56vh] md:top-[66vh]">
         <button
           onClick={handleOpenTroubleshooter}
           className="bg-rose-punch text-white font-display font-semibold px-5 md:px-7 py-3 md:py-3.5 card-radius card-shadow
