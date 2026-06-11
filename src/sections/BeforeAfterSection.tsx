@@ -50,15 +50,10 @@ export default function BeforeAfterSection({ className = '' }: Props) {
       const scrollTl = gsap.timeline({
         scrollTrigger: {
           trigger: section,
-          start: 'top top',
-          end: '+=130%',
-          pin: true,
-          scrub: 0.6,
-          snap: {
-            snapTo: [0.5],
-            duration: 0.35,
-            ease: 'power2.out',
-          },
+          start: 'top bottom',
+          end: 'bottom top',
+          toggleActions: 'play none none reverse',
+          once: false,
         }
       })
 
@@ -96,23 +91,7 @@ export default function BeforeAfterSection({ className = '' }: Props) {
 
       // ---- SETTLE (30% - 70%) — static ----
 
-      // ---- EXIT (70% - 100%) ----
-      scrollTl
-        .fromTo(headlineRef.current,
-          { y: 0, opacity: 1 },
-          { y: '-18vh', opacity: 0, ease: 'power2.in' },
-          0.70
-        )
-        .fromTo(dontCardRef.current,
-          { x: 0, y: 0, opacity: 1 },
-          { x: '-35vw', y: '14vh', opacity: 0, ease: 'power2.in' },
-          0.70
-        )
-        .fromTo(doCardRef.current,
-          { x: 0, y: 0, opacity: 1 },
-          { x: '35vw', y: '14vh', opacity: 0, ease: 'power2.in' },
-          0.70
-        )
+      // No exit animation — keep the comparison cards visible once revealed.
 
     }, section)
 

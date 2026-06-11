@@ -67,15 +67,10 @@ export default function LearnGridSection({ className = '' }: Props) {
       const scrollTl = gsap.timeline({
         scrollTrigger: {
           trigger: section,
-          start: 'top top',
-          end: '+=130%',
-          pin: true,
-          scrub: 0.8,
-          snap: {
-            snapTo: [0.5],
-            duration: 0.35,
-            ease: 'power2.out',
-          },
+          start: 'top bottom',
+          end: 'bottom top',
+          toggleActions: 'play none none reverse',
+          once: false,
         }
       })
 
@@ -108,35 +103,7 @@ export default function LearnGridSection({ className = '' }: Props) {
       // ---- SETTLE (30% - 70%) — static, no motion ----
 
       // ---- EXIT (70% - 100%) ----
-      scrollTl
-        .fromTo(headingRef.current,
-          { x: 0, opacity: 1 },
-          { x: '-24vw', opacity: 0, ease: 'power2.in' },
-          0.70
-        )
-        .fromTo(subRef.current,
-          { opacity: 1 },
-          { opacity: 0, ease: 'power2.in' },
-          0.72
-        )
-
-      // Each card exits with a softer, more subtle pass-through motion
-      const exitOffsets = [
-        { x: '-18vw', y: '10vh', r: -5 },
-        { x: '-10vw', y: '-8vh', r: 4 },
-        { x: '10vw', y: '8vh', r: -3 },
-        { x: '18vw', y: '-10vh', r: 5 },
-        { x: '22vw', y: '14vh', r: -4 },
-      ]
-
-      cardsRef.current.forEach((card, i) => {
-        if (!card) return
-        scrollTl.fromTo(card,
-          { x: 0, y: 0, rotate: lessons[i].rotate, opacity: 1 },
-          { x: exitOffsets[i].x, y: exitOffsets[i].y, rotate: lessons[i].rotate + (exitOffsets[i].r > 0 ? 4 : -4), opacity: 0, ease: 'power2.in' },
-          0.70
-        )
-      })
+      // Retain the entrance animation only and allow the section to remain visible.
 
     }, section)
 

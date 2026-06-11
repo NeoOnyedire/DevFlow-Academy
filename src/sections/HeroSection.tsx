@@ -114,14 +114,8 @@ export default function HeroSection({ className = '' }: Props) {
         scrollTrigger: {
           trigger: section,
           start: 'top top',
-          end: '+=130%',
-          pin: true,
+          end: 'bottom top',
           scrub: 0.6,
-          snap: {
-            snapTo: [0.5],
-            duration: 0.35,
-            ease: 'power2.out',
-          },
           // When user scrolls back to top, force-reset visibility
           onLeaveBack: () => {
             gsap.set([h1Line1Ref.current, h1Line2Ref.current, bodyRef.current, ctaRef.current, ghostRef.current, catRef.current], {

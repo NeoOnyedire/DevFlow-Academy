@@ -114,7 +114,7 @@ function AppInner() {
       <ReviewModal />
 
       {/* Main scrollable content */}
-      <main ref={mainRef} className="relative">
+      <main ref={mainRef} className="relative snap-y snap-mandatory scroll-smooth overflow-x-hidden">
         {/* Pinned sections — z-index increases so next section overlays previous */}
         <div className="relative z-10">
           <HeroSection className="section-pinned bg-espresso" />

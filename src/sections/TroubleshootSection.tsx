@@ -61,15 +61,10 @@ export default function TroubleshootSection({ className = '' }: Props) {
       const scrollTl = gsap.timeline({
         scrollTrigger: {
           trigger: section,
-          start: 'top top',
-          end: '+=130%',
-          pin: true,
-          scrub: 0.6,
-          snap: {
-            snapTo: [0.5],
-            duration: 0.35,
-            ease: 'power2.out',
-          },
+          start: 'top bottom',
+          end: 'bottom top',
+          toggleActions: 'play none none reverse',
+          once: false,
         }
       })
 
@@ -113,33 +108,7 @@ export default function TroubleshootSection({ className = '' }: Props) {
 
       // ---- SETTLE (30% - 70%) — static ----
 
-      // ---- EXIT (70% - 100%) ----
-      scrollTl
-        .fromTo(photoRef.current,
-          { x: 0, opacity: 1 },
-          { x: '-35vw', opacity: 0, ease: 'power2.in' },
-          0.70
-        )
-        .fromTo(headingRef.current,
-          { x: 0, opacity: 1 },
-          { x: '35vw', opacity: 0, ease: 'power2.in' },
-          0.70
-        )
-        .fromTo(subRef.current,
-          { x: 0, opacity: 1 },
-          { x: '35vw', opacity: 0, ease: 'power2.in' },
-          0.72
-        )
-        .fromTo(emojiRef.current,
-          { y: 0, opacity: 1 },
-          { y: '-18vh', opacity: 0, ease: 'power2.in' },
-          0.72
-        )
-        .fromTo(ctaRef.current,
-          { x: 0, opacity: 1 },
-          { x: '35vw', opacity: 0, ease: 'power2.in' },
-          0.74
-        )
+      // No exit animation — preserve the section content once it's in view.
 
     }, section)
 

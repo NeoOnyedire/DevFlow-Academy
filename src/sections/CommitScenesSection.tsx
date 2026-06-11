@@ -92,15 +92,10 @@ export default function CommitScenesSection({ className = '' }: Props) {
       const scrollTl = gsap.timeline({
         scrollTrigger: {
           trigger: section,
-          start: 'top top',
-          end: '+=130%',
-          pin: true,
-          scrub: 0.6,
-          snap: {
-            snapTo: 0.5,
-            duration: 0.5,
-            ease: 'power2.out',
-          },
+          start: 'top bottom',
+          end: 'bottom top',
+          toggleActions: 'play none none reverse',
+          once: false,
         }
       })
 
@@ -135,39 +130,7 @@ export default function CommitScenesSection({ className = '' }: Props) {
 
       // ---- SETTLE (30% - 70%) — static, hover handled by CSS ----
 
-      // ---- EXIT (70% - 100%) ----
-      scrollTl
-        .fromTo(headingRef.current,
-          { x: 0, opacity: 1 },
-          { x: '-35vw', opacity: 0, ease: 'power2.in' },
-          0.70
-        )
-        .fromTo(subRef.current,
-          { x: 0, opacity: 1 },
-          { x: '-35vw', opacity: 0, ease: 'power2.in' },
-          0.71
-        )
-        .fromTo(bodyRef.current,
-          { x: 0, opacity: 1 },
-          { x: '-35vw', opacity: 0, ease: 'power2.in' },
-          0.72
-        )
-
-      // Each card exits in its own direction
-      const exitOffsets = [
-        { x: '30vw', y: '-10vh' },
-        { x: '40vw', y: '8vh' },
-        { x: '20vw', y: '18vh' },
-      ]
-
-      cardsRef.current.forEach((card, i) => {
-        if (!card) return
-        scrollTl.fromTo(card,
-          { x: 0, y: 0, opacity: 1 },
-          { x: exitOffsets[i].x, y: exitOffsets[i].y, opacity: 0, ease: 'power2.in' },
-          0.70
-        )
-      })
+      // No exit animation — keep the scenario cards visible after they reveal.
 
     }, section)
 

@@ -42,15 +42,20 @@
     scroll-behavior: smooth;
     touch-action: pan-y;
     overflow-x: hidden;
+    overflow-y: auto;
+    width: 100%;
+    min-height: 100%;
   }
 
   body {
-    min-height: 100vh;
+    min-height: 100%;
     margin: 0;
+    width: 100%;
     font-family: 'Inter', sans-serif;
     background-color: var(--espresso);
     color: #FFFFFF;
     overflow-x: hidden;
+    overflow-y: visible;
     overscroll-behavior-y: contain;
     text-rendering: optimizeLegibility;
     -webkit-overflow-scrolling: touch;
@@ -86,6 +91,7 @@
     min-height: 100vh;
     overflow: hidden;
     position: relative;
+    scroll-snap-align: start;
   }
 
   .bg-espresso {
