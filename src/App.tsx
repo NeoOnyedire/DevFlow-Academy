@@ -20,9 +20,10 @@
  * 4. Commit Scenes (pinned)
  * 5. Before/After (pinned)
  * 6. Dashboard (flowing)
- * 7. Reviews (flowing)
- * 8. Challenge (flowing)
- * 9. Footer (flowing)
+ * 7. Scenario Play (flowing)
+ * 8. Reviews (flowing)
+ * 9. Challenge (flowing)
+ * 10. Footer (flowing)
  * ============================================================================
  */
 
@@ -48,6 +49,7 @@ import TroubleshootSection from './sections/TroubleshootSection'
 import CommitScenesSection from './sections/CommitScenesSection'
 import BeforeAfterSection from './sections/BeforeAfterSection'
 import DashboardSection from './sections/DashboardSection'
+import ScenarioPlaySection from './sections/ScenarioPlaySection'
 import ChallengeSection from './sections/ChallengeSection'
 import FooterSection from './sections/FooterSection'
 
@@ -135,6 +137,9 @@ function AppInner() {
         {/* Flowing sections — normal scroll behavior */}
         <div className="relative z-[60]">
           <DashboardSection className="bg-sun-yellow" />
+        </div>
+        <div className="relative z-[63]">
+          <ScenarioPlaySection className="bg-sun-yellow" />
         </div>
         <div className="relative z-[65]">
           <ReviewsSection />
