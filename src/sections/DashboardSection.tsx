@@ -16,12 +16,12 @@
  * ============================================================================
  */
 
-import { useRef, useLayoutEffect } from 'react'
+import { useRef, useState, useLayoutEffect } from 'react'
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { useAuth } from '../context/AuthContext'
-import { useApp } from '../context/AppContext'
-import { BookOpen, Flame, Award, Trophy, Map, ArrowRight, Lock } from 'lucide-react'
+import { ROLE_PATHS, useApp, type LearningRole } from '../context/AppContext'
+import { BookOpen, Flame, Award, Trophy, Map, ArrowRight, Lock, Github, Briefcase, Target, CheckCircle } from 'lucide-react'
 
 gsap.registerPlugin(ScrollTrigger)
 
@@ -39,11 +39,40 @@ const SKILLS = [
 
 export default function DashboardSection({ className = '' }: Props) {
   const { isLoggedIn, user, openAuthModal } = useAuth()
-  const { completedModules, modules, openCurriculum } = useApp()
+  const {
+    completedModules,
+    modules,
+    openCurriculum,
+    role,
+    rolePath,
+    setRole,
+    githubProfile,
+    connectGitHub,
+    disconnectGitHub,
+    weeklyChallenge,
+    hasCompletedWeeklyChallenge,
+  } = useApp()
+  const [githubUsername, setGitHubUsername] = useState('')
+  const [githubMessage, setGitHubMessage] = useState('')
+  const [isConnectingGitHub, setIsConnectingGitHub] = useState(false)
 
   const sectionRef = useRef<HTMLDivElement>(null)
   const headingRef = useRef<HTMLDivElement>(null)
   const cardsRef = useRef<(HTMLDivElement | null)[]>([])
+  const careerReadiness = Math.min(100, Math.round((completedModules.length / modules.length) * 70) + (githubProfile ? 20 : 0) + (hasCompletedWeeklyChallenge ? 10 : 0))
+  const portfolioTasks = [
+    { label: 'Finish role path lessons', done: completedModules.length >= Math.ceil(modules.length * 0.6) },
+    { label: 'Connect GitHub proof', done: !!githubProfile },
+    { label: 'Complete this week challenge', done: hasCompletedWeeklyChallenge },
+  ]
+
+  const handleGitHubConnect = async () => {
+    setIsConnectingGitHub(true)
+    const result = await connectGitHub(githubUsername)
+    setGitHubMessage(result.message)
+    if (result.ok) setGitHubUsername('')
+    setIsConnectingGitHub(false)
+  }
 
   useLayoutEffect(() => {
     const section = sectionRef.current
@@ -133,12 +162,36 @@ export default function DashboardSection({ className = '' }: Props) {
           Your Progress
         </h2>
         <p className="text-white/80 max-w-[40vw] leading-relaxed hidden md:block" style={{ fontSize: 'clamp(14px, 1.2vw, 18px)' }}>
-          Welcome back, {user?.name?.split(' ')[0] || 'learner'}! Track lessons. Earn badges. Keep the streak.
+          Welcome back, {user?.name?.split(' ')[0] || 'learner'}! {rolePath.focus}
         </p>
       </div>
 
       {/* Dashboard Grid — responsive: 2 cols on mobile, 4 on desktop */}
       <div className="px-[6vw] grid grid-cols-2 md:grid-cols-12 gap-3 md:gap-4">
+        {/* Role-Based Learning Paths */}
+        <div
+          ref={el => { cardsRef.current[6] = el }}
+          className="col-span-2 md:col-span-12 bg-card-dark card-radius card-shadow p-4 md:p-5"
+        >
+          <div className="mb-4 flex items-center gap-2">
+            <Target className="h-5 w-5 text-[#F7B731]" />
+            <span className="font-accent text-[10px] uppercase tracking-[0.14em] text-white/50">Role Path</span>
+          </div>
+          <div className="grid gap-3 md:grid-cols-3">
+            {ROLE_PATHS.map(path => (
+              <button
+                key={path.id}
+                onClick={() => setRole(path.id as LearningRole)}
+                className={`text-left p-4 transition-all ${role === path.id ? 'bg-[#F7B731] text-[#2A2A2A]' : 'bg-white/10 text-white hover:bg-white/15'}`}
+                style={{ borderRadius: 8 }}
+              >
+                <p className="font-display text-xl font-bold">{path.label}</p>
+                <p className={`mt-1 text-sm leading-relaxed ${role === path.id ? 'text-[#2A2A2A]/75' : 'text-white/62'}`}>{path.focus}</p>
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Row 1: Stats cards */}
         {/* Lessons Completed */}
         <div
@@ -258,6 +311,75 @@ export default function DashboardSection({ className = '' }: Props) {
               ? 'Click to continue learning'
               : 'Amazing work!'}
           </p>
+        </div>
+
+        {/* GitHub Account Integration */}
+        <div
+          ref={el => { cardsRef.current[7] = el }}
+          className="col-span-2 md:col-span-6 bg-card-dark card-radius card-shadow p-4 md:p-6"
+        >
+          <div className="flex items-center gap-2 mb-4">
+            <Github className="w-5 h-5 text-white" />
+            <span className="font-accent text-[10px] uppercase tracking-[0.14em] text-white/50">GitHub Proof</span>
+          </div>
+          {githubProfile ? (
+            <div className="flex flex-wrap items-center gap-4">
+              <img src={githubProfile.avatarUrl} alt={githubProfile.username} className="h-14 w-14 rounded-full" />
+              <div className="min-w-0 flex-1">
+                <a href={githubProfile.profileUrl} target="_blank" rel="noreferrer" className="font-display text-2xl font-bold text-white hover:text-[#F7B731]">
+                  @{githubProfile.username}
+                </a>
+                <p className="text-sm text-white/60">{githubProfile.publicRepos} public repos | {githubProfile.followers} followers</p>
+              </div>
+              <button onClick={disconnectGitHub} className="rounded-lg bg-white/10 px-3 py-2 text-sm text-white/70 hover:bg-white/15">
+                Disconnect
+              </button>
+            </div>
+          ) : (
+            <div>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <input
+                  value={githubUsername}
+                  onChange={event => setGitHubUsername(event.target.value)}
+                  placeholder="GitHub username"
+                  className="min-w-0 flex-1 rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-white placeholder-white/35 outline-none focus:border-[#F7B731]/60"
+                />
+                <button
+                  onClick={handleGitHubConnect}
+                  disabled={isConnectingGitHub}
+                  className="rounded-lg bg-[#F7B731] px-4 py-2 font-display font-semibold text-[#2A2A2A] disabled:opacity-60"
+                >
+                  {isConnectingGitHub ? 'Connecting...' : 'Connect'}
+                </button>
+              </div>
+              <p className="mt-2 text-xs text-white/45">{githubMessage || 'Uses GitHub public profile data. Full OAuth needs a backend client ID flow.'}</p>
+            </div>
+          )}
+        </div>
+
+        {/* Career Mode */}
+        <div
+          ref={el => { cardsRef.current[8] = el }}
+          className="col-span-2 md:col-span-6 bg-card-dark card-radius card-shadow p-4 md:p-6"
+        >
+          <div className="flex items-center gap-2 mb-4">
+            <Briefcase className="w-5 h-5 text-[#F7B731]" />
+            <span className="font-accent text-[10px] uppercase tracking-[0.14em] text-white/50">Career Mode</span>
+          </div>
+          <p className="font-display text-3xl font-bold text-white mb-1">{careerReadiness}% ready</p>
+          <p className="text-sm text-white/60 mb-4">Build proof for interviews: lessons, GitHub activity, and weekly scenario wins.</p>
+          <div className="space-y-2">
+            {portfolioTasks.map(task => (
+              <div key={task.label} className="flex items-center gap-2 text-sm text-white/75">
+                <CheckCircle className={`h-4 w-4 ${task.done ? 'text-[#3CCF4A]' : 'text-white/20'}`} />
+                <span>{task.label}</span>
+              </div>
+            ))}
+          </div>
+          <div className="mt-4 rounded-lg bg-white/10 p-3">
+            <p className="text-xs font-accent uppercase tracking-[0.12em] text-white/45">Current proof task</p>
+            <p className="mt-1 text-sm text-white/80">{weeklyChallenge.title}: {weeklyChallenge.brief}</p>
+          </div>
         </div>
       </div>
     </section>

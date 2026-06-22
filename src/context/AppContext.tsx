@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 /**
  * ============================================================================
  * AppContext.tsx
@@ -15,8 +16,36 @@
  * ============================================================================
  */
 
-import { createContext, useContext, useState, useCallback, type ReactNode } from 'react'
+import { createContext, useContext, useState, useCallback, useMemo, type ReactNode } from 'react'
 import { useAuth } from './AuthContext'
+
+export type LearningRole = 'junior-dev' | 'devops' | 'career-switcher'
+
+export interface RolePath {
+  id: LearningRole
+  label: string
+  focus: string
+  recommendedModules: string[]
+  helperTone: string
+}
+
+export interface GitHubProfile {
+  username: string
+  avatarUrl: string
+  profileUrl: string
+  publicRepos: number
+  followers: number
+}
+
+export interface WeeklyChallenge {
+  id: string
+  title: string
+  brief: string
+  rolePrompt: string
+  command: string
+  reward: number
+  moduleId: string
+}
 
 /** A single curriculum module containing a YouTube video */
 export interface CurriculumModule {
@@ -33,6 +62,11 @@ export interface CurriculumModule {
 
 /** App context value shape */
 interface AppContextValue {
+  // Role path
+  role: LearningRole
+  rolePath: RolePath
+  setRole: (role: LearningRole) => void
+
   // Curriculum panel
   isCurriculumOpen: boolean
   activeModuleId: string | null
@@ -52,11 +86,100 @@ interface AppContextValue {
   toggleModuleComplete: (id: string) => void
   isCourseComplete: boolean
 
+  // GitHub integration
+  githubProfile: GitHubProfile | null
+  connectGitHub: (username: string) => Promise<{ ok: boolean; message: string }>
+  disconnectGitHub: () => void
+
+  // Weekly challenge
+  weeklyChallenge: WeeklyChallenge
+  hasCompletedWeeklyChallenge: boolean
+  completeWeeklyChallenge: () => void
+
   // Curriculum data
   modules: CurriculumModule[]
 }
 
 const AppContext = createContext<AppContextValue | undefined>(undefined)
+
+export const ROLE_PATHS: RolePath[] = [
+  {
+    id: 'junior-dev',
+    label: 'Junior Dev',
+    focus: 'Commits, branches, pull requests, and confident team habits.',
+    recommendedModules: ['mod-01', 'mod-02', 'mod-03', 'mod-04', 'mod-07', 'mod-05', 'mod-06', 'mod-08'],
+    helperTone: 'I will keep this practical and beginner-friendly.',
+  },
+  {
+    id: 'devops',
+    label: 'DevOps',
+    focus: 'Clean history, rollback thinking, automation, and CI/CD workflows.',
+    recommendedModules: ['mod-08', 'mod-06', 'mod-07', 'mod-05', 'mod-02', 'mod-03', 'mod-01', 'mod-04'],
+    helperTone: 'I will point you toward release safety and automation.',
+  },
+  {
+    id: 'career-switcher',
+    label: 'Career Mode',
+    focus: 'Portfolio proof, interview stories, and job-ready Git confidence.',
+    recommendedModules: ['mod-01', 'mod-04', 'mod-05', 'mod-02', 'mod-03', 'mod-07', 'mod-06', 'mod-08'],
+    helperTone: 'I will connect each lesson to portfolio and interview outcomes.',
+  },
+]
+
+const CHALLENGE_TEMPLATES = [
+  {
+    title: 'Branch Rescue',
+    brief: 'A teammate mixed feature work into main. Create a clean recovery plan before anyone force pushes.',
+    command: 'git switch -c rescue/clean-history',
+    reward: 180,
+    moduleId: 'mod-06',
+  },
+  {
+    title: 'CI Fire Drill',
+    brief: 'The build failed after a merge. Find the likely commit, open a fix branch, and keep the release moving.',
+    command: 'git log --oneline -n 8',
+    reward: 220,
+    moduleId: 'mod-08',
+  },
+  {
+    title: 'Review Ready PR',
+    brief: 'Your feature works, but the branch has noisy commits. Prepare it for a calm teammate review.',
+    command: 'git rebase -i origin/main',
+    reward: 200,
+    moduleId: 'mod-05',
+  },
+  {
+    title: 'Conflict Clinic',
+    brief: 'Two developers edited the same layout file. Resolve the conflict and explain the final choice.',
+    command: 'git fetch origin && git merge origin/main',
+    reward: 160,
+    moduleId: 'mod-07',
+  },
+]
+
+function getWeekKey(date = new Date()) {
+  const start = new Date(date.getFullYear(), 0, 1)
+  const dayMs = 24 * 60 * 60 * 1000
+  const week = Math.ceil((((date.getTime() - start.getTime()) / dayMs) + start.getDay() + 1) / 7)
+  return `${date.getFullYear()}-W${String(week).padStart(2, '0')}`
+}
+
+function buildWeeklyChallenge(role: LearningRole): WeeklyChallenge {
+  const weekKey = getWeekKey()
+  const seed = [...weekKey, ...role].reduce((sum, char) => sum + char.charCodeAt(0), 0)
+  const template = CHALLENGE_TEMPLATES[seed % CHALLENGE_TEMPLATES.length]
+  const rolePath = ROLE_PATHS.find(path => path.id === role) || ROLE_PATHS[0]
+
+  return {
+    id: `${weekKey}-${role}-${template.title.toLowerCase().replace(/\s+/g, '-')}`,
+    title: template.title,
+    brief: template.brief,
+    rolePrompt: `${rolePath.label} focus: ${rolePath.focus}`,
+    command: template.command,
+    reward: template.reward,
+    moduleId: template.moduleId,
+  }
+}
 
 /** Curriculum data — free YouTube videos from reputable channels */
 const CURRICULUM_MODULES: CurriculumModule[] = [
@@ -152,6 +275,13 @@ const CURRICULUM_MODULES: CurriculumModule[] = [
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth()
+  const [role, setRoleState] = useState<LearningRole>(() => {
+    return (localStorage.getItem('devflow_role') as LearningRole | null) || 'junior-dev'
+  })
+  const [githubProfile, setGitHubProfile] = useState<GitHubProfile | null>(() => {
+    const saved = localStorage.getItem('devflow_github_profile')
+    return saved ? JSON.parse(saved) : null
+  })
 
   // ---- Curriculum Panel State ----
   const [isCurriculumOpen, setIsCurriculumOpen] = useState(false)
@@ -169,11 +299,33 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return saved ? JSON.parse(saved) : []
   })
 
+  const rolePath = useMemo(() => {
+    return ROLE_PATHS.find(path => path.id === role) || ROLE_PATHS[0]
+  }, [role])
+
+  const modules = useMemo(() => {
+    return [...CURRICULUM_MODULES].sort((a, b) => {
+      return rolePath.recommendedModules.indexOf(a.id) - rolePath.recommendedModules.indexOf(b.id)
+    })
+  }, [rolePath])
+
+  const weeklyChallenge = useMemo(() => buildWeeklyChallenge(role), [role])
+  const [completedChallengeIds, setCompletedChallengeIds] = useState<string[]>(() => {
+    const saved = localStorage.getItem('devflow_completed_challenges')
+    return saved ? JSON.parse(saved) : []
+  })
+  const hasCompletedWeeklyChallenge = completedChallengeIds.includes(weeklyChallenge.id)
+
+  const setRole = useCallback((nextRole: LearningRole) => {
+    setRoleState(nextRole)
+    localStorage.setItem('devflow_role', nextRole)
+  }, [])
+
   /** Open the curriculum panel, optionally focusing a specific module */
   const openCurriculum = useCallback((moduleId?: string) => {
-    setActiveModuleId(moduleId || CURRICULUM_MODULES[0].id)
+    setActiveModuleId(moduleId || rolePath.recommendedModules[0] || CURRICULUM_MODULES[0].id)
     setIsCurriculumOpen(true)
-  }, [])
+  }, [rolePath])
 
   const closeCurriculum = useCallback(() => {
     setIsCurriculumOpen(false)
@@ -213,12 +365,60 @@ export function AppProvider({ children }: { children: ReactNode }) {
     })
   }, [user])
 
+  const connectGitHub = useCallback(async (username: string) => {
+    const cleaned = username.trim().replace(/^@/, '')
+    if (!cleaned) return { ok: false, message: 'Enter a GitHub username.' }
+
+    try {
+      const response = await fetch(`https://api.github.com/users/${encodeURIComponent(cleaned)}`)
+      if (!response.ok) return { ok: false, message: 'GitHub user not found.' }
+
+      const data = await response.json() as {
+        login: string
+        avatar_url: string
+        html_url: string
+        public_repos: number
+        followers: number
+      }
+      const profile: GitHubProfile = {
+        username: data.login,
+        avatarUrl: data.avatar_url,
+        profileUrl: data.html_url,
+        publicRepos: data.public_repos,
+        followers: data.followers,
+      }
+
+      setGitHubProfile(profile)
+      localStorage.setItem('devflow_github_profile', JSON.stringify(profile))
+      return { ok: true, message: `Connected @${profile.username}.` }
+    } catch {
+      return { ok: false, message: 'Could not reach GitHub right now.' }
+    }
+  }, [])
+
+  const disconnectGitHub = useCallback(() => {
+    setGitHubProfile(null)
+    localStorage.removeItem('devflow_github_profile')
+  }, [])
+
+  const completeWeeklyChallenge = useCallback(() => {
+    setCompletedChallengeIds(prev => {
+      if (prev.includes(weeklyChallenge.id)) return prev
+      const next = [...prev, weeklyChallenge.id]
+      localStorage.setItem('devflow_completed_challenges', JSON.stringify(next))
+      return next
+    })
+  }, [weeklyChallenge])
+
   // Course is complete when ALL modules are done AND a review is submitted
   const allModulesDone = completedModules.length === CURRICULUM_MODULES.length
   const isCourseComplete = allModulesDone && hasSubmittedReview
 
   return (
     <AppContext.Provider value={{
+      role,
+      rolePath,
+      setRole,
       isCurriculumOpen,
       activeModuleId,
       openCurriculum,
@@ -232,7 +432,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
       completedModules,
       toggleModuleComplete,
       isCourseComplete,
-      modules: CURRICULUM_MODULES,
+      githubProfile,
+      connectGitHub,
+      disconnectGitHub,
+      weeklyChallenge,
+      hasCompletedWeeklyChallenge,
+      completeWeeklyChallenge,
+      modules,
     }}>
       {children}
     </AppContext.Provider>

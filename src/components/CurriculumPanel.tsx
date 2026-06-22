@@ -17,7 +17,7 @@
 
 import { useApp } from '../context/AppContext'
 import { useAuth } from '../context/AuthContext'
-import { X, Check, Play, Lock, Star, Award, ChevronRight } from 'lucide-react'
+import { X, Check, Play, Lock, Star, Award, ChevronRight, Route } from 'lucide-react'
 
 export default function CurriculumPanel() {
   const {
@@ -31,6 +31,7 @@ export default function CurriculumPanel() {
     isCourseComplete,
     openReviewModal,
     hasSubmittedReview,
+    rolePath,
   } = useApp()
 
   const { isLoggedIn, openAuthModal } = useAuth()
@@ -87,6 +88,11 @@ export default function CurriculumPanel() {
               />
             </div>
             <span className="font-display font-semibold text-white text-sm">{progressPercent}%</span>
+          </div>
+          <div className="mt-3 flex items-center gap-2 text-xs text-white/55">
+            <Route className="h-4 w-4 text-[#F7B731]" />
+            <span className="font-accent uppercase tracking-[0.12em]">{rolePath.label}</span>
+            <span>{rolePath.focus}</span>
           </div>
         </div>
 

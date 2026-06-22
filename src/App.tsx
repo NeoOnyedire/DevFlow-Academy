@@ -41,6 +41,7 @@ import AuthModal from './components/AuthModal'
 import CurriculumPanel from './components/CurriculumPanel'
 import ReviewModal from './components/ReviewModal'
 import ReviewsSection from './components/ReviewsSection'
+import GitterHelper from './components/GitterHelper'
 
 // Sections
 import HeroSection from './sections/HeroSection'
@@ -114,6 +115,7 @@ function AppInner() {
       <AuthModal />
       <CurriculumPanel />
       <ReviewModal />
+      <GitterHelper />
 
       {/* Main scrollable content */}
       <main ref={mainRef} className="relative snap-y snap-mandatory scroll-smooth overflow-x-hidden">

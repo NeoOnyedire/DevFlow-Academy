@@ -41,7 +41,7 @@ const lessons = [
 
 export default function LearnGridSection({ className = '' }: Props) {
   const { isLoggedIn, openAuthModal } = useAuth()
-  const { openCurriculum } = useApp()
+  const { openCurriculum, rolePath } = useApp()
 
   // Refs for GSAP targets
   const sectionRef = useRef<HTMLDivElement>(null)
@@ -145,7 +145,7 @@ export default function LearnGridSection({ className = '' }: Props) {
       {/* ---- SUBHEADING ---- */}
       <div ref={subRef} className="absolute left-[6vw] top-[28vh] md:top-[30vh] max-w-[70vw] md:max-w-[48vw]">
         <p className="text-white/80 font-accent text-xs md:text-sm uppercase tracking-[0.14em]">
-          8 modules. Zero jargon. All action. All free.
+          {rolePath.label}: {rolePath.focus}
         </p>
       </div>
 

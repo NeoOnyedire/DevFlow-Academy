@@ -18,7 +18,7 @@ import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { useAuth } from '../context/AuthContext'
 import { useApp } from '../context/AppContext'
-import { Zap, Crown } from 'lucide-react'
+import { Zap, Crown, Check, Play } from 'lucide-react'
 
 gsap.registerPlugin(ScrollTrigger)
 
@@ -37,7 +37,14 @@ const LEADERBOARD = [
 
 export default function ChallengeSection({ className = '' }: Props) {
   const { isLoggedIn, openAuthModal } = useAuth()
-  const { openCurriculum } = useApp()
+  const {
+    openCurriculum,
+    weeklyChallenge,
+    hasCompletedWeeklyChallenge,
+    completeWeeklyChallenge,
+    rolePath,
+    githubProfile,
+  } = useApp()
 
   const sectionRef = useRef<HTMLDivElement>(null)
   const photoRef = useRef<HTMLDivElement>(null)
@@ -47,7 +54,15 @@ export default function ChallengeSection({ className = '' }: Props) {
   /** Handle Join button click */
   const handleJoin = () => {
     if (isLoggedIn) {
-      openCurriculum()
+      openCurriculum(weeklyChallenge.moduleId)
+    } else {
+      openAuthModal('register')
+    }
+  }
+
+  const handleComplete = () => {
+    if (isLoggedIn) {
+      completeWeeklyChallenge()
     } else {
       openAuthModal('register')
     }
@@ -142,19 +157,45 @@ export default function ChallengeSection({ className = '' }: Props) {
           Repo Royale
         </h2>
         <p className="font-accent text-xs uppercase tracking-[0.14em] text-white/60 mb-4 md:mb-6">
-          Weekly challenge
+          Dynamic weekly challenge | {rolePath.label}
         </p>
+        <div className="mb-4 rounded-lg bg-white/10 p-4 card-outline">
+          <p className="font-display text-2xl font-bold text-white">{weeklyChallenge.title}</p>
+          <p className="mt-2 text-sm leading-relaxed text-white/72">{weeklyChallenge.brief}</p>
+          <p className="mt-3 text-xs font-accent uppercase tracking-[0.12em] text-white/45">{weeklyChallenge.rolePrompt}</p>
+          <div className="mt-3 rounded-lg border border-white/10 bg-black/25 px-3 py-2 font-mono text-xs text-[#F7B731]">
+            {weeklyChallenge.command}
+          </div>
+        </div>
         <p className="text-white/80 leading-relaxed mb-6 md:mb-8 max-w-lg" style={{ fontSize: 'clamp(14px, 1.2vw, 18px)' }}>
-          Solve the scenario. Post your answer. Climb the board. Every week, a new real-world Git puzzle drops. Join the community of learners.
+          This challenge changes each week from a deterministic scenario pool and adapts to your selected role path. Connect GitHub to turn it into portfolio proof.
         </p>
 
-        <button
-          onClick={handleJoin}
-          className="bg-rose-punch text-white font-display font-semibold px-5 md:px-7 py-3 md:py-3.5 card-radius card-shadow
-            hover:scale-105 hover:shadow-[0_25px_55px_rgba(255,77,109,0.35)] transition-all duration-300 mb-8 md:mb-10"
-          style={{ fontSize: 'clamp(13px, 1.2vw, 17px)' }}>
-          {isLoggedIn ? 'Join This Week' : 'Join Free & Play'}
-        </button>
+        <div className="mb-8 flex flex-wrap gap-3 md:mb-10">
+          <button
+            onClick={handleJoin}
+            className="bg-rose-punch text-white font-display font-semibold px-5 md:px-7 py-3 md:py-3.5 card-radius card-shadow
+              hover:scale-105 hover:shadow-[0_25px_55px_rgba(255,77,109,0.35)] transition-all duration-300 flex items-center gap-2"
+            style={{ fontSize: 'clamp(13px, 1.2vw, 17px)' }}>
+            <Play className="h-4 w-4" />
+            {isLoggedIn ? 'Train for Challenge' : 'Join Free & Play'}
+          </button>
+          <button
+            onClick={handleComplete}
+            className={`font-display font-semibold px-5 md:px-7 py-3 md:py-3.5 card-radius transition-all duration-300 flex items-center gap-2 ${
+              hasCompletedWeeklyChallenge ? 'bg-[#3CCF4A]/20 text-[#3CCF4A]' : 'bg-white/10 text-white hover:bg-white/15'
+            }`}
+            style={{ fontSize: 'clamp(13px, 1.2vw, 17px)' }}>
+            <Check className="h-4 w-4" />
+            {hasCompletedWeeklyChallenge ? `Completed +${weeklyChallenge.reward}` : `Mark Complete +${weeklyChallenge.reward}`}
+          </button>
+        </div>
+
+        {githubProfile && (
+          <p className="mb-4 text-sm text-white/55">
+            Connected to @{githubProfile.username}. Add your solution to a public repo for Career Mode credit.
+          </p>
+        )}
 
         {/* Leaderboard */}
         <div>
