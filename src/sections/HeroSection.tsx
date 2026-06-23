@@ -7,12 +7,14 @@
  * Features the bold "Git yourself Repo-Ready" headline, body copy,
  * CTA buttons, and Gitter the cat mascot illustration.
  *
- * CHANGES from v1:
- * - Removed the speech bubble (user found it redundant)
- * - Added auth-gated CTA — "Start First Lesson" opens curriculum
- *   or auth modal if not logged in
- * - "Browse Curriculum" opens the curriculum panel directly
- * - Fully mobile responsive — stacked layout on small screens
+ * CTA behaviour (intentionally distinct):
+ * - Primary "Start First Lesson" / "Join Free & Start Learning":
+ *     Opens the curriculum panel at mod-01 (the actual first lesson).
+ *     If not logged in, opens the register modal instead.
+ * - Secondary "See what's inside":
+ *     Smooth-scrolls down to the LearnGrid section so the user can
+ *     browse the lesson cards without committing to anything.
+ *     Never requires login — it's a pure discovery action.
  *
  * Animation:
  * - Auto-play entrance on page load (staggered fade + slide)
@@ -24,10 +26,12 @@
 import { useRef, useLayoutEffect } from 'react'
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
+import { ScrollToPlugin } from 'gsap/ScrollToPlugin'
 import { useAuth } from '../context/AuthContext'
 import { useApp } from '../context/AppContext'
+import { ChevronDown } from 'lucide-react'
 
-gsap.registerPlugin(ScrollTrigger)
+gsap.registerPlugin(ScrollTrigger, ScrollToPlugin)
 
 interface Props {
   className?: string
@@ -37,7 +41,6 @@ export default function HeroSection({ className = '' }: Props) {
   const { isLoggedIn, openAuthModal } = useAuth()
   const { openCurriculum } = useApp()
 
-  // Refs for GSAP animation targets
   const sectionRef = useRef<HTMLDivElement>(null)
   const h1Line1Ref = useRef<HTMLDivElement>(null)
   const h1Line2Ref = useRef<HTMLDivElement>(null)
@@ -46,18 +49,33 @@ export default function HeroSection({ className = '' }: Props) {
   const ghostRef = useRef<HTMLDivElement>(null)
   const catRef = useRef<HTMLDivElement>(null)
 
-  /** Handle "Start First Lesson" click — requires login */
+  /**
+   * Primary CTA — takes the user straight into lesson 1.
+   * Logged-in users open the curriculum panel at the first module.
+   * Guests are asked to register first (they'll be auto-redirected after).
+   */
   const handleStartLesson = () => {
     if (isLoggedIn) {
-      openCurriculum()
+      openCurriculum('mod-01')
     } else {
       openAuthModal('register')
     }
   }
 
-  /** Handle "Browse Curriculum" click — always opens panel */
-  const handleBrowseCurriculum = () => {
-    openCurriculum()
+  /**
+   * Secondary CTA — pure discovery, no login needed.
+   * Scrolls the page down to the LearnGrid section so the user can
+   * browse lesson cards and get a feel for the course before committing.
+   */
+  const handleSeeInside = () => {
+    const el = document.getElementById('learn-grid')
+    if (el) {
+      gsap.to(window, {
+        scrollTo: { y: el, offsetY: 0 },
+        duration: 0.8,
+        ease: 'power2.inOut',
+      })
+    }
   }
 
   useLayoutEffect(() => {
@@ -65,58 +83,45 @@ export default function HeroSection({ className = '' }: Props) {
     if (!section) return
 
     const ctx = gsap.context(() => {
-      // ---- AUTO-PLAY ENTRANCE (page load, ~1.1s total) ----
-      // Each element animates in with staggered delays for a
-      // cinematic reveal effect. This only runs once on mount.
       const loadTl = gsap.timeline({ delay: 0.2 })
 
       loadTl
-        // Line 1 of headline slides up + fades in
         .fromTo(h1Line1Ref.current,
           { y: 40, rotate: -1, opacity: 0 },
           { y: 0, rotate: 0, opacity: 1, duration: 0.6, ease: 'power3.out' }
         )
-        // Line 2 follows with slight overlap
         .fromTo(h1Line2Ref.current,
           { y: 40, rotate: -1, opacity: 0 },
           { y: 0, rotate: 0, opacity: 1, duration: 0.6, ease: 'power3.out' },
           '-=0.48'
         )
-        // Body copy fades up
         .fromTo(bodyRef.current,
           { y: 18, opacity: 0 },
           { y: 0, opacity: 1, duration: 0.35, ease: 'power2.out' },
           '-=0.3'
         )
-        // Primary CTA
         .fromTo(ctaRef.current,
           { y: 18, opacity: 0 },
           { y: 0, opacity: 1, duration: 0.35, ease: 'power2.out' },
           '-=0.25'
         )
-        // Ghost link
         .fromTo(ghostRef.current,
           { y: 18, opacity: 0 },
           { y: 0, opacity: 1, duration: 0.35, ease: 'power2.out' },
           '-=0.25'
         )
-        // Cat mascot slides in from right with bounce
         .fromTo(catRef.current,
           { x: '10vw', scale: 0.96, opacity: 0 },
           { x: 0, scale: 1, opacity: 1, duration: 0.6, ease: 'back.out(1.4)' },
           '-=0.5'
         )
 
-      // ---- SCROLL-DRIVEN EXIT ANIMATION ----
-      // Elements are already visible from load animation above.
-      // ScrollTrigger handles only the exit phase (70%-100%).
       const scrollTl = gsap.timeline({
         scrollTrigger: {
           trigger: section,
           start: 'top top',
           end: 'bottom top',
           scrub: 0.6,
-          // When user scrolls back to top, force-reset visibility
           onLeaveBack: () => {
             gsap.set([h1Line1Ref.current, h1Line2Ref.current, bodyRef.current, ctaRef.current, ghostRef.current, catRef.current], {
               opacity: 1, x: 0, y: 0, scale: 1, rotate: 0
@@ -125,7 +130,6 @@ export default function HeroSection({ className = '' }: Props) {
         }
       })
 
-      // Phase 3: EXIT (70% - 100%) — elements slide away
       scrollTl
         .fromTo([h1Line1Ref.current, h1Line2Ref.current],
           { x: 0, opacity: 1 },
@@ -150,7 +154,6 @@ export default function HeroSection({ className = '' }: Props) {
 
     }, section)
 
-    // Cleanup GSAP animations on unmount
     return () => ctx.revert()
   }, [])
 
@@ -161,7 +164,7 @@ export default function HeroSection({ className = '' }: Props) {
       className={`${className} flex items-center justify-center`}
       style={{ paddingTop: '10vh', paddingBottom: '10vh' }}
     >
-      {/* Subtle warm glow behind the cat — adds depth */}
+      {/* Subtle warm glow behind the cat */}
       <div
         className="absolute pointer-events-none hidden md:block"
         style={{
@@ -173,7 +176,7 @@ export default function HeroSection({ className = '' }: Props) {
         }}
       />
 
-      {/* ---- HEADLINE GROUP ---- */}
+      {/* HEADLINE */}
       <div className="absolute left-[6vw] top-[10vh] w-[88vw] md:w-[70vw]">
         <div ref={h1Line1Ref} className="font-display font-bold text-white heading-responsive tracking-[0.02em]"
           style={{ fontSize: 'clamp(42px, 9vw, 132px)' }}>
@@ -185,7 +188,7 @@ export default function HeroSection({ className = '' }: Props) {
         </div>
       </div>
 
-      {/* ---- BODY COPY ---- */}
+      {/* BODY COPY */}
       <div ref={bodyRef} className="absolute left-[6vw] top-[38vh] md:top-[52vh] w-[80vw] md:w-[34vw]">
         <p className="text-white/80 leading-relaxed" style={{ fontSize: 'clamp(15px, 1.2vw, 18px)' }}>
           A friendly, practical course in Git & GitHub—built for beginners, taught like you're already on the team.
@@ -193,7 +196,7 @@ export default function HeroSection({ className = '' }: Props) {
         </p>
       </div>
 
-      {/* ---- CTA BUTTONS ---- */}
+      {/* PRIMARY CTA — commits the user to starting lesson 1 */}
       <div ref={ctaRef} className="absolute left-[6vw] top-[52vh] md:top-[66vh]">
         <button
           onClick={handleStartLesson}
@@ -204,18 +207,18 @@ export default function HeroSection({ className = '' }: Props) {
         </button>
       </div>
 
-      {/* Ghost link — opens curriculum panel */}
+      {/* SECONDARY CTA — scrolls to lesson overview, no login needed */}
       <div ref={ghostRef} className="absolute left-[6vw] top-[64vh] md:top-[76vh]">
         <button
-          onClick={handleBrowseCurriculum}
-          className="text-white/60 font-accent text-xs uppercase tracking-[0.14em] hover:text-white transition-colors underline underline-offset-4"
+          onClick={handleSeeInside}
+          className="flex items-center gap-1.5 text-white/60 font-accent text-xs uppercase tracking-[0.14em] hover:text-white transition-colors"
         >
-          Browse the curriculum
+          See what's inside
+          <ChevronDown className="w-3.5 h-3.5" />
         </button>
       </div>
 
-      {/* ---- GITTER THE CAT MASCOT ---- */}
-      {/* Hidden on mobile (too cramped), shown on md+ screens */}
+      {/* GITTER THE CAT — desktop only */}
       <div ref={catRef} className="absolute hidden md:block" style={{ right: '6vw', top: '18vh', width: '38vw', maxWidth: '520px' }}>
         <img
           src="/hero_cat.png"

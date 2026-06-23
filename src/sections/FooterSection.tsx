@@ -6,8 +6,14 @@
  * Final CTA section — "Start Your Streak" with dual call-to-action buttons,
  * the celebratory Gitter cat illustration, and footer links.
  *
- * The primary CTA opens the curriculum panel (or auth modal if not logged in).
- * The secondary CTA opens the curriculum panel in browse mode.
+ * CTA behaviour (intentionally distinct):
+ * - Primary "Start Free" / "Continue Learning":
+ *     Opens the curriculum panel at the user's next incomplete module,
+ *     or prompts registration for guests. This is the conversion action.
+ * - Secondary "Browse all 8 lessons":
+ *     Opens the curriculum panel in its default browse state (no specific
+ *     module focused). Lets the user survey the full course before deciding.
+ *     Works whether or not the user is logged in.
  *
  * MOBILE: Cat illustration is hidden (too cramped), text and CTAs are
  * centered and full-width. Footer links stack vertically.
@@ -29,7 +35,7 @@ interface Props {
 
 export default function FooterSection({ className = '' }: Props) {
   const { isLoggedIn, openAuthModal } = useAuth()
-  const { openCurriculum } = useApp()
+  const { openCurriculum, modules, completedModules } = useApp()
 
   const sectionRef = useRef<HTMLDivElement>(null)
   const leftRef = useRef<HTMLDivElement>(null)
@@ -37,17 +43,27 @@ export default function FooterSection({ className = '' }: Props) {
   const ctasRef = useRef<HTMLDivElement>(null)
   const footerLinksRef = useRef<HTMLDivElement>(null)
 
-  /** Primary CTA — starts learning or prompts login */
+  /**
+   * Primary CTA — the conversion action.
+   * Logged-in: opens curriculum at the next incomplete module so the user
+   * lands exactly where they left off rather than at the beginning.
+   * Guest: opens the register modal.
+   */
   const handleStartFree = () => {
     if (isLoggedIn) {
-      openCurriculum()
+      const nextModule = modules.find(m => !completedModules.includes(m.id))
+      openCurriculum(nextModule?.id)
     } else {
       openAuthModal('register')
     }
   }
 
-  /** Secondary CTA — browse curriculum */
-  const handleViewCurriculum = () => {
+  /**
+   * Secondary CTA — browse the full curriculum.
+   * Opens the panel without jumping to a specific module, letting the user
+   * scroll through all 8 lessons at their own pace. No login required.
+   */
+  const handleBrowseAll = () => {
     openCurriculum()
   }
 
@@ -56,7 +72,6 @@ export default function FooterSection({ className = '' }: Props) {
     if (!section) return
 
     const ctx = gsap.context(() => {
-      // Left content fades up
       gsap.fromTo(leftRef.current,
         { y: '6vh', opacity: 0 },
         {
@@ -70,7 +85,6 @@ export default function FooterSection({ className = '' }: Props) {
         }
       )
 
-      // Cat illustration slides in from right
       gsap.fromTo(catRef.current,
         { x: '10vw', scale: 0.98, opacity: 0 },
         {
@@ -84,7 +98,6 @@ export default function FooterSection({ className = '' }: Props) {
         }
       )
 
-      // CTAs fade up
       gsap.fromTo(ctasRef.current,
         { y: '10px', opacity: 0 },
         {
@@ -98,7 +111,6 @@ export default function FooterSection({ className = '' }: Props) {
         }
       )
 
-      // Footer links fade in last
       gsap.fromTo(footerLinksRef.current,
         { y: '10px', opacity: 0 },
         {
@@ -136,6 +148,7 @@ export default function FooterSection({ className = '' }: Props) {
         </div>
 
         <div ref={ctasRef} className="flex flex-col gap-3 md:gap-4">
+          {/* Primary — conversion action */}
           <button
             onClick={handleStartFree}
             className="bg-rose-punch text-white font-display font-semibold px-6 md:px-8 py-3 md:py-4 card-radius card-shadow
@@ -143,12 +156,14 @@ export default function FooterSection({ className = '' }: Props) {
             style={{ fontSize: 'clamp(15px, 1.4vw, 20px)' }}>
             {isLoggedIn ? 'Continue Learning' : 'Start Free'}
           </button>
+
+          {/* Secondary — low-commitment browse action */}
           <button
-            onClick={handleViewCurriculum}
+            onClick={handleBrowseAll}
             className="border-2 border-[#2A2A2A]/30 text-[#2A2A2A] font-display font-semibold px-6 md:px-8 py-3 md:py-4 card-radius
               hover:bg-[#2A2A2A]/5 hover:border-[#2A2A2A]/50 transition-all duration-300 w-fit"
             style={{ fontSize: 'clamp(13px, 1.2vw, 17px)' }}>
-            View Curriculum
+            Browse all 8 lessons
           </button>
         </div>
       </div>

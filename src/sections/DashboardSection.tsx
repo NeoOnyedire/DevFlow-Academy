@@ -7,16 +7,23 @@
  * learning stats: lessons completed, streak, badges, leaderboard position,
  * skill map with progress bars, and next lesson.
  *
+ * SKILL BARS — dynamic, not hardcoded:
+ * Each skill maps to a set of curriculum modules. The bar fills based on
+ * how many of those modules the user has actually completed.
+ *
+ *   Staging   → mod-01, mod-02          (commit & setup foundations)
+ *   Branching → mod-02, mod-03, mod-07  (branch, merge, conflict)
+ *   Merging   → mod-07, mod-05          (merge strategies, rebase)
+ *   Review    → mod-04, mod-05          (PRs, code review)
+ *   Automation→ mod-08                  (CI/CD)
+ *
  * AUTH INTEGRATION:
  * - If logged in: shows real progress data from AppContext
- * - If not logged in: shows a login prompt instead of the dashboard
- *
- * MOBILE: Grid collapses to single column. Cards stack vertically.
- * All stats remain visible but reflow for narrow screens.
+ * - If not logged in: shows a login prompt
  * ============================================================================
  */
 
-import { useRef, useState, useLayoutEffect } from 'react'
+import { useRef, useState, useLayoutEffect, useMemo } from 'react'
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { useAuth } from '../context/AuthContext'
@@ -29,12 +36,16 @@ interface Props {
   className?: string
 }
 
-/** Skill progress data (percentage filled for each skill) */
-const SKILLS = [
-  { name: 'Staging', pct: 85 },
-  { name: 'Branching', pct: 70 },
-  { name: 'Merging', pct: 45 },
-  { name: 'Review', pct: 20 },
+/**
+ * Each skill lists the module IDs that contribute to it.
+ * Progress = (completed modules in list) / (total modules in list) * 100
+ */
+const SKILL_MODULES: { name: string; moduleIds: string[] }[] = [
+  { name: 'Staging',    moduleIds: ['mod-01', 'mod-02'] },
+  { name: 'Branching',  moduleIds: ['mod-02', 'mod-03', 'mod-07'] },
+  { name: 'Merging',    moduleIds: ['mod-07', 'mod-05'] },
+  { name: 'Review',     moduleIds: ['mod-04', 'mod-05'] },
+  { name: 'Automation', moduleIds: ['mod-08'] },
 ]
 
 export default function DashboardSection({ className = '' }: Props) {
@@ -52,6 +63,7 @@ export default function DashboardSection({ className = '' }: Props) {
     weeklyChallenge,
     hasCompletedWeeklyChallenge,
   } = useApp()
+
   const [githubUsername, setGitHubUsername] = useState('')
   const [githubMessage, setGitHubMessage] = useState('')
   const [isConnectingGitHub, setIsConnectingGitHub] = useState(false)
@@ -59,14 +71,34 @@ export default function DashboardSection({ className = '' }: Props) {
   const sectionRef = useRef<HTMLDivElement>(null)
   const headingRef = useRef<HTMLDivElement>(null)
   const cardsRef = useRef<(HTMLDivElement | null)[]>([])
-  const careerReadiness = Math.min(100, Math.round((completedModules.length / modules.length) * 70) + (githubProfile ? 20 : 0) + (hasCompletedWeeklyChallenge ? 10 : 0))
+
+  /** Derive skill percentages from actual completed modules */
+  const skills = useMemo(() => {
+    return SKILL_MODULES.map(skill => {
+      const completedCount = skill.moduleIds.filter(id => completedModules.includes(id)).length
+      const pct = Math.round((completedCount / skill.moduleIds.length) * 100)
+      return { name: skill.name, pct }
+    })
+  }, [completedModules])
+
+  const careerReadiness = Math.min(
+    100,
+    Math.round((completedModules.length / modules.length) * 70) +
+    (githubProfile ? 20 : 0) +
+    (hasCompletedWeeklyChallenge ? 10 : 0)
+  )
+
   const portfolioTasks = [
     { label: 'Finish role path lessons', done: completedModules.length >= Math.ceil(modules.length * 0.6) },
     { label: 'Connect GitHub proof', done: !!githubProfile },
-    { label: 'Complete this week challenge', done: hasCompletedWeeklyChallenge },
+    { label: 'Complete this week\'s challenge', done: hasCompletedWeeklyChallenge },
   ]
 
   const handleGitHubConnect = async () => {
+    if (!githubUsername.trim()) {
+      setGitHubMessage('Enter a GitHub username first.')
+      return
+    }
     setIsConnectingGitHub(true)
     const result = await connectGitHub(githubUsername)
     setGitHubMessage(result.message)
@@ -79,7 +111,6 @@ export default function DashboardSection({ className = '' }: Props) {
     if (!section) return
 
     const ctx = gsap.context(() => {
-      // Heading slides in from left as it enters viewport
       gsap.fromTo(headingRef.current,
         { x: '-12vw', opacity: 0 },
         {
@@ -93,7 +124,6 @@ export default function DashboardSection({ className = '' }: Props) {
         }
       )
 
-      // Each card fades up as it enters viewport
       cardsRef.current.forEach((card) => {
         if (!card) return
         gsap.fromTo(card,
@@ -114,7 +144,7 @@ export default function DashboardSection({ className = '' }: Props) {
     return () => ctx.revert()
   }, [])
 
-  // If not logged in, show a login prompt
+  // Not logged in — show login prompt
   if (!isLoggedIn) {
     return (
       <section
@@ -166,9 +196,9 @@ export default function DashboardSection({ className = '' }: Props) {
         </p>
       </div>
 
-      {/* Dashboard Grid — responsive: 2 cols on mobile, 4 on desktop */}
       <div className="px-[6vw] grid grid-cols-2 md:grid-cols-12 gap-3 md:gap-4">
-        {/* Role-Based Learning Paths */}
+
+        {/* Role Path selector */}
         <div
           ref={el => { cardsRef.current[6] = el }}
           className="col-span-2 md:col-span-12 bg-card-dark card-radius card-shadow p-4 md:p-5"
@@ -182,17 +212,28 @@ export default function DashboardSection({ className = '' }: Props) {
               <button
                 key={path.id}
                 onClick={() => setRole(path.id as LearningRole)}
-                className={`text-left p-4 transition-all ${role === path.id ? 'bg-[#F7B731] text-[#2A2A2A]' : 'bg-white/10 text-white hover:bg-white/15'}`}
+                className={`text-left p-4 transition-all cursor-pointer ring-0 focus:outline-none ${
+                  role === path.id
+                    ? 'bg-[#F7B731] text-[#2A2A2A]'
+                    : 'bg-white/10 text-white hover:bg-white/20 hover:scale-[1.02]'
+                }`}
                 style={{ borderRadius: 8 }}
+                aria-pressed={role === path.id}
               >
                 <p className="font-display text-xl font-bold">{path.label}</p>
-                <p className={`mt-1 text-sm leading-relaxed ${role === path.id ? 'text-[#2A2A2A]/75' : 'text-white/62'}`}>{path.focus}</p>
+                <p className={`mt-1 text-sm leading-relaxed ${role === path.id ? 'text-[#2A2A2A]/75' : 'text-white/62'}`}>
+                  {path.focus}
+                </p>
+                {role === path.id && (
+                  <p className="mt-2 text-[10px] font-accent uppercase tracking-[0.12em] text-[#2A2A2A]/50">
+                    Active path
+                  </p>
+                )}
               </button>
             ))}
           </div>
         </div>
 
-        {/* Row 1: Stats cards */}
         {/* Lessons Completed */}
         <div
           ref={el => { cardsRef.current[0] = el }}
@@ -253,7 +294,7 @@ export default function DashboardSection({ className = '' }: Props) {
           <p className="text-white/60 text-xs md:text-sm">this week</p>
         </div>
 
-        {/* Row 2: Skill Map */}
+        {/* Skill Map — bars driven by real completion data */}
         <div
           ref={el => { cardsRef.current[4] = el }}
           className="col-span-2 md:col-span-6 bg-card-dark card-radius card-shadow p-4 md:p-6 hover:scale-[1.01] transition-transform duration-300"
@@ -264,29 +305,44 @@ export default function DashboardSection({ className = '' }: Props) {
             </div>
             <span className="font-accent text-[9px] md:text-[10px] uppercase tracking-[0.14em] text-white/50">Skill Map</span>
           </div>
-          <div className="grid grid-cols-2 md:flex md:gap-3 gap-2">
-            {SKILLS.map((skill) => (
-              <div key={skill.name} className="flex-1">
-                <div className="flex items-center gap-2 mb-1.5 md:mb-2">
-                  <div className={`w-2.5 h-2.5 md:w-3 md:h-3 rounded-full ${skill.pct > 40 ? 'bg-lime' : 'bg-white/20'}`} />
-                  <span className="text-white/80 text-xs md:text-sm font-medium">{skill.name}</span>
+
+          {completedModules.length === 0 ? (
+            <p className="text-white/40 text-sm">
+              Complete your first lesson to start filling your skill map.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {skills.map((skill) => (
+                <div key={skill.name}>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <div className="flex items-center gap-2">
+                      <div className={`w-2.5 h-2.5 rounded-full ${skill.pct > 0 ? 'bg-lime' : 'bg-white/20'}`} />
+                      <span className="text-white/80 text-xs md:text-sm font-medium">{skill.name}</span>
+                    </div>
+                    <span className="text-white/40 text-xs font-accent">{skill.pct}%</span>
+                  </div>
+                  <div className="h-1.5 md:h-2 bg-white/10 rounded-full overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all duration-700"
+                      style={{
+                        width: `${skill.pct}%`,
+                        backgroundColor: skill.pct > 0 ? 'var(--lime)' : 'rgba(255,255,255,0.2)',
+                      }}
+                    />
+                  </div>
                 </div>
-                <div className="h-1.5 md:h-2 bg-white/10 rounded-full overflow-hidden">
-                  <div className="h-full rounded-full transition-all duration-500"
-                    style={{
-                      width: `${skill.pct}%`,
-                      backgroundColor: skill.pct > 40 ? 'var(--lime)' : 'rgba(255,255,255,0.2)'
-                    }} />
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Next Lesson CTA */}
         <div
           ref={el => { cardsRef.current[5] = el }}
-          onClick={() => openCurriculum()}
+          onClick={() => {
+            const nextModule = modules.find(m => !completedModules.includes(m.id))
+            openCurriculum(nextModule?.id)
+          }}
           className="col-span-2 md:col-span-6 bg-rose-punch card-radius card-shadow p-4 md:p-6 hover:scale-[1.01] transition-transform duration-300 cursor-pointer"
         >
           <div className="flex items-center justify-between mb-3 md:mb-4">
@@ -299,17 +355,17 @@ export default function DashboardSection({ className = '' }: Props) {
             <ArrowRight className="w-4 h-4 md:w-5 md:h-5 text-white/70" />
           </div>
           <p className="font-display text-2xl md:text-3xl font-bold text-white mb-1">
-            {completedModules.length < modules.length ? String(completedModules.length + 1).padStart(2, '0') : 'All Done!'}
+            {completedModules.length < modules.length
+              ? String(completedModules.length + 1).padStart(2, '0')
+              : 'All Done!'}
           </p>
           <p className="text-white/90 text-sm md:text-lg font-medium">
             {completedModules.length < modules.length
-              ? modules[completedModules.length]?.title || 'CI / CD Basics'
+              ? modules.find(m => !completedModules.includes(m.id))?.title || 'CI / CD Basics'
               : 'Course Complete!'}
           </p>
           <p className="text-white/60 text-xs md:text-sm mt-1 md:mt-2">
-            {completedModules.length < modules.length
-              ? 'Click to continue learning'
-              : 'Amazing work!'}
+            {completedModules.length < modules.length ? 'Click to open this lesson' : 'Amazing work!'}
           </p>
         </div>
 
@@ -329,7 +385,7 @@ export default function DashboardSection({ className = '' }: Props) {
                 <a href={githubProfile.profileUrl} target="_blank" rel="noreferrer" className="font-display text-2xl font-bold text-white hover:text-[#F7B731]">
                   @{githubProfile.username}
                 </a>
-                <p className="text-sm text-white/60">{githubProfile.publicRepos} public repos | {githubProfile.followers} followers</p>
+                <p className="text-sm text-white/60">{githubProfile.publicRepos} public repos · {githubProfile.followers} followers</p>
               </div>
               <button onClick={disconnectGitHub} className="rounded-lg bg-white/10 px-3 py-2 text-sm text-white/70 hover:bg-white/15">
                 Disconnect
@@ -340,7 +396,8 @@ export default function DashboardSection({ className = '' }: Props) {
               <div className="flex flex-col gap-2 sm:flex-row">
                 <input
                   value={githubUsername}
-                  onChange={event => setGitHubUsername(event.target.value)}
+                  onChange={e => setGitHubUsername(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') handleGitHubConnect() }}
                   placeholder="GitHub username"
                   className="min-w-0 flex-1 rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-white placeholder-white/35 outline-none focus:border-[#F7B731]/60"
                 />
@@ -349,10 +406,17 @@ export default function DashboardSection({ className = '' }: Props) {
                   disabled={isConnectingGitHub}
                   className="rounded-lg bg-[#F7B731] px-4 py-2 font-display font-semibold text-[#2A2A2A] disabled:opacity-60"
                 >
-                  {isConnectingGitHub ? 'Connecting...' : 'Connect'}
+                  {isConnectingGitHub ? 'Connecting…' : 'Connect'}
                 </button>
               </div>
-              <p className="mt-2 text-xs text-white/45">{githubMessage || 'Uses GitHub public profile data. Full OAuth needs a backend client ID flow.'}</p>
+              {githubMessage && (
+                <p className="mt-2 text-xs text-white/60">{githubMessage}</p>
+              )}
+              {!githubMessage && (
+                <p className="mt-2 text-xs text-white/45">
+                  Uses your public GitHub profile. Adds portfolio proof to Career Mode.
+                </p>
+              )}
             </div>
           )}
         </div>
@@ -367,20 +431,23 @@ export default function DashboardSection({ className = '' }: Props) {
             <span className="font-accent text-[10px] uppercase tracking-[0.14em] text-white/50">Career Mode</span>
           </div>
           <p className="font-display text-3xl font-bold text-white mb-1">{careerReadiness}% ready</p>
-          <p className="text-sm text-white/60 mb-4">Build proof for interviews: lessons, GitHub activity, and weekly scenario wins.</p>
+          <p className="text-sm text-white/60 mb-4">
+            Build proof for interviews: lessons, GitHub activity, and weekly scenario wins.
+          </p>
           <div className="space-y-2">
             {portfolioTasks.map(task => (
               <div key={task.label} className="flex items-center gap-2 text-sm text-white/75">
-                <CheckCircle className={`h-4 w-4 ${task.done ? 'text-[#3CCF4A]' : 'text-white/20'}`} />
+                <CheckCircle className={`h-4 w-4 flex-shrink-0 ${task.done ? 'text-[#3CCF4A]' : 'text-white/20'}`} />
                 <span>{task.label}</span>
               </div>
             ))}
           </div>
           <div className="mt-4 rounded-lg bg-white/10 p-3">
-            <p className="text-xs font-accent uppercase tracking-[0.12em] text-white/45">Current proof task</p>
+            <p className="text-xs font-accent uppercase tracking-[0.12em] text-white/45">This week's proof task</p>
             <p className="mt-1 text-sm text-white/80">{weeklyChallenge.title}: {weeklyChallenge.brief}</p>
           </div>
         </div>
+
       </div>
     </section>
   )
