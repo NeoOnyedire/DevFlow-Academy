@@ -68,38 +68,38 @@ export default function BeforeAfterSection({ className = '' }: Props) {
     <section
       ref={sectionRef}
       id="before-after"
-      className={`${className} flex items-center justify-center`}
-      style={{ paddingTop: '10vh', paddingBottom: '10vh' }}
+      className={`${className} flex flex-col md:flex-row md:items-center md:justify-center`}
+      style={{ paddingTop: '0', paddingBottom: '10vh' }}
     >
-      {/* Headline */}
-      <div ref={headlineRef} className="absolute left-1/2 -translate-x-1/2" style={{ top: '6vh' }}>
+      {/* Headline — flows above cards on mobile, absolute on desktop */}
+      <div ref={headlineRef} className="md:absolute md:left-1/2 md:-translate-x-1/2 text-center px-6 pt-8 md:p-0 md:top-[6vh]">
         <h2 className="font-display font-bold text-white tracking-[0.02em] text-center"
           style={{ fontSize: 'clamp(36px, 6vw, 92px)' }}>
           Do's & Don'ts
         </h2>
       </div>
 
-      {/* ── Desktop layout: side-by-side absolute cards ── */}
-      <div className="hidden sm:block">
+      {/* ── Desktop layout: side-by-side absolute cards (md and up only) ── */}
+      <div className="hidden md:block">
         {/* Don'ts card */}
         <div
           ref={dontCardRef}
-          className="absolute card-radius card-shadow overflow-hidden left-[6vw] md:left-[8vw]
-            top-[18vh] md:top-[22vh] w-[42vw] md:w-[38vw] h-[55vh] md:h-[58vh]"
+          className="absolute card-radius card-shadow overflow-hidden left-[8vw]
+            top-[22vh] w-[38vw] h-[58vh]"
         >
           <img src="/before_after_dont.jpg" alt="Messy workspace - don'ts"
             className="w-full h-full object-cover" style={{ filter: 'saturate(0.85) contrast(1.05)' }} />
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
-          <div ref={dontChipRef} className="absolute top-3 left-3 md:top-4 md:left-4">
-            <div className="bg-rose-punch text-white px-3 py-1.5 md:px-4 md:py-2 rounded-full flex items-center gap-1.5 font-display font-semibold text-xs md:text-sm">
-              <X className="w-3 h-3 md:w-4 md:h-4" /> Don'ts
+          <div ref={dontChipRef} className="absolute top-4 left-4">
+            <div className="bg-rose-punch text-white px-4 py-2 rounded-full flex items-center gap-1.5 font-display font-semibold text-sm">
+              <X className="w-4 h-4" /> Don'ts
             </div>
           </div>
-          <div className="absolute bottom-4 left-4 right-4 md:bottom-6 md:left-6 md:right-6">
+          <div className="absolute bottom-6 left-6 right-6">
             {DONTS.map((item, i) => (
-              <div key={i} className="flex items-center gap-2 mb-1.5 md:mb-2">
-                <span className="text-rose-punch font-bold text-base md:text-lg">-</span>
-                <span className="text-white/90 font-medium text-xs md:text-base">{item}</span>
+              <div key={i} className="flex items-center gap-2 mb-2">
+                <span className="text-rose-punch font-bold text-lg">-</span>
+                <span className="text-white/90 font-medium text-base">{item}</span>
               </div>
             ))}
           </div>
@@ -108,30 +108,30 @@ export default function BeforeAfterSection({ className = '' }: Props) {
         {/* Do's card */}
         <div
           ref={doCardRef}
-          className="absolute card-radius card-shadow overflow-hidden right-[6vw] md:left-[54vw]
-            top-[18vh] md:top-[22vh] w-[42vw] md:w-[38vw] h-[55vh] md:h-[58vh]"
+          className="absolute card-radius card-shadow overflow-hidden left-[54vw]
+            top-[22vh] w-[38vw] h-[58vh]"
         >
           <img src="/before_after_do.jpg" alt="Clean workspace - do's"
             className="w-full h-full object-cover" style={{ filter: 'saturate(0.85) contrast(1.05)' }} />
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
-          <div ref={doChipRef} className="absolute top-3 left-3 md:top-4 md:left-4">
-            <div className="bg-lime text-[#2A2A2A] px-3 py-1.5 md:px-4 md:py-2 rounded-full flex items-center gap-1.5 font-display font-semibold text-xs md:text-sm">
-              <Check className="w-3 h-3 md:w-4 md:h-4" /> Do's
+          <div ref={doChipRef} className="absolute top-4 left-4">
+            <div className="bg-lime text-[#2A2A2A] px-4 py-2 rounded-full flex items-center gap-1.5 font-display font-semibold text-sm">
+              <Check className="w-4 h-4" /> Do's
             </div>
           </div>
-          <div className="absolute bottom-4 left-4 right-4 md:bottom-6 md:left-6 md:right-6">
+          <div className="absolute bottom-6 left-6 right-6">
             {DOS.map((item, i) => (
-              <div key={i} className="flex items-center gap-2 mb-1.5 md:mb-2">
-                <span className="text-lime font-bold text-base md:text-lg">+</span>
-                <span className="text-white/90 font-medium text-xs md:text-base">{item}</span>
+              <div key={i} className="flex items-center gap-2 mb-2">
+                <span className="text-lime font-bold text-lg">+</span>
+                <span className="text-white/90 font-medium text-base">{item}</span>
               </div>
             ))}
           </div>
         </div>
       </div>
 
-      {/* ── Mobile layout: stacked vertical cards (< sm) ── */}
-      <div className="sm:hidden absolute inset-x-[6vw] top-[14vh] flex flex-col gap-4">
+      {/* ── Mobile layout: stacked vertical cards (below md / 768px) ── */}
+      <div className="md:hidden absolute inset-x-[6vw] top-[14vh] flex flex-col gap-4">
         {/* Don'ts */}
         <div className="card-radius card-shadow overflow-hidden relative" style={{ height: '38vh' }}>
           <img src="/before_after_dont.jpg" alt="Messy workspace - don'ts"
