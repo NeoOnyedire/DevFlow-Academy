@@ -3,18 +3,12 @@
  * CommitScenesSection.tsx
  * ============================================================================
  *
- * "What Do You Do?" — Interactive scenario cards that simulate real
- * workplace Git situations. Users pick a card to explore that scenario.
+ * "What Do You Do?" — Interactive scenario cards.
  *
- * Three scenarios:
- * 1. "You pushed to main" — teaches revert/undo
- * 2. "Merge conflict in styles.css" — teaches conflict resolution
- * 3. "Teammate broke the build" — teaches rollback/communication
- *
- * MOBILE: Cards stack vertically with full-width layout.
- * Each card click opens the curriculum panel at the relevant module.
- *
- * Animation: 3-phase pinned scroll with cards entering from right.
+ * Mobile fix: the card strip was positioned at top-[40vh] which could
+ * overlap the body text on short phones. It now sits below the body copy
+ * using a flow layout on mobile rather than absolute positioning, giving
+ * each element room to breathe regardless of screen height.
  * ============================================================================
  */
 
@@ -31,7 +25,6 @@ interface Props {
   className?: string
 }
 
-/** Scenario data — each maps to a curriculum module */
 const SCENARIOS = [
   {
     title: 'You pushed to main',
@@ -75,19 +68,14 @@ export default function CommitScenesSection({ className = '' }: Props) {
   const bodyRef = useRef<HTMLDivElement>(null)
   const cardsRef = useRef<(HTMLDivElement | null)[]>([])
 
-  /** Handle scenario card click */
   const handleCardClick = (moduleId: string) => {
-    if (isLoggedIn) {
-      openCurriculum(moduleId)
-    } else {
-      openAuthModal('register')
-    }
+    if (isLoggedIn) openCurriculum(moduleId)
+    else openAuthModal('register')
   }
 
   useLayoutEffect(() => {
     const section = sectionRef.current
     if (!section) return
-
     const ctx = gsap.context(() => {
       const scrollTl = gsap.timeline({
         scrollTrigger: {
@@ -98,42 +86,24 @@ export default function CommitScenesSection({ className = '' }: Props) {
           once: false,
         }
       })
-
-      // ---- ENTRANCE (0% - 30%) ----
-      // Left heading block slides in
       scrollTl
         .fromTo(headingRef.current,
           { x: '-60vw', rotate: -2, opacity: 0 },
-          { x: 0, rotate: 0, opacity: 1, ease: 'none' },
-          0.05
-        )
+          { x: 0, rotate: 0, opacity: 1, ease: 'none' }, 0.05)
         .fromTo(subRef.current,
           { x: '-60vw', opacity: 0 },
-          { x: 0, opacity: 1, ease: 'none' },
-          0.10
-        )
+          { x: 0, opacity: 1, ease: 'none' }, 0.10)
         .fromTo(bodyRef.current,
           { x: '-60vw', opacity: 0 },
-          { x: 0, opacity: 1, ease: 'none' },
-          0.14
-        )
-
-      // Cards enter from right with stagger
+          { x: 0, opacity: 1, ease: 'none' }, 0.14)
       cardsRef.current.forEach((card, i) => {
         if (!card) return
         scrollTl.fromTo(card,
           { x: '70vw', rotate: 10, scale: 0.88, opacity: 0 },
           { x: 0, rotate: (i - 1) * 2, scale: 1, opacity: 1, ease: 'none' },
-          0.10 + i * 0.07
-        )
+          0.10 + i * 0.07)
       })
-
-      // ---- SETTLE (30% - 70%) — static, hover handled by CSS ----
-
-      // No exit animation — keep the scenario cards visible after they reveal.
-
     }, section)
-
     return () => ctx.revert()
   }, [])
 
@@ -144,29 +114,23 @@ export default function CommitScenesSection({ className = '' }: Props) {
       className={`${className} flex items-center justify-center`}
       style={{ paddingTop: '10vh', paddingBottom: '10vh' }}
     >
-      {/* ---- LEFT HEADING BLOCK ---- */}
-      <div ref={headingRef} className="absolute left-[6vw] top-[8vh] md:top-[10vh]">
-        <h2 className="font-display font-bold text-white heading-responsive tracking-[0.02em]"
-          style={{ fontSize: 'clamp(36px, 6vw, 92px)' }}>
-          What Do You Do?
-        </h2>
-      </div>
-
-      <div ref={subRef} className="absolute left-[6vw] top-[20vh] md:top-[26vh] max-w-[40vw]">
-        <p className="font-accent text-xs uppercase tracking-[0.14em] text-white/60">
-          Commit Scenes
-        </p>
-      </div>
-
-      <div ref={bodyRef} className="absolute left-[6vw] top-[26vh] md:top-[32vh] max-w-[80vw] md:max-w-[32vw]">
-        <p className="text-white/80 leading-relaxed" style={{ fontSize: 'clamp(14px, 1.2vw, 18px)' }}>
-          Pick the best move. Get feedback instantly. Learn by making decisions—just like on the job.
-          Each scenario links to a free video lesson.
-        </p>
-      </div>
-
-      {/* ---- DESKTOP SCENARIO CARDS (absolute positioned) ---- */}
+      {/* ── Desktop: absolute positioned heading + cards ── */}
       <div className="hidden md:block">
+        <div ref={headingRef} className="absolute left-[6vw] top-[8vh] md:top-[10vh]">
+          <h2 className="font-display font-bold text-white tracking-[0.02em]"
+            style={{ fontSize: 'clamp(36px, 6vw, 92px)' }}>
+            What Do You Do?
+          </h2>
+        </div>
+        <div ref={subRef} className="absolute left-[6vw] top-[20vh] md:top-[26vh] max-w-[40vw]">
+          <p className="font-accent text-xs uppercase tracking-[0.14em] text-white/60">Commit Scenes</p>
+        </div>
+        <div ref={bodyRef} className="absolute left-[6vw] top-[26vh] md:top-[32vh] max-w-[32vw]">
+          <p className="text-white/80 leading-relaxed" style={{ fontSize: 'clamp(14px, 1.2vw, 18px)' }}>
+            Pick the best move. Get feedback instantly. Learn by making decisions—just like on the job.
+          </p>
+        </div>
+
         {SCENARIOS.map((scenario, i) => {
           const Icon = scenario.icon
           return (
@@ -176,16 +140,11 @@ export default function CommitScenesSection({ className = '' }: Props) {
               onClick={() => handleCardClick(scenario.moduleId)}
               className="absolute card-radius card-shadow overflow-hidden cursor-pointer
                 hover:scale-105 hover:z-10 transition-transform duration-300"
-              style={{
-                ...scenario.position,
-                width: scenario.width,
-                backgroundColor: 'var(--card-light)',
-              }}
+              style={{ ...scenario.position, width: scenario.width, backgroundColor: 'var(--card-light)' }}
             >
               <div className="w-full h-32 overflow-hidden relative">
                 <img src={scenario.img} alt={scenario.title}
-                  className="w-full h-full object-cover"
-                  style={{ filter: 'saturate(0.85) contrast(1.05)' }} />
+                  className="w-full h-full object-cover" style={{ filter: 'saturate(0.85) contrast(1.05)' }} />
                 <div className="absolute inset-0" style={{ background: `linear-gradient(to bottom, transparent 40%, ${scenario.color}30 100%)` }} />
               </div>
               <div className="p-4">
@@ -193,9 +152,7 @@ export default function CommitScenesSection({ className = '' }: Props) {
                   style={{ backgroundColor: scenario.color }}>
                   <Icon className="w-4 h-4 text-white" />
                 </div>
-                <h3 className="font-display font-semibold text-[#2A2A2A] text-sm leading-tight mb-2">
-                  {scenario.title}
-                </h3>
+                <h3 className="font-display font-semibold text-[#2A2A2A] text-sm leading-tight mb-2">{scenario.title}</h3>
                 <div className="flex gap-1.5">
                   {scenario.tags.map(tag => (
                     <span key={tag} className="px-2 py-0.5 rounded-full text-[9px] font-accent font-semibold uppercase tracking-wider"
@@ -210,44 +167,50 @@ export default function CommitScenesSection({ className = '' }: Props) {
         })}
       </div>
 
-      {/* ---- MOBILE SCENARIO CARDS (horizontal scroll) ---- */}
-      <div className="md:hidden absolute left-[6vw] right-[6vw] top-[40vh] flex gap-3 overflow-x-auto pb-4 snap-x snap-mandatory
-        scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent">
-        {SCENARIOS.map((scenario, i) => {
-          const Icon = scenario.icon
-          return (
-            <div
-              key={i}
-              onClick={() => handleCardClick(scenario.moduleId)}
-              className="min-w-[260px] card-radius card-shadow overflow-hidden cursor-pointer snap-start"
-              style={{ backgroundColor: 'var(--card-light)' }}
-            >
-              <div className="w-full h-28 overflow-hidden relative">
-                <img src={scenario.img} alt={scenario.title}
-                  className="w-full h-full object-cover"
-                  style={{ filter: 'saturate(0.85) contrast(1.05)' }} />
-                <div className="absolute inset-0" style={{ background: `linear-gradient(to bottom, transparent 40%, ${scenario.color}30 100%)` }} />
-              </div>
-              <div className="p-3">
-                <div className="w-8 h-8 rounded-full flex items-center justify-center mb-1.5"
-                  style={{ backgroundColor: scenario.color }}>
-                  <Icon className="w-4 h-4 text-white" />
+      {/* ── Mobile: normal flow layout so nothing overlaps ── */}
+      <div className="md:hidden w-full px-[6vw] flex flex-col gap-6 pt-[6vh]">
+        <div ref={headingRef}>
+          <h2 className="font-display font-bold text-white tracking-[0.02em] mb-2"
+            style={{ fontSize: 'clamp(32px, 9vw, 56px)' }}>
+            What Do You Do?
+          </h2>
+          <p className="font-accent text-xs uppercase tracking-[0.14em] text-white/60 mb-3">Commit Scenes</p>
+          <p className="text-white/80 leading-relaxed text-sm mb-4">
+            Pick the best move. Get feedback instantly. Each scenario links to a free video lesson.
+          </p>
+        </div>
+
+        <div className="flex flex-col gap-3">
+          {SCENARIOS.map((scenario, i) => {
+            const Icon = scenario.icon
+            return (
+              <div
+                key={i}
+                onClick={() => handleCardClick(scenario.moduleId)}
+                className="card-radius card-shadow overflow-hidden cursor-pointer active:scale-[0.98] transition-transform"
+                style={{ backgroundColor: 'var(--card-light)' }}
+              >
+                <div className="flex items-center gap-3 p-3">
+                  <div className="w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center"
+                    style={{ backgroundColor: scenario.color }}>
+                    <Icon className="w-5 h-5 text-white" />
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="font-display font-semibold text-[#2A2A2A] text-sm leading-tight mb-1">{scenario.title}</h3>
+                    <div className="flex gap-1.5">
+                      {scenario.tags.map(tag => (
+                        <span key={tag} className="px-1.5 py-0.5 rounded-full text-[9px] font-accent font-semibold uppercase tracking-wider"
+                          style={{ backgroundColor: `${scenario.color}20`, color: scenario.color }}>
+                          #{tag}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
                 </div>
-                <h3 className="font-display font-semibold text-[#2A2A2A] text-xs leading-tight mb-1.5">
-                  {scenario.title}
-                </h3>
-                <div className="flex gap-1.5">
-                  {scenario.tags.map(tag => (
-                    <span key={tag} className="px-1.5 py-0.5 rounded-full text-[8px] font-accent font-semibold uppercase tracking-wider"
-                      style={{ backgroundColor: `${scenario.color}20`, color: scenario.color }}>
-                      #{tag}
-                    </span>
-                  ))}
-                </div>
               </div>
-            </div>
-          )
-        })}
+            )
+          })}
+        </div>
       </div>
     </section>
   )

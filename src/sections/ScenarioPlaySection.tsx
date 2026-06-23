@@ -1,7 +1,23 @@
+/**
+ * ============================================================================
+ * ScenarioPlaySection.tsx
+ * ============================================================================
+ *
+ * Interactive Git scenario practice.
+ *
+ * Improvements:
+ * - After answering, a large prominent "Next Scenario →" banner replaces
+ *   the tucked-away button so it's impossible to miss
+ * - Scenario tabs (01–04) show a coloured dot when that scenario has been
+ *   answered in this session
+ * - Reset now shows a native confirm dialog before clearing state
+ * ============================================================================
+ */
+
 import { useMemo, useRef, useState, useLayoutEffect } from 'react'
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
-import { BadgeCheck, CircleAlert, Flame, RotateCcw, Sparkles, Trophy } from 'lucide-react'
+import { BadgeCheck, CircleAlert, Flame, RotateCcw, Sparkles, Trophy, ArrowRight } from 'lucide-react'
 
 gsap.registerPlugin(ScrollTrigger)
 
@@ -75,19 +91,19 @@ export default function ScenarioPlaySection({ className = '' }: Props) {
   const [selectedChoice, setSelectedChoice] = useState<ScenarioChoice | null>(null)
   const [totalPoints, setTotalPoints] = useState(() => Number(localStorage.getItem('devflow_scenario_points') || 0))
   const [plays, setPlays] = useState(() => Number(localStorage.getItem('devflow_scenario_plays') || 0))
+  // Track which scenario indices have been answered this session
+  const [answeredIndices, setAnsweredIndices] = useState<Set<number>>(new Set())
 
   const sectionRef = useRef<HTMLDivElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
   const cardsRef = useRef<(HTMLButtonElement | null)[]>([])
 
   const scenario = SCENARIOS[activeIndex]
-  const bestPoints = Math.max(...scenario.choices.map(choice => choice.points))
+  const bestPoints = Math.max(...scenario.choices.map(c => c.points))
   const streak = Math.min(plays, 7)
   const rank = totalPoints >= 900 ? 'Gold' : totalPoints >= 450 ? 'Silver' : 'Rookie'
 
-  const sortedChoices = useMemo(() => {
-    return scenario.choices
-  }, [scenario])
+  const sortedChoices = useMemo(() => scenario.choices, [scenario])
 
   const chooseScenario = (index: number) => {
     setActiveIndex(index)
@@ -96,13 +112,12 @@ export default function ScenarioPlaySection({ className = '' }: Props) {
 
   const answerScenario = (choice: ScenarioChoice) => {
     if (selectedChoice) return
-
     const nextPoints = totalPoints + choice.points
     const nextPlays = plays + 1
-
     setSelectedChoice(choice)
     setTotalPoints(nextPoints)
     setPlays(nextPlays)
+    setAnsweredIndices(prev => new Set(prev).add(activeIndex))
     localStorage.setItem('devflow_scenario_points', String(nextPoints))
     localStorage.setItem('devflow_scenario_plays', String(nextPlays))
   }
@@ -113,9 +128,12 @@ export default function ScenarioPlaySection({ className = '' }: Props) {
   }
 
   const resetRun = () => {
+    const confirmed = window.confirm('Reset your points and streak? This cannot be undone.')
+    if (!confirmed) return
     setSelectedChoice(null)
     setTotalPoints(0)
     setPlays(0)
+    setAnsweredIndices(new Set())
     localStorage.removeItem('devflow_scenario_points')
     localStorage.removeItem('devflow_scenario_plays')
   }
@@ -123,13 +141,11 @@ export default function ScenarioPlaySection({ className = '' }: Props) {
   useLayoutEffect(() => {
     const section = sectionRef.current
     if (!section) return
-
     const ctx = gsap.context(() => {
       gsap.fromTo(panelRef.current,
         { y: 64, opacity: 0 },
         {
-          y: 0,
-          opacity: 1,
+          y: 0, opacity: 1,
           scrollTrigger: {
             trigger: section,
             start: 'top 75%',
@@ -138,14 +154,12 @@ export default function ScenarioPlaySection({ className = '' }: Props) {
           },
         }
       )
-
       cardsRef.current.forEach((card, index) => {
         if (!card) return
         gsap.fromTo(card,
           { y: 24, opacity: 0 },
           {
-            y: 0,
-            opacity: 1,
+            y: 0, opacity: 1,
             delay: index * 0.04,
             scrollTrigger: {
               trigger: card,
@@ -157,7 +171,6 @@ export default function ScenarioPlaySection({ className = '' }: Props) {
         )
       })
     }, section)
-
     return () => ctx.revert()
   }, [])
 
@@ -169,6 +182,8 @@ export default function ScenarioPlaySection({ className = '' }: Props) {
       style={{ padding: '9vh 6vw', minHeight: '100vh' }}
     >
       <div className="grid gap-6 lg:grid-cols-[0.9fr_1.4fr] lg:items-start">
+
+        {/* Left — stats */}
         <div className="max-w-xl">
           <p className="font-accent text-xs uppercase tracking-[0.14em] text-[#2A2A2A]/60 mb-4">
             Interactive practice
@@ -202,23 +217,41 @@ export default function ScenarioPlaySection({ className = '' }: Props) {
           </div>
         </div>
 
+        {/* Right — scenario panel */}
         <div ref={panelRef} className="bg-card-dark card-shadow text-white p-4 md:p-6" style={{ borderRadius: 8 }}>
+
+          {/* Scenario tabs — show a dot when answered */}
           <div className="flex flex-wrap gap-2 mb-5">
-            {SCENARIOS.map((item, index) => (
-              <button
-                key={item.title}
-                onClick={() => chooseScenario(index)}
-                className={`px-3 py-2 text-xs font-accent uppercase tracking-[0.12em] transition-colors ${
-                  activeIndex === index ? 'bg-[#F7B731] text-[#2A2A2A]' : 'bg-white/10 text-white/70 hover:bg-white/15'
-                }`}
-                style={{ borderRadius: 8 }}
-              >
-                {String(index + 1).padStart(2, '0')}
-              </button>
-            ))}
+            {SCENARIOS.map((item, index) => {
+              const isAnswered = answeredIndices.has(index)
+              return (
+                <button
+                  key={item.title}
+                  onClick={() => chooseScenario(index)}
+                  className={`relative px-3 py-2 text-xs font-accent uppercase tracking-[0.12em] transition-colors ${
+                    activeIndex === index
+                      ? 'bg-[#F7B731] text-[#2A2A2A]'
+                      : 'bg-white/10 text-white/70 hover:bg-white/15'
+                  }`}
+                  style={{ borderRadius: 8 }}
+                >
+                  {String(index + 1).padStart(2, '0')}
+                  {/* Answered indicator dot */}
+                  {isAnswered && activeIndex !== index && (
+                    <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-[#3CCF4A] border-2 border-[#4A2F2F]" />
+                  )}
+                </button>
+              )
+            })}
+            {/* Legend */}
+            <span className="flex items-center gap-1 text-[10px] text-white/30 font-accent ml-1 self-center">
+              <span className="w-2 h-2 rounded-full bg-[#3CCF4A] inline-block" />
+              answered
+            </span>
           </div>
 
           <div className="grid gap-4 xl:grid-cols-[1fr_0.8fr]">
+            {/* Scenario info */}
             <div>
               <p className="font-accent text-xs uppercase tracking-[0.14em] text-white/45 mb-3">{scenario.role}</p>
               <h3 className="font-display text-3xl md:text-4xl font-bold mb-4">{scenario.title}</h3>
@@ -228,6 +261,7 @@ export default function ScenarioPlaySection({ className = '' }: Props) {
               </div>
             </div>
 
+            {/* Choice buttons */}
             <div className="space-y-3">
               {sortedChoices.map((choice, index) => {
                 const isSelected = selectedChoice?.label === choice.label
@@ -239,12 +273,15 @@ export default function ScenarioPlaySection({ className = '' }: Props) {
                     key={choice.label}
                     ref={el => { cardsRef.current[index] = el }}
                     onClick={() => answerScenario(choice)}
+                    disabled={!!selectedChoice}
                     className={`w-full text-left p-4 border transition-all ${
                       isSelected
                         ? isBest
                           ? 'bg-[#3CCF4A]/20 border-[#3CCF4A]'
                           : 'bg-[#FF4D6D]/20 border-[#FF4D6D]'
-                        : 'bg-white/[0.07] border-white/10 hover:bg-white/[0.12]'
+                        : showResult && isBest
+                          ? 'bg-[#3CCF4A]/10 border-[#3CCF4A]/40'
+                          : 'bg-white/[0.07] border-white/10 hover:bg-white/[0.12] disabled:cursor-default'
                     }`}
                     style={{ borderRadius: 8 }}
                   >
@@ -260,7 +297,9 @@ export default function ScenarioPlaySection({ className = '' }: Props) {
                       </div>
                       <div>
                         <p className="font-display text-lg font-semibold text-white">{choice.label}</p>
-                        <p className="mt-1 text-sm leading-relaxed text-white/60">{showResult ? choice.detail : `${choice.points} possible points`}</p>
+                        <p className="mt-1 text-sm leading-relaxed text-white/60">
+                          {showResult ? choice.detail : `${choice.points} possible points`}
+                        </p>
                       </div>
                     </div>
                   </button>
@@ -269,26 +308,43 @@ export default function ScenarioPlaySection({ className = '' }: Props) {
             </div>
           </div>
 
-          <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-4">
-            <div className="flex items-center gap-2 text-sm text-white/62">
-              <CircleAlert className="h-4 w-4 text-[#F7B731]" />
-              {selectedChoice ? `You earned ${selectedChoice.points} points on this scenario.` : 'Choose one move to lock in your answer.'}
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={resetRun}
-                className="flex items-center gap-2 bg-white/10 px-4 py-2 text-sm font-semibold text-white/75 transition-colors hover:bg-white/15"
-                style={{ borderRadius: 8 }}
-              >
-                <RotateCcw className="h-4 w-4" />
-                Reset
-              </button>
+          {/* Bottom bar */}
+          <div className="mt-5 border-t border-white/10 pt-4 space-y-3">
+
+            {/* Prominent "Next Scenario" banner — only shown after answering */}
+            {selectedChoice && (
               <button
                 onClick={nextScenario}
-                className="bg-rose-punch px-4 py-2 text-sm font-display font-semibold text-white transition-transform hover:scale-105"
+                className="w-full flex items-center justify-between gap-3 px-5 py-4
+                  bg-rose-punch hover:bg-[#ff3d5d] text-white font-display font-semibold
+                  transition-all hover:scale-[1.01] active:scale-[0.99]"
+                style={{ borderRadius: 8, fontSize: 'clamp(14px, 1.1vw, 16px)' }}
+              >
+                <span>
+                  {selectedChoice.points === bestPoints
+                    ? `Perfect! +${selectedChoice.points} points — next scenario`
+                    : `+${selectedChoice.points} points — try the next one`}
+                </span>
+                <ArrowRight className="h-5 w-5 flex-shrink-0" />
+              </button>
+            )}
+
+            {/* Status row + reset */}
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2 text-sm text-white/62">
+                <CircleAlert className="h-4 w-4 text-[#F7B731] flex-shrink-0" />
+                {selectedChoice
+                  ? `You earned ${selectedChoice.points} pts on this scenario.`
+                  : 'Choose one move to lock in your answer.'}
+              </div>
+              <button
+                onClick={resetRun}
+                className="flex items-center gap-2 bg-white/10 px-3 py-2 text-sm
+                  font-semibold text-white/60 hover:bg-white/15 hover:text-white/80 transition-colors"
                 style={{ borderRadius: 8 }}
               >
-                Next Scenario
+                <RotateCcw className="h-3.5 w-3.5" />
+                Reset
               </button>
             </div>
           </div>
