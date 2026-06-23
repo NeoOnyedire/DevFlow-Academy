@@ -227,15 +227,10 @@ export default function CurriculumPanel() {
 
           {/* Module sidebar */}
           <div
-            className="w-full md:w-72 border-t md:border-t-0 md:border-l border-white/10 overflow-y-auto flex-shrink-0"
-            style={{ maxHeight: 'min(40vh, 300px)', mdMaxHeight: '100dvh' }}
+            className="w-full md:w-72 border-t md:border-t-0 md:border-l border-white/10 overflow-y-auto flex-shrink-0
+              max-h-[300px] md:max-h-[100dvh]"
           >
-            <style>{`
-              @media (min-width: 768px) {
-                .sidebar-scroll { max-height: 100dvh !important; }
-              }
-            `}</style>
-            <div className="p-3 sidebar-scroll">
+            <div className="p-3">
               <p className="font-accent text-[10px] uppercase tracking-[0.14em] text-white/40 px-3 mb-2">
                 All Modules
               </p>
