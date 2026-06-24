@@ -28,7 +28,7 @@ import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { useAuth } from '../context/AuthContext'
 import { ROLE_PATHS, useApp, type LearningRole } from '../context/AppContext'
-import { BookOpen, Flame, Award, Trophy, Map, ArrowRight, Lock, Github, Briefcase, Target, CheckCircle } from 'lucide-react'
+import { BookOpen, Flame, Award, Trophy, Map, ArrowRight, Github, Briefcase, Target, CheckCircle } from 'lucide-react'
 
 gsap.registerPlugin(ScrollTrigger)
 
@@ -144,39 +144,72 @@ export default function DashboardSection({ className = '' }: Props) {
     return () => ctx.revert()
   }, [])
 
-  // Not logged in — show login prompt
+  // Not logged in — aspirational preview with empty bars (motivating, not a lock screen)
   if (!isLoggedIn) {
     return (
       <section
         ref={sectionRef}
         id="dashboard"
         className={`${className} relative`}
-        style={{ padding: '8vh 0', minHeight: '60vh' }}
+        style={{ padding: '8vh 0', minHeight: '80vh' }}
       >
-        <div className="px-[6vw] flex flex-col items-center justify-center text-center py-16">
-          <div ref={headingRef}>
-            <div className="w-16 h-16 rounded-full bg-[#4A2F2F] flex items-center justify-center mx-auto mb-5">
-              <Lock className="w-8 h-8 text-white/40" />
-            </div>
-            <h2 className="font-display font-bold heading-responsive tracking-[0.02em] mb-4"
+        <div className="px-[6vw]">
+          <div ref={headingRef} className="mb-8">
+            <h2 className="font-display font-bold tracking-[0.02em] mb-2"
               style={{ fontSize: 'clamp(36px, 6vw, 72px)', color: '#2A2A2A' }}>
-              Track Your Progress
+              Your Progress
             </h2>
-            <p className="max-w-md mx-auto leading-relaxed mb-8" style={{ color: '#2A2A2Acc', fontSize: 'clamp(14px, 1.2vw, 17px)' }}>
-              Create a free account to track your lessons, earn badges, and see how far you've come.
+            <p style={{ color: '#2A2A2A99', fontSize: 'clamp(14px, 1.2vw, 17px)' }}>
+              Start learning to fill these in. Free account, no credit card.
             </p>
-            <button
-              onClick={() => openAuthModal('register')}
-              className="bg-rose-punch text-white font-display font-semibold px-8 py-4 card-radius card-shadow
-                hover:scale-105 transition-all duration-300"
-              style={{ fontSize: 'clamp(15px, 1.4vw, 18px)' }}>
-              Join Free to Track Progress
-            </button>
           </div>
+
+          {/* Greyed-out stat cards */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4 opacity-40 pointer-events-none select-none">
+            {[
+              { label: 'Lessons', value: '0 / 8' },
+              { label: 'Streak',  value: '0 days' },
+              { label: 'Badges',  value: '0'      },
+              { label: 'Ranking', value: 'Top 25%'},
+            ].map(stat => (
+              <div key={stat.label} className="bg-[#4A2F2F]/60 card-radius p-4">
+                <p className="font-display text-3xl font-bold text-white mb-1">{stat.value}</p>
+                <p className="text-white/50 text-xs font-accent uppercase tracking-wider">{stat.label}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Empty skill map */}
+          <div className="bg-[#4A2F2F]/60 card-radius p-5 mb-6 opacity-40 pointer-events-none select-none">
+            <p className="text-white/40 text-xs font-accent uppercase tracking-[0.14em] mb-4">Skill Map</p>
+            <div className="space-y-3">
+              {SKILL_MODULES.map(skill => (
+                <div key={skill.name}>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2.5 h-2.5 rounded-full bg-white/15" />
+                      <span className="text-white/50 text-sm">{skill.name}</span>
+                    </div>
+                    <span className="text-white/25 text-xs">0%</span>
+                  </div>
+                  <div className="h-2 bg-white/10 rounded-full" />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <button
+            onClick={() => openAuthModal('register')}
+            className="bg-rose-punch text-white font-display font-semibold px-8 py-4 card-radius card-shadow
+              hover:scale-105 transition-all duration-300"
+            style={{ fontSize: 'clamp(15px, 1.4vw, 18px)' }}>
+            Join Free — start filling in your progress
+          </button>
         </div>
       </section>
     )
   }
+
 
   return (
     <section

@@ -34,6 +34,7 @@ interface ScenarioChoice {
 interface Scenario {
   title: string
   role: string
+  realness: string
   prompt: string
   command: string
   choices: ScenarioChoice[]
@@ -42,6 +43,7 @@ interface Scenario {
 const SCENARIOS: Scenario[] = [
   {
     title: 'The Hotfix Sprint',
+    realness: 'This happens at most companies within your first two weeks.',
     role: 'Release captain',
     prompt: 'Production is broken, but your teammate has unfinished work on main. What is the cleanest first move?',
     command: 'git switch -c hotfix/payment-timeout',
@@ -53,6 +55,7 @@ const SCENARIOS: Scenario[] = [
   },
   {
     title: 'The Conflict Room',
+    realness: 'Every developer hits this in their first month on a shared codebase.',
     role: 'Merge mediator',
     prompt: 'Your pull request conflicts with main. You need to bring main into your branch before asking for review.',
     command: 'git fetch origin && git merge origin/main',
@@ -64,6 +67,7 @@ const SCENARIOS: Scenario[] = [
   },
   {
     title: 'The Mystery Commit',
+    realness: 'You will investigate broken builds like this regularly as a team grows.',
     role: 'History detective',
     prompt: 'A bug appeared yesterday. You need to inspect recent changes without altering the project.',
     command: 'git log --oneline --decorate -n 8',
@@ -75,6 +79,7 @@ const SCENARIOS: Scenario[] = [
   },
   {
     title: 'The Almost Ready PR',
+    realness: 'Code review etiquette like this is expected on every professional team.',
     role: 'Review finisher',
     prompt: 'Your feature works, but you accidentally staged a local notes file. What should you do?',
     command: 'git restore --staged notes.txt',
@@ -253,7 +258,8 @@ export default function ScenarioPlaySection({ className = '' }: Props) {
           <div className="grid gap-4 xl:grid-cols-[1fr_0.8fr]">
             {/* Scenario info */}
             <div>
-              <p className="font-accent text-xs uppercase tracking-[0.14em] text-white/45 mb-3">{scenario.role}</p>
+              <p className="font-accent text-xs uppercase tracking-[0.14em] text-white/45 mb-1">{scenario.role}</p>
+              <p className="text-[#F7B731]/70 text-xs mb-3 italic">{scenario.realness}</p>
               <h3 className="font-display text-3xl md:text-4xl font-bold mb-4">{scenario.title}</h3>
               <p className="text-white/75 leading-relaxed mb-5">{scenario.prompt}</p>
               <div className="bg-black/25 border border-white/10 p-4 font-mono text-sm text-[#F7B731]" style={{ borderRadius: 8 }}>
