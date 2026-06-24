@@ -32,8 +32,8 @@ const SCENARIOS = [
     color: '#3CCF4A',
     icon: RotateCcw,
     img: '/commit_scene_01.jpg',
-    position: { left: '54vw', top: '10vh' },
-    width: '38vw',
+    position: { left: '56vw', top: '8vh' },
+    width: '36vw',
     moduleId: 'mod-01',
   },
   {
@@ -42,7 +42,7 @@ const SCENARIOS = [
     color: '#FF4D6D',
     icon: GitMerge,
     img: '/commit_scene_02.jpg',
-    position: { left: '62vw', top: '38vh' },
+    position: { left: '62vw', top: '36vh' },
     width: '30vw',
     moduleId: 'mod-03',
   },
@@ -52,7 +52,7 @@ const SCENARIOS = [
     color: '#4A90D9',
     icon: MessageCircle,
     img: '/commit_scene_03.jpg',
-    position: { left: '46vw', top: '62vh' },
+    position: { left: '54vw', top: '60vh' },
     width: '36vw',
     moduleId: 'mod-04',
   },
@@ -116,8 +116,8 @@ export default function CommitScenesSection({ className = '' }: Props) {
     >
       {/* ── Desktop: absolute positioned heading + cards ── */}
       <div className="hidden md:block">
-        <div ref={headingRef} className="absolute left-[6vw] top-[8vh] md:top-[10vh]">
-          <h2 className="font-display font-bold text-white tracking-[0.02em]"
+        <div ref={headingRef} className="absolute left-[6vw] top-[8vh] md:top-[10vh] max-w-[44vw]">
+          <h2 className="font-display font-bold text-white tracking-[0.02em] leading-none"
             style={{ fontSize: 'clamp(36px, 6vw, 92px)' }}>
             What Do You Do?
           </h2>
