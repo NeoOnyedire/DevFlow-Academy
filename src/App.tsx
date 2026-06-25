@@ -1,33 +1,20 @@
 /**
- * ============================================================================
  * App.tsx
- * ============================================================================
  *
- * Root component for DevFlow Academy. Orchestrates all sections,
- * context providers, modals, and global scroll behavior.
+ * Root component — sets up context providers and routes.
+ * Global overlays (CurriculumPanel, AuthModal, ReviewModal, GitterHelper)
+ * live here so they persist and work on every page.
  *
- * Architecture:
- * - AuthProvider: manages login/register state
- * - AppProvider: manages curriculum, reviews, progress
- * - Pinned sections (1-5): full-viewport with GSAP ScrollTrigger
- * - Flowing sections (6-8): normal scroll with reveal animations
- * - Floating modals: AuthModal, CurriculumPanel, ReviewModal (portal-like)
- *
- * Section order:
- * 1. Hero (pinned)
- * 2. Learn Grid (pinned)
- * 3. Troubleshoot (pinned)
- * 4. Commit Scenes (pinned)
- * 5. Before/After (pinned)
- * 6. Dashboard (flowing)
- * 7. Scenario Play (flowing)
- * 8. Reviews (flowing)
- * 9. Challenge (flowing)
- * 10. Footer (flowing)
- * ============================================================================
+ * Routes:
+ *   /              Landing page
+ *   /learn         Curriculum / lesson browser
+ *   /practice      Commit scenes + scenario play
+ *   /troubleshoot  Git error search tool
+ *   /challenge     Repo Royale weekly challenge
+ *   /dashboard     Progress, skills, GitHub, career mode
  */
 
-import { useEffect, useRef, useLayoutEffect } from 'react'
+import { Routes, Route } from 'react-router-dom'
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 
@@ -35,129 +22,46 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { AuthProvider } from './context/AuthContext'
 import { AppProvider } from './context/AppContext'
 
-// Components
-import Navigation from './components/Navigation'
-import AuthModal from './components/AuthModal'
+// Global overlays — always mounted, shown/hidden via context
+import AuthModal      from './components/AuthModal'
 import CurriculumPanel from './components/CurriculumPanel'
-import ReviewModal from './components/ReviewModal'
-import ReviewsSection from './components/ReviewsSection'
-import GitterHelper from './components/GitterHelper'
+import ReviewModal    from './components/ReviewModal'
+import GitterHelper   from './components/GitterHelper'
 
-// Sections
-import HeroSection from './sections/HeroSection'
-import LearnGridSection from './sections/LearnGridSection'
-import TroubleshootSection from './sections/TroubleshootSection'
-import CommitScenesSection from './sections/CommitScenesSection'
-import BeforeAfterSection from './sections/BeforeAfterSection'
-import DashboardSection from './sections/DashboardSection'
-import ScenarioPlaySection from './sections/ScenarioPlaySection'
-import ChallengeSection from './sections/ChallengeSection'
-import FooterSection from './sections/FooterSection'
+// Pages
+import LandingPage      from './pages/LandingPage'
+import LearnPage        from './pages/LearnPage'
+import PracticePage     from './pages/PracticePage'
+import TroubleshootPage from './pages/TroubleshootPage'
+import ChallengePage    from './pages/ChallengePage'
+import DashboardPage    from './pages/DashboardPage'
 
 gsap.registerPlugin(ScrollTrigger)
 
-/** Inner app component — all hooks run inside providers */
 function AppInner() {
-  const mainRef = useRef<HTMLDivElement>(null)
-  const navRef = useRef<HTMLDivElement>(null)
-
-  /**
-   * Refresh ScrollTrigger after the page mounts.
-   * This helps pinned section boundaries settle cleanly without forcing a snap.
-   */
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      ScrollTrigger.refresh()
-    }, 500)
-
-    return () => clearTimeout(timer)
-  }, [])
-
-  /**
-   * Navigation show/hide based on scroll position.
-   * Nav appears after scrolling past the hero section (~100vh).
-   */
-  useLayoutEffect(() => {
-    const showNav = () => {
-      if (navRef.current) {
-        gsap.to(navRef.current, { y: 0, opacity: 1, duration: 0.3, ease: 'power2.out' })
-      }
-    }
-    const hideNav = () => {
-      if (navRef.current) {
-        gsap.to(navRef.current, { y: -100, opacity: 0, duration: 0.3, ease: 'power2.out' })
-      }
-    }
-
-    ScrollTrigger.create({
-      trigger: mainRef.current,
-      start: 'top -100vh',
-      onEnter: showNav,
-      onLeaveBack: hideNav,
-    })
-
-    return () => {
-      ScrollTrigger.getAll().forEach(st => st.kill())
-    }
-  }, [])
-
   return (
     <>
-      {/* Film grain texture overlay — subtle, static, pointer-events none */}
-      <div className="grain-overlay" />
-
-      {/* Fixed navigation — hidden initially, shown after scrolling */}
-      <div ref={navRef} className="fixed top-0 left-0 w-full z-[100] opacity-0 -translate-y-full">
-        <Navigation />
-      </div>
-
-      {/* Floating modals — rendered at root level for portal-like behavior */}
+      {/* Global overlays */}
       <AuthModal />
       <CurriculumPanel />
       <ReviewModal />
       <GitterHelper />
 
-      {/* Main scrollable content */}
-      <main ref={mainRef} className="relative snap-y snap-mandatory scroll-smooth overflow-x-hidden">
-        {/* Pinned sections — z-index increases so next section overlays previous */}
-        <div className="relative z-10">
-          <HeroSection className="section-pinned bg-espresso" />
-        </div>
-        <div className="relative z-20">
-          <LearnGridSection className="section-pinned bg-sun-yellow" />
-        </div>
-        <div className="relative z-30">
-          <TroubleshootSection className="section-pinned bg-espresso" />
-        </div>
-        <div className="relative z-40">
-          <CommitScenesSection className="section-pinned bg-sun-yellow" />
-        </div>
-        <div className="relative z-50">
-          <BeforeAfterSection className="section-pinned bg-espresso" />
-        </div>
-
-        {/* Flowing sections — normal scroll behavior */}
-        <div className="relative z-[60]">
-          <DashboardSection className="bg-sun-yellow" />
-        </div>
-        <div className="relative z-[63]">
-          <ScenarioPlaySection className="bg-sun-yellow" />
-        </div>
-        <div className="relative z-[65]">
-          <ReviewsSection />
-        </div>
-        <div className="relative z-[70]">
-          <ChallengeSection className="bg-espresso" />
-        </div>
-        <div className="relative z-[80]">
-          <FooterSection className="bg-sun-yellow" />
-        </div>
-      </main>
+      {/* Page routes */}
+      <Routes>
+        <Route path="/"             element={<LandingPage />} />
+        <Route path="/learn"        element={<LearnPage />} />
+        <Route path="/practice"     element={<PracticePage />} />
+        <Route path="/troubleshoot" element={<TroubleshootPage />} />
+        <Route path="/challenge"    element={<ChallengePage />} />
+        <Route path="/dashboard"    element={<DashboardPage />} />
+        {/* Fallback */}
+        <Route path="*"             element={<LandingPage />} />
+      </Routes>
     </>
   )
 }
 
-/** Root App — wraps everything in context providers */
 export default function App() {
   return (
     <AuthProvider>

@@ -23,6 +23,7 @@
 import { useRef, useLayoutEffect } from 'react'
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useApp } from '../context/AppContext'
 import { GitBranch, Heart } from 'lucide-react'
@@ -36,6 +37,7 @@ interface Props {
 export default function FooterSection({ className = '' }: Props) {
   const { isLoggedIn, openAuthModal } = useAuth()
   const { openCurriculum, modules, completedModules } = useApp()
+  const navigate = useNavigate()
 
   const sectionRef = useRef<HTMLDivElement>(null)
   const leftRef = useRef<HTMLDivElement>(null)
@@ -52,7 +54,8 @@ export default function FooterSection({ className = '' }: Props) {
   const handleStartFree = () => {
     if (isLoggedIn) {
       const nextModule = modules.find(m => !completedModules.includes(m.id))
-      openCurriculum(nextModule?.id)
+      navigate('/learn')
+      setTimeout(() => openCurriculum(nextModule?.id), 200)
     } else {
       openAuthModal('register')
     }
@@ -64,7 +67,7 @@ export default function FooterSection({ className = '' }: Props) {
    * scroll through all 8 lessons at their own pace. No login required.
    */
   const handleBrowseAll = () => {
-    openCurriculum()
+    navigate('/learn')
   }
 
   useLayoutEffect(() => {
