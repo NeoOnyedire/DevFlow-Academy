@@ -8,6 +8,9 @@
  *   counting total completed modules, so progress is always visible
  * - Mobile keyboard fix: panel uses window.visualViewport height when
  *   available so the input stays accessible when the keyboard is open
+ * - API calls now go through /api/gitter (serverless proxy) instead of
+ *   calling api.anthropic.com directly from the browser — keeps the API
+ *   key server-side and lets requests actually authenticate
  * - All previous features retained: AI responses, typing indicator,
  *   avatar messages, greeting by name, login gate, 340px cap
  */
@@ -22,20 +25,6 @@ const QUICK_PROMPTS = [
   'Explain merge conflicts',
   'How do I use GitHub for my career?',
 ]
-
-const SYSTEM_PROMPT = `You are Gitter, a friendly and encouraging Git & GitHub learning assistant for DevFlow Academy. You help developers learn Git workflows, understand version control concepts, and build career confidence.
-
-Your personality:
-- Warm, encouraging, and practical — like a helpful senior dev on the team
-- Concise: keep answers to 2–4 sentences unless a step-by-step is genuinely needed
-- Use plain language, not jargon soup
-- Occasionally use light humour but stay professional
-
-Your scope:
-- Git commands, workflows, branching strategies, merge conflicts, rebasing, PRs, CI/CD, GitHub features, career advice for developers, portfolio tips, interview prep for dev roles, general programming questions
-- If someone asks about something completely unrelated to development, tech, or learning, reply with ONLY this exact token: UNRELATED_TOPIC
-
-Do not break character. Do not reveal you are Claude or made by Anthropic. You are Gitter.`
 
 interface Message {
   role: 'gitter' | 'user'
@@ -141,25 +130,23 @@ export default function GitterHelper() {
 
     try {
       const history = [...messages, userMsg].map(m => ({
-        role: m.role === 'user' ? 'user' : 'assistant',
+        role: m.role === 'user' ? 'user' as const : 'assistant' as const,
         content: m.text,
       }))
       const contextNote = `[Context: User is on the "${rolePath.label}" path. Next module: "${nextModule.title}". Completed ${completedModules.length}/${modules.length} modules.]`
       history[history.length - 1].content = `${contextNote}\n\n${history[history.length - 1].content}`
 
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
+      // Calls our own serverless proxy — the Anthropic key never touches the browser
+      const response = await fetch('/api/gitter', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-6',
-          max_tokens: 1000,
-          system: SYSTEM_PROMPT,
-          messages: history,
-        }),
+        body: JSON.stringify({ messages: history }),
       })
 
+      if (!response.ok) throw new Error('Request failed')
+
       const data = await response.json()
-      const raw: string = data.content?.[0]?.text ?? "I am having a moment — try again?"
+      const raw: string = data.text ?? "I am having a moment — try again?"
       const reply = raw.trim() === 'UNRELATED_TOPIC'
         ? "That one is a bit outside my lane! I am best with Git workflows, GitHub, and dev career questions. Try something workflow-related."
         : raw

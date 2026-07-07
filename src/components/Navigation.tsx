@@ -15,7 +15,7 @@
  */
 
 import { useState, useCallback } from 'react'
-import { NavLink, useNavigate } from 'react-router-dom'
+import { NavLink } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useApp } from '../context/AppContext'
 import { GitBranch, LogIn, LogOut, Menu, X, GraduationCap, BookOpen, Wrench, Zap, LayoutDashboard } from 'lucide-react'
@@ -24,7 +24,6 @@ export default function Navigation() {
   const { user, isLoggedIn, logout, openAuthModal } = useAuth()
   const { openCurriculum, modules, completedModules } = useApp()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const navigate = useNavigate()
 
   const closeMobileMenu = useCallback(() => setMobileMenuOpen(false), [])
 
