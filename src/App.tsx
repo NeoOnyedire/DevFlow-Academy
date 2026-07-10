@@ -12,6 +12,10 @@
  *   /troubleshoot  Git error search tool
  *   /challenge     Repo Royale weekly challenge
  *   /dashboard     Progress, skills, GitHub, career mode
+ *   /about         About DevFlow Academy
+ *   /privacy       Privacy policy
+ *   /terms         Terms of use
+ *   /support       Support / contact / socials
  */
 
 import { Routes, Route } from 'react-router-dom'
@@ -35,6 +39,10 @@ import PracticePage     from './pages/PracticePage'
 import TroubleshootPage from './pages/TroubleshootPage'
 import ChallengePage    from './pages/ChallengePage'
 import DashboardPage    from './pages/DashboardPage'
+import AboutPage        from './pages/AboutPage'
+import PrivacyPage      from './pages/PrivacyPage'
+import TermsPage        from './pages/TermsPage'
+import SupportPage      from './pages/SupportPage'
 
 gsap.registerPlugin(ScrollTrigger)
 
@@ -55,6 +63,10 @@ function AppInner() {
         <Route path="/troubleshoot" element={<TroubleshootPage />} />
         <Route path="/challenge"    element={<ChallengePage />} />
         <Route path="/dashboard"    element={<DashboardPage />} />
+        <Route path="/about"        element={<AboutPage />} />
+        <Route path="/privacy"      element={<PrivacyPage />} />
+        <Route path="/terms"        element={<TermsPage />} />
+        <Route path="/support"      element={<SupportPage />} />
         {/* Fallback */}
         <Route path="*"             element={<LandingPage />} />
       </Routes>

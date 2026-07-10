@@ -15,6 +15,8 @@
  *     module focused). Lets the user survey the full course before deciding.
  *     Works whether or not the user is logged in.
  *
+ * Footer links now route to real pages: /about, /privacy, /terms, /support.
+ *
  * MOBILE: Cat illustration is hidden (too cramped), text and CTAs are
  * centered and full-width. Footer links stack vertically.
  * ============================================================================
@@ -23,7 +25,7 @@
 import { useRef, useLayoutEffect } from 'react'
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useApp } from '../context/AppContext'
 import { GitBranch, Heart } from 'lucide-react'
@@ -33,6 +35,13 @@ gsap.registerPlugin(ScrollTrigger)
 interface Props {
   className?: string
 }
+
+const FOOTER_LINKS = [
+  { to: '/about',   label: 'About' },
+  { to: '/privacy', label: 'Privacy' },
+  { to: '/terms',   label: 'Terms' },
+  { to: '/support', label: 'Support' },
+]
 
 export default function FooterSection({ className = '' }: Props) {
   const { isLoggedIn, openAuthModal } = useAuth()
@@ -186,10 +195,13 @@ export default function FooterSection({ className = '' }: Props) {
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pt-6"
           style={{ borderTop: '1px solid rgba(42,42,42,0.15)' }}>
           <div className="flex flex-wrap items-center gap-4 md:gap-6">
-            <a href="#" className="font-accent text-xs uppercase tracking-[0.14em] hover:opacity-70 transition-opacity" style={{ color: '#2A2A2Acc' }}>About</a>
-            <a href="#" className="font-accent text-xs uppercase tracking-[0.14em] hover:opacity-70 transition-opacity" style={{ color: '#2A2A2Acc' }}>Privacy</a>
-            <a href="#" className="font-accent text-xs uppercase tracking-[0.14em] hover:opacity-70 transition-opacity" style={{ color: '#2A2A2Acc' }}>Terms</a>
-            <a href="#" className="font-accent text-xs uppercase tracking-[0.14em] hover:opacity-70 transition-opacity" style={{ color: '#2A2A2Acc' }}>Support</a>
+            {FOOTER_LINKS.map(link => (
+              <Link key={link.to} to={link.to}
+                className="font-accent text-xs uppercase tracking-[0.14em] hover:opacity-70 transition-opacity"
+                style={{ color: '#2A2A2Acc' }}>
+                {link.label}
+              </Link>
+            ))}
           </div>
           <div className="flex items-center gap-2">
             <GitBranch className="w-4 h-4" style={{ color: '#2A2A2A80' }} />
