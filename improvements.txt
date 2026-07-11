@@ -1,0 +1,31 @@
+## Disclaimer: I made this public to document the journey of this project, so no you are not seeing this by mistake lol
+## 🔴 Fix first: security/data issues
+
+- **Plaintext passwords in localStorage.** `AuthContext` stores `password` directly in `devflow_users` with no hashing. Anyone with dev tools open can read every user's password. Even for a demo, at minimum hash with something like bcrypt server-side — this really needs a real backend auth flow (or swap to GitHub OAuth, which fits the theme perfectly and removes password handling entirely).
+- **"Reviews are shown publicly" is misleading.** `ReviewsSection` reads from the *same browser's* localStorage, so reviews aren't actually shared between users — the review modal's copy overpromises. If you want real public reviews, you need a backend (Supabase/Firebase/Postgres are quick to bolt on).
+- **Progress is keyed to `guest` for logged-out users** and to `btoa(email)` for logged-in ones — if two people log in on the same browser, or a user clears storage, progress silently resets or merges oddly. Worth flagging in the privacy page (partially already done) but also worth hardening.
+
+## 🟠 Architecture/robustness
+
+- **No error boundaries.** A single component throw currently takes down the whole app (no `<ErrorBoundary>` around routes/overlays).
+- **No real 404 page** — unknown routes silently fall back to `LandingPage`, which is confusing for shareable/bookmarked bad links.
+- **`GitterHelper`'s proactive-message effect** has an `eslint-disable` on `completedModules.length` and derives `justFinished` via `modules.find((_, i) => i === prev)` — this assumes module order is stable, but `modules` gets *re-sorted* whenever `rolePath` changes, so "just finished" can point at the wrong module after a role switch. Worth tracking finished module by `id`, not index.
+- **Backend-less by design** is fine for a free tool, but it caps you: no cross-device sync, no real leaderboard, no admin visibility into how people are actually using it. If you want to scale past "cool portfolio project," this is the next big lift — Supabase would get you auth + Postgres + row-level security without much extra code.
+
+## 🟡 UX polish
+
+- **No password reset / no email verification** — currently if a user forgets their password there's no recovery path at all.
+- **No loading skeleton on first paint** for GSAP-heavy sections — everything pops in via ScrollTrigger, which is nice, but a first-load flash of unstyled layout could be smoothed with a lightweight skeleton or fade-in root wrapper.
+- **Lazy-load routes.** `App.tsx` imports every page eagerly; switching to `React.lazy` + `Suspense` per route would shrink the initial bundle noticeably given how much GSAP/lucide/page code you have.
+- **Gitter chat has no persistence** — closing the panel or reloading wipes the conversation. Even simple sessionStorage persistence would feel much less throwaway.
+- **Gitter doesn't stream** — for a "friendly, snappy" assistant, a streaming response (SSE) would feel a lot more alive than one big `await` blob, especially since you already have a typing indicator built.
+- **Certificates are conceptual only** — "earn your certificate" is promised on review completion, but there's no actual certificate artifact (PDF/shareable image). That's a nice, fairly cheap feature to add (canvas or PDF-lib generated cert with name + completion date).
+
+## 🟢 Feature ideas worth considering
+
+- **GitHub OAuth login** — given the whole site is Git-themed, "Sign in with GitHub" is both on-brand and removes your password-security problem in one move.
+- **More weekly challenges** — only 4 templates rotate by hash; the pool feels thin over a few months. Worth growing this list or generating challenges dynamically.
+- **Search/filter on the Learn page** — right now it's just the fixed fanned card list; a filter by difficulty/role would help as the curriculum grows.
+- **Basic analytics you control** (privacy-respecting, e.g., Plausible or a simple self-hosted counter) so you can actually see which modules/pages get used — your privacy policy already commits to no third-party trackers, so this would need to be first-party.
+- **Tests** — there's currently no test suite visible. Even a handful of Vitest unit tests around `AppContext`/`AuthContext` logic (progress toggling, role switching, weekly challenge hashing) would catch regressions like the `GitterHelper` index-bug above.
+
