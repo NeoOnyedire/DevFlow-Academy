@@ -22,10 +22,22 @@ const SECTIONS = [
   },
   {
     title: 'What leaves your browser',
-    body: `Two things call out to third-party services: connecting your GitHub username fetches your public
-    profile info directly from the GitHub API, and messages you send to Gitter (the in-app assistant) are
-    relayed through our own server to Anthropic's Claude API so Gitter can reply. We don't use your chat
-    messages for anything beyond generating that reply.`,
+    body: `By default, Gitter (the in-app assistant) runs in "Lite" mode — it answers from a small built-in
+    Git knowledge base, and nothing is sent anywhere. If you choose to unlock "Gitter AI," you provide your
+    own free API key from Google Gemini or Groq. In that case, your messages and that key are sent from your
+    browser through our own proxy server directly to whichever provider you picked, so Gitter can reply. We
+    don't store that key on our servers, and we don't use your chat messages for anything beyond generating
+    that reply. Separately, connecting your GitHub username fetches your public profile info directly from
+    the GitHub API.`,
+  },
+  {
+    title: 'Who pays for what',
+    body: `DevFlow Academy never holds or pays for any AI API key. Gitter Lite costs nothing to use, for
+    anyone. Gitter AI is entirely optional and uses your own free API key from your own account with Google
+    Gemini or Groq — any usage is governed by that provider's own free-tier terms and limits, not by us.
+    There is no "log in with your existing ChatGPT or Claude subscription" option, because AI providers don't
+    offer a way for third-party sites to use someone's existing consumer chat subscription — API access is
+    always a separate account and separate free tier.`,
   },
   {
     title: 'Cookies and tracking',
@@ -34,9 +46,10 @@ const SECTIONS = [
   },
   {
     title: 'Your control over your data',
-    body: `Because your account and progress live in your browser's local storage, clearing your browser
-    data or using a different device/browser will reset your progress. Logging out clears your session but
-    keeps your account so you can log back in on the same browser.`,
+    body: `Because your account, progress, and any Gitter AI key live in your browser's local storage,
+    clearing your browser data or using a different device/browser will reset your progress and disconnect
+    Gitter AI mode (you'll drop back to Gitter Lite automatically). Logging out clears your session but keeps
+    your account so you can log back in on the same browser.`,
   },
   {
     title: 'Changes to this policy',

@@ -1,30 +1,66 @@
 /**
  * GitterHelper.tsx
  *
- * Changes:
- * - Proactive suggestions: when completedModules changes (user just finished
- *   a module), Gitter sends an unprompted "nice work + next step" message
- * - Completion badge: a small gold star badge appears on the toggle button
- *   counting total completed modules, so progress is always visible
- * - Mobile keyboard fix: panel uses window.visualViewport height when
- *   available so the input stays accessible when the keyboard is open
- * - API calls now go through /api/gitter (serverless proxy) instead of
- *   calling api.anthropic.com directly from the browser — keeps the API
- *   key server-side and lets requests actually authenticate
- * - All previous features retained: AI responses, typing indicator,
- *   avatar messages, greeting by name, login gate, 340px cap
+ * Two modes, both $0 for DevFlow Academy, always:
+ *
+ * - "Gitter Lite" (default): answers come from a local, built-in Git
+ *   knowledge base (src/lib/gitterLite.ts). No key, no signup, no
+ *   network call, no cost — works for every logged-in user immediately.
+ *
+ * - "Gitter AI" (optional, opt-in): real conversational AI, powered by
+ *   the user's own free API key from Google Gemini or Groq. The key is
+ *   stored only in the user's browser (localStorage) and sent straight
+ *   through our serverless proxy (/api/gitter) to the chosen provider.
+ *   DevFlow Academy never holds or pays for any AI key — all usage cost
+ *   and rate limits belong to the user's own account with that provider.
+ *
+ * Other retained features:
+ * - Proactive suggestions when a module is completed
+ * - Completion badge on the toggle button
+ * - Mobile keyboard fix using visualViewport
+ * - Typing indicator, avatar messages, greeting by name
+ * - Login gate, 340px width cap
  */
 
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
-import { Bot, ChevronDown, MessageCircle, Send, Sparkles, Star } from 'lucide-react'
+import { Bot, ChevronDown, MessageCircle, Send, Sparkles, Star, KeyRound, Zap, ChevronRight } from 'lucide-react'
 import { useApp } from '../context/AppContext'
 import { useAuth } from '../context/AuthContext'
+import { answerWithGitterLite } from '../lib/gitterLite'
 
 const QUICK_PROMPTS = [
   'What should I learn next?',
   'Explain merge conflicts',
   'How do I use GitHub for my career?',
 ]
+
+type AiProvider = 'gemini' | 'groq'
+
+const API_KEY_STORAGE = 'devflow_gitter_api_key'
+const PROVIDER_STORAGE = 'devflow_gitter_provider'
+
+const PROVIDER_INFO: Record<AiProvider, { name: string; url: string; host: string; steps: string[] }> = {
+  gemini: {
+    name: 'Google Gemini',
+    url: 'https://aistudio.google.com/apikey',
+    host: 'aistudio.google.com/apikey',
+    steps: [
+      'Go to aistudio.google.com/apikey and log in with any Google account.',
+      'Click "Create API key" — no credit card required.',
+      'Copy the key and paste it below.',
+    ],
+  },
+  groq: {
+    name: 'Groq',
+    url: 'https://console.groq.com/keys',
+    host: 'console.groq.com/keys',
+    steps: [
+      'Go to console.groq.com/keys and sign up with an email — no card needed.',
+      'Click "Create API Key."',
+      'Copy the key and paste it below.',
+    ],
+  },
+}
 
 interface Message {
   role: 'gitter' | 'user'
@@ -44,6 +80,18 @@ export default function GitterHelper() {
   const prevCompletedCount            = useRef(completedModules.length)
   const messagesEndRef                = useRef<HTMLDivElement>(null)
   const inputRef                      = useRef<HTMLInputElement>(null)
+
+  // ---- AI mode state (optional, BYOK) ----
+  const [apiKey, setApiKey] = useState<string>(() => localStorage.getItem(API_KEY_STORAGE) || '')
+  const [provider, setProvider] = useState<AiProvider>(
+    () => (localStorage.getItem(PROVIDER_STORAGE) as AiProvider) || 'gemini'
+  )
+  const isAiMode = !!apiKey
+
+  const [showKeySettings, setShowKeySettings] = useState(false)
+  const [setupProvider, setSetupProvider] = useState<AiProvider>('gemini')
+  const [keyInput, setKeyInput] = useState('')
+  const [keyError, setKeyError] = useState('')
 
   const nextModule = useMemo(() =>
     modules.find(m => !completedModules.includes(m.id)) || modules[0],
@@ -119,6 +167,37 @@ export default function GitterHelper() {
     }
   }, [isOpen, isLoggedIn])
 
+  /** Save a newly entered API key and switch into AI mode. */
+  const saveApiKey = () => {
+    const trimmed = keyInput.trim()
+    if (trimmed.length < 10) {
+      setKeyError('That key looks too short — double check you copied the whole thing.')
+      return
+    }
+    localStorage.setItem(API_KEY_STORAGE, trimmed)
+    localStorage.setItem(PROVIDER_STORAGE, setupProvider)
+    setApiKey(trimmed)
+    setProvider(setupProvider)
+    setKeyInput('')
+    setKeyError('')
+    setShowKeySettings(false)
+    setMessages(prev => [...prev, {
+      role: 'gitter',
+      text: `AI mode connected via ${PROVIDER_INFO[setupProvider].name}! This uses your own free key, so there's no cost to DevFlow Academy or to you beyond that provider's free limits.`,
+    }])
+  }
+
+  /** Remove the stored key and fall back to Gitter Lite. */
+  const clearApiKey = () => {
+    localStorage.removeItem(API_KEY_STORAGE)
+    localStorage.removeItem(PROVIDER_STORAGE)
+    setApiKey('')
+    setMessages(prev => [...prev, {
+      role: 'gitter',
+      text: "Back to Gitter Lite — still free, still here, just working from my built-in Git knowledge instead of live AI.",
+    }])
+  }
+
   const sendMessage = useCallback(async (prompt = question) => {
     const cleaned = prompt.trim()
     if (!cleaned || isTyping) return
@@ -128,6 +207,16 @@ export default function GitterHelper() {
     setQuestion('')
     setIsTyping(true)
 
+    // ---- Gitter Lite: default, free forever, no network call at all ----
+    if (!isAiMode) {
+      setTimeout(() => {
+        setMessages(prev => [...prev, { role: 'gitter', text: answerWithGitterLite(cleaned) }])
+        setIsTyping(false)
+      }, 500) // small delay so replies don't feel instant/robotic
+      return
+    }
+
+    // ---- Gitter AI: user's own key, user's own provider, user's own cost ----
     try {
       const history = [...messages, userMsg].map(m => ({
         role: m.role === 'user' ? 'user' as const : 'assistant' as const,
@@ -136,16 +225,30 @@ export default function GitterHelper() {
       const contextNote = `[Context: User is on the "${rolePath.label}" path. Next module: "${nextModule.title}". Completed ${completedModules.length}/${modules.length} modules.]`
       history[history.length - 1].content = `${contextNote}\n\n${history[history.length - 1].content}`
 
-      // Calls our own serverless proxy — the Anthropic key never touches the browser
       const response = await fetch('/api/gitter', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: history }),
+        body: JSON.stringify({ messages: history, apiKey, provider }),
       })
 
-      if (!response.ok) throw new Error('Request failed')
-
       const data = await response.json()
+
+      if (!response.ok) {
+        if (data.error === 'INVALID_API_KEY') {
+          setMessages(prev => [...prev, {
+            role: 'gitter',
+            text: `Your ${PROVIDER_INFO[provider].name} key was rejected — switching back to Gitter Lite. Check the key in settings.`,
+          }])
+          clearApiKey()
+        } else {
+          setMessages(prev => [...prev, {
+            role: 'gitter',
+            text: data.message || data.error || 'Something went wrong reaching the AI provider — try again shortly.',
+          }])
+        }
+        return
+      }
+
       const raw: string = data.text ?? "I am having a moment — try again?"
       const reply = raw.trim() === 'UNRELATED_TOPIC'
         ? "That one is a bit outside my lane! I am best with Git workflows, GitHub, and dev career questions. Try something workflow-related."
@@ -157,7 +260,7 @@ export default function GitterHelper() {
     } finally {
       setIsTyping(false)
     }
-  }, [question, isTyping, messages, rolePath.label, nextModule.title, completedModules.length, modules.length])
+  }, [question, isTyping, messages, rolePath.label, nextModule.title, completedModules.length, modules.length, isAiMode, apiKey, provider])
 
   // Not logged in
   if (!isLoggedIn) {
@@ -186,15 +289,112 @@ export default function GitterHelper() {
                 className="h-9 w-9 rounded-full bg-[#F7B731]/20 object-cover flex-shrink-0" />
               <div>
                 <p className="font-display text-base font-bold text-white leading-tight">Gitter</p>
-                <p className="text-[10px] text-white/45 font-accent uppercase tracking-wider">{rolePath.label} mode</p>
+                <p className="text-[10px] text-white/45 font-accent uppercase tracking-wider">
+                  {isAiMode ? `AI mode · ${PROVIDER_INFO[provider].name}` : 'Lite mode · free, no key'}
+                </p>
               </div>
             </div>
-            <button onClick={() => setIsOpen(false)}
-              className="rounded-lg p-1.5 text-white/50 hover:bg-white/10 hover:text-white transition-colors"
-              aria-label="Collapse Gitter">
-              <ChevronDown className="h-4 w-4" />
-            </button>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setShowKeySettings(v => !v)}
+                className="rounded-lg p-1.5 text-white/50 hover:bg-white/10 hover:text-white transition-colors"
+                aria-label="AI settings"
+                title={isAiMode ? 'AI mode settings' : 'Upgrade to Gitter AI'}
+              >
+                <KeyRound className={`h-4 w-4 ${isAiMode ? 'text-[#3CCF4A]' : ''}`} />
+              </button>
+              <button onClick={() => setIsOpen(false)}
+                className="rounded-lg p-1.5 text-white/50 hover:bg-white/10 hover:text-white transition-colors"
+                aria-label="Collapse Gitter">
+                <ChevronDown className="h-4 w-4" />
+              </button>
+            </div>
           </div>
+
+          {/* AI / key settings panel */}
+          {showKeySettings && (
+            <div className="flex-shrink-0 border-b border-white/10 bg-black/20 px-3 py-3 space-y-3">
+              {isAiMode ? (
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs text-[#3CCF4A]">
+                    {PROVIDER_INFO[provider].name} connected ({apiKey.slice(0, 8)}…)
+                  </span>
+                  <button onClick={clearApiKey} className="text-xs text-white/50 hover:text-white underline flex-shrink-0">
+                    Switch back to Lite
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <p className="font-display font-semibold text-white text-sm">Get free AI chat</p>
+                  <p className="text-xs text-white/60 leading-relaxed">
+                    Gitter Lite is free forever with no signup. If you'd like real conversational AI, add your own
+                    free key from Gemini or Groq — it stays in your browser, and any usage cost is on your own
+                    account, not ours.
+                  </p>
+
+                  {/* Provider tabs */}
+                  <div className="flex gap-2">
+                    {(['gemini', 'groq'] as AiProvider[]).map(p => (
+                      <button
+                        key={p}
+                        onClick={() => setSetupProvider(p)}
+                        className={`flex-1 rounded-lg px-3 py-2 text-xs font-display font-semibold transition-colors ${
+                          setupProvider === p ? 'bg-[#F7B731] text-[#2A2A2A]' : 'bg-white/10 text-white/70 hover:bg-white/15'
+                        }`}
+                      >
+                        {PROVIDER_INFO[p].name}
+                      </button>
+                    ))}
+                  </div>
+
+                  <ol className="list-decimal list-inside text-xs text-white/60 space-y-1">
+                    {PROVIDER_INFO[setupProvider].steps.map((step, i) => (
+                      <li key={i}>
+                        {i === 0 ? (
+                          <>
+                            Go to{' '}
+                            <a
+                              href={PROVIDER_INFO[setupProvider].url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-[#F7B731] hover:underline"
+                            >
+                              {PROVIDER_INFO[setupProvider].host}
+                            </a>{' '}
+                            and{' '}
+                            {setupProvider === 'gemini'
+                              ? 'log in with any Google account.'
+                              : 'sign up with an email — no card needed.'}
+                          </>
+                        ) : (
+                          step
+                        )}
+                      </li>
+                    ))}
+                  </ol>
+
+                  <div className="flex gap-2">
+                    <input
+                      type="password"
+                      value={keyInput}
+                      onChange={e => setKeyInput(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') saveApiKey() }}
+                      placeholder="Paste your key here…"
+                      className="min-w-0 flex-1 rounded-lg border border-white/10 bg-white/10 px-2.5 py-1.5
+                        text-xs text-white placeholder-white/30 outline-none focus:border-[#F7B731]/60"
+                    />
+                    <button
+                      onClick={saveApiKey}
+                      className="rounded-lg bg-[#F7B731] px-3 py-1.5 text-xs font-display font-semibold text-[#2A2A2A] flex-shrink-0"
+                    >
+                      Save
+                    </button>
+                  </div>
+                  {keyError && <p className="text-[#FF4D6D] text-xs">{keyError}</p>}
+                </>
+              )}
+            </div>
+          )}
 
           {/* Tip */}
           <div className="flex-shrink-0 border-b border-white/10 bg-[#F7B731]/10 px-3 py-2">
@@ -203,6 +403,14 @@ export default function GitterHelper() {
               <span className="font-display font-semibold text-[#F7B731] text-xs">This week</span>
             </div>
             <p className="text-white/70 text-xs leading-snug">{helperTip}</p>
+            {!isAiMode && !showKeySettings && (
+              <button
+                onClick={() => setShowKeySettings(true)}
+                className="mt-1.5 flex items-center gap-1 text-[10px] text-[#F7B731]/80 hover:text-[#F7B731] transition-colors"
+              >
+                <Zap className="h-3 w-3" /> Want smarter answers? Add a free AI key <ChevronRight className="h-3 w-3" />
+              </button>
+            )}
           </div>
 
           {/* Messages */}
