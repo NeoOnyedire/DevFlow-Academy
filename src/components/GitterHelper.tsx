@@ -20,6 +20,10 @@
  * - Mobile keyboard fix using visualViewport
  * - Typing indicator, avatar messages, greeting by name
  * - Login gate, 340px width cap
+ *
+ * UPDATE: the AI / key settings panel now has an explicit "Close" button
+ * in both its states (mid-setup, and already-connected), instead of
+ * relying on the person noticing the key icon in the header is a toggle.
  */
 
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
@@ -319,13 +323,29 @@ export default function GitterHelper() {
                   <span className="text-xs text-[#3CCF4A]">
                     {PROVIDER_INFO[provider].name} connected ({apiKey.slice(0, 8)}…)
                   </span>
-                  <button onClick={clearApiKey} className="text-xs text-white/50 hover:text-white underline flex-shrink-0">
-                    Switch back to Lite
-                  </button>
+                  <div className="flex items-center gap-3 flex-shrink-0">
+                    <button onClick={clearApiKey} className="text-xs text-white/50 hover:text-white underline">
+                      Switch back to Lite
+                    </button>
+                    <button
+                      onClick={() => setShowKeySettings(false)}
+                      className="text-xs text-white/40 hover:text-white transition-colors"
+                    >
+                      Close
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <>
-                  <p className="font-display font-semibold text-white text-sm">Get free AI chat</p>
+                  <div className="flex items-center justify-between">
+                    <p className="font-display font-semibold text-white text-sm">Get free AI chat</p>
+                    <button
+                      onClick={() => setShowKeySettings(false)}
+                      className="text-white/40 hover:text-white transition-colors text-xs"
+                    >
+                      Close
+                    </button>
+                  </div>
                   <p className="text-xs text-white/60 leading-relaxed">
                     Gitter Lite is free forever with no signup. If you'd like real conversational AI, add your own
                     free key from Gemini or Groq — it stays in your browser, and any usage cost is on your own
