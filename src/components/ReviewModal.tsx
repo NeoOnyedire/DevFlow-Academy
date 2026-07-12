@@ -6,8 +6,9 @@
  * Review modal — users must leave a review before they can "complete" the
  * course. This collects a star rating (1-5) and a written comment.
  *
- * The review is stored in localStorage and shown publicly in the
- * ReviewsSection component. Users can only submit once.
+ * Submitting now posts to the shared /api/reviews backend (see
+ * AppContext.submitReview), so the review is genuinely visible to every
+ * visitor in ReviewsSection — not just the browser that wrote it.
  *
  * Props: none — reads from AppContext
  * ============================================================================
@@ -25,9 +26,10 @@ export default function ReviewModal() {
   const [hoveredRating, setHoveredRating] = useState(0)
   const [comment, setComment] = useState('')
   const [error, setError] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  /** Submit handler — validates and calls context submitReview */
-  const handleSubmit = () => {
+  /** Submit handler — validates client-side, then posts to the shared backend */
+  const handleSubmit = async () => {
     setError('')
 
     if (rating === 0) {
@@ -39,7 +41,15 @@ export default function ReviewModal() {
       return
     }
 
-    submitReview(rating, comment)
+    setIsSubmitting(true)
+    const result = await submitReview(rating, comment)
+    setIsSubmitting(false)
+
+    if (!result.ok) {
+      setError(result.message)
+      return
+    }
+
     // Reset form after successful submission
     setRating(0)
     setComment('')
@@ -76,7 +86,8 @@ export default function ReviewModal() {
             Almost There!
           </h3>
           <p className="text-white/60 text-sm">
-            Leave a quick review to complete your course and earn your certificate.
+            Leave a quick, public review to complete your course and earn your certificate — it'll show up for
+            every future learner on the homepage.
           </p>
         </div>
 
@@ -118,8 +129,9 @@ export default function ReviewModal() {
             onChange={e => setComment(e.target.value)}
             placeholder="What did you learn? How was the experience? Help future learners know what to expect..."
             rows={4}
+            disabled={isSubmitting}
             className="w-full px-4 py-3 rounded-xl bg-white/10 text-white placeholder-white/30 border border-white/10
-              focus:border-[#F7B731]/50 focus:outline-none transition-colors resize-none text-sm"
+              focus:border-[#F7B731]/50 focus:outline-none transition-colors resize-none text-sm disabled:opacity-60"
           />
           <p className="text-white/30 text-xs mt-1 text-right">{comment.length} chars</p>
         </div>
@@ -127,11 +139,12 @@ export default function ReviewModal() {
         {/* Submit button */}
         <button
           onClick={handleSubmit}
+          disabled={isSubmitting}
           className="w-full bg-rose-punch text-white font-display font-semibold py-3.5 rounded-xl
-            hover:bg-[#ff3d5d] transition-all duration-200 flex items-center justify-center gap-2"
+            hover:bg-[#ff3d5d] disabled:opacity-60 transition-all duration-200 flex items-center justify-center gap-2"
         >
           <Send className="w-4 h-4" />
-          Submit Review & Complete Course
+          {isSubmitting ? 'Submitting…' : 'Submit Review & Complete Course'}
         </button>
       </div>
     </div>

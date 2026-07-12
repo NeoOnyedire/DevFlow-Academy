@@ -3,7 +3,7 @@
  *
  * General, plain-language privacy overview. Not a substitute for a
  * lawyer-drafted policy — update this before relying on it in production,
- * especially if you add real backend storage, analytics, or payments.
+ * especially if you add more backend storage, analytics, or payments.
  */
 import { useEffect } from 'react'
 import { gsap } from 'gsap'
@@ -16,9 +16,16 @@ gsap.registerPlugin(ScrollTrigger)
 const SECTIONS = [
   {
     title: 'What we store, and where',
-    body: `Your account (name, email) and your course progress — completed modules, review submission,
-    scenario points, and connected GitHub username — are stored in your browser's local storage. This data
-    stays on your device and is not sent to a DevFlow Academy database or shared with third parties.`,
+    body: `Your account (name, email), your course progress — completed modules, scenario points, and
+    connected GitHub username — are stored in your browser's local storage. This data stays on your device
+    and is not sent to a DevFlow Academy database or shared with third parties.`,
+  },
+  {
+    title: 'Reviews are genuinely public',
+    body: `Unlike progress, course reviews you submit are sent to and stored on our server (a small shared
+    database), and are shown to every visitor on the homepage — that's the point of leaving one. A review
+    includes your star rating, your written comment, the display name on your account, and the submission
+    date. We don't ask for or store anything beyond that with a review.`,
   },
   {
     title: 'What leaves your browser',
@@ -28,7 +35,7 @@ const SECTIONS = [
     browser through our own proxy server directly to whichever provider you picked, so Gitter can reply. We
     don't store that key on our servers, and we don't use your chat messages for anything beyond generating
     that reply. Separately, connecting your GitHub username fetches your public profile info directly from
-    the GitHub API.`,
+    the GitHub API, and submitting a course review sends that review to our server as described above.`,
   },
   {
     title: 'Who pays for what',
@@ -48,13 +55,15 @@ const SECTIONS = [
     title: 'Your control over your data',
     body: `Because your account, progress, and any Gitter AI key live in your browser's local storage,
     clearing your browser data or using a different device/browser will reset your progress and disconnect
-    Gitter AI mode (you'll drop back to Gitter Lite automatically). Logging out clears your session but keeps
-    your account so you can log back in on the same browser.`,
+    Gitter AI mode (you'll drop back to Gitter Lite automatically). It will not remove any review you've
+    already submitted, since that lives on our server, not your browser — contact us via the Support page if
+    you'd like a review taken down. Logging out clears your session but keeps your account so you can log
+    back in on the same browser.`,
   },
   {
     title: 'Changes to this policy',
-    body: `If how this site handles data changes — for example, if progress moves to a real backend — this
-    page will be updated to reflect that.`,
+    body: `If how this site handles data changes — for example, if progress also moves to a real backend —
+    this page will be updated to reflect that.`,
   },
 ]
 

@@ -5,56 +5,45 @@
  *
  * Displays user reviews in a horizontal scrolling card layout.
  *
- * Fix: long review comments were wrapped in literal `"..."` quote marks
- * which broke awkwardly across lines. Comments are now displayed as plain
- * paragraph text with a large decorative opening quote mark above — cleaner
- * typographically and works at any length.
+ * Reviews now come from AppContext.reviews, which is fetched from the
+ * shared /api/reviews backend — every visitor sees the same list, unlike
+ * the earlier localStorage-only version where reviews were effectively
+ * private to whichever browser wrote them.
+ *
+ * A small set of curated "seed" reviews is always shown first so the
+ * section never looks empty for new visitors, clearly labelled as such.
  * ============================================================================
  */
 
-import { useState, useEffect } from 'react'
+import { useApp, type PublicReview } from '../context/AppContext'
 import { Star, MessageCircle } from 'lucide-react'
 
-interface Review {
-  rating: number
-  comment: string
-  date: string
-  userName: string
-}
+const SEED_REVIEWS: PublicReview[] = [
+  {
+    rating: 5,
+    comment: "This course made Git finally click for me. The workplace scenarios feel so real — I actually knew what to do on my first day at my internship!",
+    date: '2026-05-20T10:00:00Z',
+    userName: 'Sarah Chen',
+  },
+  {
+    rating: 5,
+    comment: "Gitter is adorable and the troubleshooting section saved me when I got merge conflict panic. Highly recommend for any new dev!",
+    date: '2026-05-15T14:30:00Z',
+    userName: 'Marcus Johnson',
+  },
+  {
+    rating: 4,
+    comment: "Great free resource. The video curation is top-notch — pulled from the best YouTube channels. Loved the weekly challenges.",
+    date: '2026-05-10T09:15:00Z',
+    userName: 'Priya Patel',
+  },
+]
 
 export default function ReviewsSection() {
-  const [reviews, setReviews] = useState<Review[]>([])
+  const { reviews, isLoadingReviews, reviewsError } = useApp()
 
-  useEffect(() => {
-    const stored = JSON.parse(localStorage.getItem('devflow_reviews') || '[]')
-    const defaults: Review[] = [
-      {
-        rating: 5,
-        comment: "This course made Git finally click for me. The workplace scenarios feel so real — I actually knew what to do on my first day at my internship!",
-        date: '2026-05-20T10:00:00Z',
-        userName: 'Sarah Chen',
-      },
-      {
-        rating: 5,
-        comment: "Gitter is adorable and the troubleshooting section saved me when I got merge conflict panic. Highly recommend for any new dev!",
-        date: '2026-05-15T14:30:00Z',
-        userName: 'Marcus Johnson',
-      },
-      {
-        rating: 4,
-        comment: "Great free resource. The video curation is top-notch — pulled from the best YouTube channels. Loved the weekly challenges.",
-        date: '2026-05-10T09:15:00Z',
-        userName: 'Priya Patel',
-      },
-    ]
-    const merged = [
-      ...defaults,
-      ...stored.filter((s: Review) => !defaults.some(d => d.comment === s.comment)),
-    ]
-    setReviews(merged)
-  }, [])
-
-  if (reviews.length === 0) return null
+  // Seed reviews first (stable ordering), then real submitted reviews.
+  const allReviews = [...SEED_REVIEWS, ...reviews]
 
   return (
     <section className="bg-espresso py-16 md:py-20 px-[6vw]">
@@ -65,16 +54,24 @@ export default function ReviewsSection() {
         </div>
         <div>
           <h3 className="font-display font-bold text-white text-2xl md:text-3xl">What Learners Say</h3>
-          <p className="text-white/50 text-sm font-accent uppercase tracking-wider">{reviews.length} reviews</p>
+          <p className="text-white/50 text-sm font-accent uppercase tracking-wider">
+            {isLoadingReviews ? 'Loading reviews…' : `${allReviews.length} reviews`}
+          </p>
         </div>
       </div>
+
+      {reviewsError && (
+        <p className="text-white/40 text-sm mb-6">
+          Couldn't load the latest reviews right now — showing what we have.
+        </p>
+      )}
 
       {/* Cards */}
       <div className="flex md:grid md:grid-cols-3 gap-4 overflow-x-auto pb-4 snap-x snap-mandatory
         scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent">
-        {reviews.map((review, i) => (
+        {allReviews.map((review, i) => (
           <div
-            key={i}
+            key={`${review.userName}-${review.date}-${i}`}
             className="min-w-[280px] md:min-w-0 bg-[#4A2F2F] card-radius p-5 card-outline snap-start flex flex-col"
           >
             {/* Stars */}

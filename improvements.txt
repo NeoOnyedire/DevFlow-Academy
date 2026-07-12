@@ -22,8 +22,6 @@
 - **Certificates are conceptual only** — "earn your certificate" is promised on review completion, but there's no actual certificate artifact (PDF/shareable image). That's a nice, fairly cheap feature to add (canvas or PDF-lib generated cert with name + completion date).
 
 ## 🟢 Feature ideas worth considering
-
-- **GitHub OAuth login** — given the whole site is Git-themed, "Sign in with GitHub" is both on-brand and removes your password-security problem in one move.
 - **More weekly challenges** — only 4 templates rotate by hash; the pool feels thin over a few months. Worth growing this list or generating challenges dynamically.
 - **Search/filter on the Learn page** — right now it's just the fixed fanned card list; a filter by difficulty/role would help as the curriculum grows.
 - **Basic analytics you control** (privacy-respecting, e.g., Plausible or a simple self-hosted counter) so you can actually see which modules/pages get used — your privacy policy already commits to no third-party trackers, so this would need to be first-party.

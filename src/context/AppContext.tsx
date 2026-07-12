@@ -11,12 +11,17 @@
  * - Curriculum panel open/close
  * - Active module/video tracking
  * - Video watch progress per user
- * - Review submission state (required before course completion)
+ * - Review submission (required before course completion) — reviews are
+ *   fetched from and posted to /api/reviews, a real shared backend, so
+ *   they're visible to every visitor, not just the browser that wrote
+ *   them. `hasSubmittedReview` itself stays a local, per-browser flag —
+ *   it just gates this browser's own "have I already reviewed?" UI, the
+ *   same way course progress does.
  * - Completed modules tracking
  * ============================================================================
  */
 
-import { createContext, useContext, useState, useCallback, useMemo, type ReactNode } from 'react'
+import { createContext, useContext, useState, useCallback, useMemo, useEffect, type ReactNode } from 'react'
 import { useAuth } from './AuthContext'
 
 export type LearningRole = 'junior-dev' | 'devops' | 'career-switcher'
@@ -45,6 +50,14 @@ export interface WeeklyChallenge {
   command: string
   reward: number
   moduleId: string
+}
+
+/** A public review, as returned by the shared /api/reviews backend. */
+export interface PublicReview {
+  rating: number
+  comment: string
+  date: string
+  userName: string
 }
 
 /** A single curriculum module containing a YouTube video */
@@ -79,7 +92,13 @@ interface AppContextValue {
   hasSubmittedReview: boolean
   openReviewModal: () => void
   closeReviewModal: () => void
-  submitReview: (rating: number, comment: string) => void
+  submitReview: (rating: number, comment: string) => Promise<{ ok: boolean; message: string }>
+
+  // Public reviews — shared across all visitors, backed by /api/reviews
+  reviews: PublicReview[]
+  isLoadingReviews: boolean
+  reviewsError: string | null
+  refreshReviews: () => Promise<void>
 
   // Progress
   completedModules: string[]
@@ -289,9 +308,38 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   // ---- Review State ----
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false)
+  // Local, per-browser "did I submit a review" flag — mirrors how
+  // course progress works. The reviews themselves are shared (below).
   const [hasSubmittedReview, setHasSubmittedReview] = useState(() => {
     return !!localStorage.getItem('devflow_review_submitted')
   })
+
+  // ---- Public reviews — shared across everyone, via /api/reviews ----
+  const [reviews, setReviews] = useState<PublicReview[]>([])
+  const [isLoadingReviews, setIsLoadingReviews] = useState(true)
+  const [reviewsError, setReviewsError] = useState<string | null>(null)
+
+  const refreshReviews = useCallback(async () => {
+    setIsLoadingReviews(true)
+    setReviewsError(null)
+    try {
+      const response = await fetch('/api/reviews')
+      const data = await response.json()
+      if (!response.ok) {
+        setReviewsError(data.error || 'Could not load reviews.')
+        return
+      }
+      setReviews(Array.isArray(data.reviews) ? data.reviews : [])
+    } catch {
+      setReviewsError('Could not reach the server to load reviews.')
+    } finally {
+      setIsLoadingReviews(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    refreshReviews()
+  }, [refreshReviews])
 
   // ---- Progress State ----
   const [completedModules, setCompletedModules] = useState<string[]>(() => {
@@ -339,21 +387,36 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const openReviewModal = useCallback(() => setIsReviewModalOpen(true), [])
   const closeReviewModal = useCallback(() => setIsReviewModalOpen(false), [])
 
-  /** Submit a review — marks the review as submitted and persists it */
-  const submitReview = useCallback((rating: number, comment: string) => {
-    const reviews = JSON.parse(localStorage.getItem('devflow_reviews') || '[]')
-    reviews.push({
-      rating,
-      comment,
-      date: new Date().toISOString(),
-      userId: user?.id || 'anonymous',
-      userName: user?.name || 'Anonymous',
-    })
-    localStorage.setItem('devflow_reviews', JSON.stringify(reviews))
-    localStorage.setItem('devflow_review_submitted', 'true')
-    setHasSubmittedReview(true)
-    setIsReviewModalOpen(false)
-  }, [user])
+  /**
+   * Submit a review — posts to the shared /api/reviews backend so it's
+   * visible to every visitor, then marks this browser as "reviewed" and
+   * refreshes the local list so the new review shows up immediately.
+   */
+  const submitReview = useCallback(async (rating: number, comment: string): Promise<{ ok: boolean; message: string }> => {
+    try {
+      const response = await fetch('/api/reviews', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rating, comment, userName: user?.name || 'Anonymous' }),
+      })
+      const data = await response.json()
+
+      if (!response.ok) {
+        return { ok: false, message: data.error || 'Could not submit your review. Please try again.' }
+      }
+
+      localStorage.setItem('devflow_review_submitted', 'true')
+      setHasSubmittedReview(true)
+      setIsReviewModalOpen(false)
+      // Optimistically show the new review immediately, then reconcile with the server.
+      if (data.review) setReviews(prev => [data.review, ...prev])
+      refreshReviews()
+
+      return { ok: true, message: 'Review submitted — thanks!' }
+    } catch {
+      return { ok: false, message: 'Could not reach the server. Please check your connection and try again.' }
+    }
+  }, [user, refreshReviews])
 
   // ---- Progress Handlers ----
   /** Toggle a module's completion status and persist to localStorage */
@@ -429,6 +492,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       openReviewModal,
       closeReviewModal,
       submitReview,
+      reviews,
+      isLoadingReviews,
+      reviewsError,
+      refreshReviews,
       completedModules,
       toggleModuleComplete,
       isCourseComplete,
