@@ -12,6 +12,10 @@
  *   Practice      → /practice
  *   Progress      → /dashboard
  *   Challenge     → /challenge
+ *
+ * User avatar now shows the real GitHub profile photo when the person
+ * signed in via GitHub OAuth (user.avatarUrl), falling back to the
+ * original colored-initials circle for password accounts.
  */
 
 import { useState, useCallback } from 'react'
@@ -101,11 +105,16 @@ export default function Navigation() {
           {/* Auth */}
           {isLoggedIn && user ? (
             <div className="flex items-center gap-3 pl-4 border-l border-white/10">
-              <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
-                style={{ backgroundColor: user.avatar }}>
-                <span className="font-display font-bold text-white text-xs">
-                  {user.name.split(' ').map(n => n[0]).join('')}
-                </span>
+              <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden"
+                style={{ backgroundColor: user.avatar }}
+                title={user.githubUsername ? `@${user.githubUsername}` : user.name}>
+                {user.avatarUrl ? (
+                  <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
+                ) : (
+                  <span className="font-display font-bold text-white text-xs">
+                    {user.name.split(' ').map(n => n[0]).join('')}
+                  </span>
+                )}
               </div>
               <button onClick={logout} className="text-white/40 hover:text-white transition-colors" title="Log out">
                 <LogOut className="w-4 h-4" />
@@ -176,10 +185,14 @@ export default function Navigation() {
               {isLoggedIn && user ? (
                 <div className="flex items-center justify-between px-2 py-2">
                   <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: user.avatar }}>
-                      <span className="font-display font-bold text-white text-xs">
-                        {user.name.split(' ').map(n => n[0]).join('')}
-                      </span>
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center overflow-hidden" style={{ backgroundColor: user.avatar }}>
+                      {user.avatarUrl ? (
+                        <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="font-display font-bold text-white text-xs">
+                          {user.name.split(' ').map(n => n[0]).join('')}
+                        </span>
+                      )}
                     </div>
                     <span className="text-white text-sm">{user.name}</span>
                   </div>

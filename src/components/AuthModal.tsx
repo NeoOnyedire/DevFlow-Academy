@@ -7,13 +7,20 @@
  * Switches between modes dynamically. Validates inputs client-side.
  * Shows friendly error messages. Auto-focuses first input on open.
  *
+ * Now also offers "Continue with GitHub" above the form — redirects to
+ * GitHub's OAuth authorize page, which eventually lands the user back on
+ * /auth/github/callback, fully signed in, with no password ever created.
+ * The GitHub button only renders if VITE_GITHUB_CLIENT_ID is configured,
+ * so this degrades gracefully to email/password-only if it isn't set up.
+ *
  * Props: none — reads from AuthContext
  * ============================================================================
  */
 
 import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { X, LogIn, UserPlus, Eye, EyeOff } from 'lucide-react'
+import { X, LogIn, UserPlus, Eye, EyeOff, Github } from 'lucide-react'
+import { buildGitHubAuthorizeUrl, isGitHubOAuthConfigured } from '../lib/githubOAuth'
 
 export default function AuthModal() {
   const { isAuthModalOpen, authModalMode, closeAuthModal, login, register, openAuthModal } = useAuth()
@@ -25,6 +32,8 @@ export default function AuthModal() {
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const githubEnabled = isGitHubOAuthConfigured()
 
   // Auto-focus the first input when modal opens
   const firstInputRef = useRef<HTMLInputElement>(null)
@@ -45,6 +54,16 @@ export default function AuthModal() {
     if (isAuthModalOpen) window.addEventListener('keydown', handleKey)
     return () => window.removeEventListener('keydown', handleKey)
   }, [isAuthModalOpen, closeAuthModal])
+
+  /** Kick off the GitHub OAuth redirect. */
+  const handleGitHubLogin = () => {
+    const url = buildGitHubAuthorizeUrl()
+    if (!url) {
+      setError('GitHub sign-in is not configured yet.')
+      return
+    }
+    window.location.href = url
+  }
 
   /** Handle form submission — validates inputs and calls auth functions */
   const handleSubmit = (e: React.FormEvent) => {
@@ -135,6 +154,30 @@ export default function AuthModal() {
           <div className="mb-4 p-3 rounded-xl bg-[#FF4D6D]/20 text-[#FF4D6D] text-sm font-medium">
             {error}
           </div>
+        )}
+
+        {/* GitHub OAuth — the recommended path, shown first */}
+        {githubEnabled && (
+          <>
+            <button
+              type="button"
+              onClick={handleGitHubLogin}
+              className="w-full flex items-center justify-center gap-2.5 bg-[#24292F] hover:bg-[#1b1f24]
+                text-white font-display font-semibold py-3.5 rounded-xl transition-colors mb-2"
+            >
+              <Github className="w-4 h-4" />
+              Continue with GitHub
+            </button>
+            <p className="text-white/35 text-xs text-center mb-5">
+              Fastest option — no password to create or remember.
+            </p>
+
+            <div className="flex items-center gap-3 mb-5">
+              <div className="h-px flex-1 bg-white/10" />
+              <span className="text-white/30 text-xs font-accent uppercase tracking-wider">or use email</span>
+              <div className="h-px flex-1 bg-white/10" />
+            </div>
+          </>
         )}
 
         {/* Form */}

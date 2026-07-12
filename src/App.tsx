@@ -6,16 +6,17 @@
  * live here so they persist and work on every page.
  *
  * Routes:
- *   /              Landing page
- *   /learn         Curriculum / lesson browser
- *   /practice      Commit scenes + scenario play
- *   /troubleshoot  Git error search tool
- *   /challenge     Repo Royale weekly challenge
- *   /dashboard     Progress, skills, GitHub, career mode
- *   /about         About DevFlow Academy
- *   /privacy       Privacy policy
- *   /terms         Terms of use
- *   /support       Support / contact / socials
+ *   /                      Landing page
+ *   /learn                 Curriculum / lesson browser
+ *   /practice              Commit scenes + scenario play
+ *   /troubleshoot           Git error search tool
+ *   /challenge              Repo Royale weekly challenge
+ *   /dashboard              Progress, skills, GitHub, career mode
+ *   /about                  About DevFlow Academy
+ *   /privacy                Privacy policy
+ *   /terms                  Terms of use
+ *   /support                Support / contact / socials
+ *   /auth/github/callback   GitHub OAuth redirect target (no nav, brief only)
  */
 
 import { Routes, Route } from 'react-router-dom'
@@ -33,16 +34,17 @@ import ReviewModal    from './components/ReviewModal'
 import GitterHelper   from './components/GitterHelper'
 
 // Pages
-import LandingPage      from './pages/LandingPage'
-import LearnPage        from './pages/LearnPage'
-import PracticePage     from './pages/PracticePage'
-import TroubleshootPage from './pages/TroubleshootPage'
-import ChallengePage    from './pages/ChallengePage'
-import DashboardPage    from './pages/DashboardPage'
-import AboutPage        from './pages/AboutPage'
-import PrivacyPage      from './pages/PrivacyPage'
-import TermsPage        from './pages/TermsPage'
-import SupportPage      from './pages/SupportPage'
+import LandingPage        from './pages/LandingPage'
+import LearnPage          from './pages/LearnPage'
+import PracticePage       from './pages/PracticePage'
+import TroubleshootPage   from './pages/TroubleshootPage'
+import ChallengePage      from './pages/ChallengePage'
+import DashboardPage      from './pages/DashboardPage'
+import AboutPage          from './pages/AboutPage'
+import PrivacyPage        from './pages/PrivacyPage'
+import TermsPage          from './pages/TermsPage'
+import SupportPage        from './pages/SupportPage'
+import GitHubCallbackPage from './pages/GitHubCallbackPage'
 
 gsap.registerPlugin(ScrollTrigger)
 
@@ -57,18 +59,19 @@ function AppInner() {
 
       {/* Page routes */}
       <Routes>
-        <Route path="/"             element={<LandingPage />} />
-        <Route path="/learn"        element={<LearnPage />} />
-        <Route path="/practice"     element={<PracticePage />} />
-        <Route path="/troubleshoot" element={<TroubleshootPage />} />
-        <Route path="/challenge"    element={<ChallengePage />} />
-        <Route path="/dashboard"    element={<DashboardPage />} />
-        <Route path="/about"        element={<AboutPage />} />
-        <Route path="/privacy"      element={<PrivacyPage />} />
-        <Route path="/terms"        element={<TermsPage />} />
-        <Route path="/support"      element={<SupportPage />} />
+        <Route path="/"                     element={<LandingPage />} />
+        <Route path="/learn"                element={<LearnPage />} />
+        <Route path="/practice"             element={<PracticePage />} />
+        <Route path="/troubleshoot"         element={<TroubleshootPage />} />
+        <Route path="/challenge"            element={<ChallengePage />} />
+        <Route path="/dashboard"            element={<DashboardPage />} />
+        <Route path="/about"                element={<AboutPage />} />
+        <Route path="/privacy"              element={<PrivacyPage />} />
+        <Route path="/terms"                element={<TermsPage />} />
+        <Route path="/support"              element={<SupportPage />} />
+        <Route path="/auth/github/callback" element={<GitHubCallbackPage />} />
         {/* Fallback */}
-        <Route path="*"             element={<LandingPage />} />
+        <Route path="*"                     element={<LandingPage />} />
       </Routes>
     </>
   )
