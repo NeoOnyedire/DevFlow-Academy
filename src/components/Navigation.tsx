@@ -13,15 +13,19 @@
  *   Progress      → /dashboard
  *   Challenge     → /challenge
  *
- * User avatar now shows the real GitHub profile photo when the person
- * signed in via GitHub OAuth (user.avatarUrl), falling back to the
- * original colored-initials circle for password accounts.
+ * User avatar shows the real GitHub profile photo when the person signed
+ * in via GitHub OAuth (user.avatarUrl), falling back to a colored-initials
+ * circle otherwise. That fallback color is now computed on the fly via
+ * nameToColor() rather than stored on the account — it's purely cosmetic
+ * and always derivable from the name, so there's no reason to persist it
+ * server-side.
  */
 
 import { useState, useCallback } from 'react'
 import { NavLink } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useApp } from '../context/AppContext'
+import { nameToColor } from '../lib/avatarColor'
 import { GitBranch, LogIn, LogOut, Menu, X, GraduationCap, BookOpen, Wrench, Zap, LayoutDashboard } from 'lucide-react'
 
 export default function Navigation() {
@@ -106,7 +110,7 @@ export default function Navigation() {
           {isLoggedIn && user ? (
             <div className="flex items-center gap-3 pl-4 border-l border-white/10">
               <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden"
-                style={{ backgroundColor: user.avatar }}
+                style={{ backgroundColor: nameToColor(user.name) }}
                 title={user.githubUsername ? `@${user.githubUsername}` : user.name}>
                 {user.avatarUrl ? (
                   <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
@@ -185,7 +189,7 @@ export default function Navigation() {
               {isLoggedIn && user ? (
                 <div className="flex items-center justify-between px-2 py-2">
                   <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center overflow-hidden" style={{ backgroundColor: user.avatar }}>
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center overflow-hidden" style={{ backgroundColor: nameToColor(user.name) }}>
                       {user.avatarUrl ? (
                         <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
                       ) : (

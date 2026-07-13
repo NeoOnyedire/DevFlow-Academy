@@ -293,7 +293,7 @@ const CURRICULUM_MODULES: CurriculumModule[] = [
 ]
 
 export function AppProvider({ children }: { children: ReactNode }) {
-  const { user } = useAuth()
+  const { user, refreshUser } = useAuth()
   const [role, setRoleState] = useState<LearningRole>(() => {
     return (localStorage.getItem('devflow_role') as LearningRole | null) || 'junior-dev'
   })
@@ -308,11 +308,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   // ---- Review State ----
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false)
-  // Local, per-browser "did I submit a review" flag — mirrors how
-  // course progress works. The reviews themselves are shared (below).
-  const [hasSubmittedReview, setHasSubmittedReview] = useState(() => {
-    return !!localStorage.getItem('devflow_review_submitted')
-  })
+  // "Did I submit a review" is now a real, server-verified fact tied to
+  // the account (see api/_lib/users.ts) — not a flag that could be
+  // cleared by clearing the browser. Guests (no account) are always false.
+  const hasSubmittedReview = !!user?.hasReviewedCourse
 
   // ---- Public reviews — shared across everyone, via /api/reviews ----
   const [reviews, setReviews] = useState<PublicReview[]>([])
@@ -388,16 +387,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const closeReviewModal = useCallback(() => setIsReviewModalOpen(false), [])
 
   /**
-   * Submit a review — posts to the shared /api/reviews backend so it's
-   * visible to every visitor, then marks this browser as "reviewed" and
-   * refreshes the local list so the new review shows up immediately.
+   * Submit a review — posts to the shared /api/reviews backend, which
+   * requires being logged in and enforces one review per account
+   * server-side. The display name comes from the account server-side,
+   * not from this request. On success, refreshUser() re-syncs
+   * user.hasReviewedCourse from the server so hasSubmittedReview updates
+   * everywhere immediately.
    */
   const submitReview = useCallback(async (rating: number, comment: string): Promise<{ ok: boolean; message: string }> => {
     try {
       const response = await fetch('/api/reviews', {
         method: 'POST',
+        credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rating, comment, userName: user?.name || 'Anonymous' }),
+        body: JSON.stringify({ rating, comment }),
       })
       const data = await response.json()
 
@@ -405,18 +408,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
         return { ok: false, message: data.error || 'Could not submit your review. Please try again.' }
       }
 
-      localStorage.setItem('devflow_review_submitted', 'true')
-      setHasSubmittedReview(true)
       setIsReviewModalOpen(false)
       // Optimistically show the new review immediately, then reconcile with the server.
       if (data.review) setReviews(prev => [data.review, ...prev])
       refreshReviews()
+      await refreshUser()
 
       return { ok: true, message: 'Review submitted — thanks!' }
     } catch {
       return { ok: false, message: 'Could not reach the server. Please check your connection and try again.' }
     }
-  }, [user, refreshReviews])
+  }, [refreshReviews, refreshUser])
 
   // ---- Progress Handlers ----
   /** Toggle a module's completion status and persist to localStorage */

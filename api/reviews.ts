@@ -2,32 +2,32 @@
 //
 // Serverless endpoint for DevFlow Academy's course reviews.
 //
-// Reviews are now genuinely shared across everyone who visits the site —
-// they're stored in a small Upstash Redis database (via its REST API),
-// not in any one visitor's browser. This replaces the earlier version,
-// where "reviews" only ever lived in localStorage and were only ever
-// visible on the same browser that wrote them, despite the UI implying
-// they were public.
+// Reviews are shared across everyone who visits the site — stored in the
+// same Upstash Redis database as user accounts, not in any one visitor's
+// browser.
+//
+// Submitting a review now requires being signed in (a valid session
+// cookie — see api/_lib/session.ts), and each account can only submit
+// once: the server checks and sets `hasReviewedCourse` on the account
+// record itself (api/_lib/users.ts), so clearing your browser or using
+// a different tab can't be used to submit a second review. The display
+// name attached to a review is taken from the account, not from
+// whatever the client sends, so it can't be spoofed either.
 //
 // ---- One-time setup ----
-//   1. Create a free database at https://console.upstash.com (Redis,
-//      "Regional" or "Global" — either works fine for this volume).
-//   2. On the database's dashboard, copy the "REST URL" and
-//      "REST TOKEN" (NOT the redis:// connection string — the REST
-//      ones, since this project talks to Upstash over HTTPS like it
-//      already does for GitHub/Gemini/Groq elsewhere in /api).
-//   3. Set them as environment variables named exactly:
+//   1. Create a free database at https://console.upstash.com (Redis).
+//   2. Copy its "REST URL" and "REST TOKEN" from the database dashboard.
+//   3. Set them as environment variables:
 //        UPSTASH_REDIS_REST_URL
 //        UPSTASH_REDIS_REST_TOKEN
-//      In Vercel: Project Settings -> Environment Variables, added for
-//      Production AND Preview. Locally: put them in .env.local (this
-//      file is already gitignored — never commit real credentials).
-//
-// Neither value is ever sent to the browser — only this function talks
-// to Upstash, the same way api/gitter.ts is the only thing that talks
-// to the AI providers.
+//      In Vercel: Project Settings -> Environment Variables (Production
+//      and Preview). Locally: add them to .env.local (never commit that
+//      file). You'll also need SESSION_SECRET set — see api/_lib/session.ts.
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
+import { getUpstashConfig } from './_lib/upstash'
+import { getUserIdFromRequest } from './_lib/session'
+import { getUserById, saveUser } from './_lib/users'
 
 interface StoredReview {
   rating: number
@@ -40,11 +40,10 @@ const REVIEWS_KEY = 'devflow:reviews'
 const MAX_REVIEWS_RETURNED = 50
 const MAX_COMMENT_LEN = 600
 const MIN_COMMENT_LEN = 10
-const MAX_NAME_LEN = 60
 
 // ---- Best-effort per-IP rate limiter, write path only ----
-// Resets on cold start — enough to stop casual spam of this endpoint,
-// not a hard guarantee across all instances.
+// Defense in depth on top of the one-review-per-account rule below —
+// resets on cold start, not a hard guarantee across all instances.
 const WINDOW_MS = 60_000
 const MAX_WRITES_PER_WINDOW = 5
 const ipHits = new Map<string, number[]>()
@@ -65,13 +64,6 @@ function getClientIp(req: VercelRequest): string {
     req.socket.remoteAddress ||
     'unknown'
   )
-}
-
-function getUpstashConfig() {
-  const url = process.env.UPSTASH_REDIS_REST_URL
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN
-  if (!url || !token) return null
-  return { url: url.replace(/\/+$/, ''), token }
 }
 
 /** Reads the most recent reviews, newest first (LPUSH means index 0 is newest). */
@@ -142,17 +134,31 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return
   }
 
+  // ---- Write: must be signed in ----
+  const userId = getUserIdFromRequest(req)
+  if (!userId) {
+    res.status(401).json({ error: 'You need to be logged in to submit a review.' })
+    return
+  }
+
+  const user = await getUserById(userId)
+  if (!user) {
+    res.status(401).json({ error: 'Your session has expired. Please log in again.' })
+    return
+  }
+
+  if (user.hasReviewedCourse) {
+    res.status(409).json({ error: "You've already submitted a review with this account." })
+    return
+  }
+
   const ip = getClientIp(req)
   if (isIpRateLimited(ip)) {
     res.status(429).json({ error: 'Too many reviews submitted. Please slow down and try again shortly.' })
     return
   }
 
-  const { rating, comment, userName } = (req.body || {}) as {
-    rating?: number
-    comment?: string
-    userName?: string
-  }
+  const { rating, comment } = (req.body || {}) as { rating?: number; comment?: string }
 
   if (typeof rating !== 'number' || !Number.isInteger(rating) || rating < 1 || rating > 5) {
     res.status(400).json({ error: 'Rating must be a whole number from 1 to 5.' })
@@ -167,13 +173,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return
   }
 
-  const cleanName = (typeof userName === 'string' ? userName.trim() : '').slice(0, MAX_NAME_LEN) || 'Anonymous'
-
+  // Display name comes from the account, not the request body — can't be spoofed.
   const review: StoredReview = {
     rating,
     comment: comment.trim(),
     date: new Date().toISOString(),
-    userName: cleanName,
+    userName: user.name,
   }
 
   try {
@@ -182,6 +187,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       res.status(502).json({ error: 'Could not save your review right now. Please try again.' })
       return
     }
+
+    user.hasReviewedCourse = true
+    await saveUser(user)
+
     res.status(200).json({ ok: true, review })
   } catch {
     res.status(502).json({ error: 'Could not save your review right now. Please try again.' })

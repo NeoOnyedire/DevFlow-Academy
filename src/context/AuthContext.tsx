@@ -4,179 +4,177 @@
  * ============================================================================
  *
  * Authentication context provider for DevFlow Academy.
- * Manages user login state, credentials, and access control.
  *
- * Two ways to sign in:
- * - Email + password (original flow) — credentials stored in localStorage.
- *   Kept as-is for backward compatibility with existing accounts.
- * - GitHub OAuth (new) — no password ever touches this app. The browser
- *   redirects to GitHub, GitHub redirects back with a one-time code, and
- *   api/auth/github.ts exchanges that code server-side (where the client
- *   secret lives) for the user's public profile. See src/lib/githubOAuth.ts
- *   and src/pages/GitHubCallbackPage.tsx for the rest of that flow.
+ * Accounts are now real, server-side records (see api/_lib/users.ts),
+ * not localStorage. Two ways to sign in, both end the same way — a
+ * signed, httpOnly session cookie set by the server:
  *
- * All curriculum content requires login. Users must also leave a review
- * before marking the course as complete.
+ * - Email + password — api/auth/register.ts and api/auth/login.ts.
+ *   Passwords are hashed server-side (scrypt) before ever touching
+ *   storage; this app never sees or stores a plaintext password after
+ *   the initial request.
+ * - GitHub OAuth — unchanged redirect flow (see githubOAuth.ts /
+ *   GitHubCallbackPage.tsx), but api/auth/github.ts now creates or
+ *   finds a real server-side account and signs the same kind of
+ *   session cookie, instead of handing the browser a profile to store
+ *   itself.
+ *
+ * On mount, this provider asks the server "who am I?" via
+ * GET /api/auth/me (the cookie travels automatically) rather than
+ * reading a cached user out of localStorage. This also means things
+ * like "have I already submitted a review" are real, server-verified
+ * facts tied to the account (user.hasReviewedCourse), not a flag that
+ * resets when someone clears their browser.
+ *
+ * NOTE ON MIGRATION: accounts created under the old localStorage-based
+ * system do not carry over — this is a genuinely different storage
+ * backend. Existing test users will need to register again.
  * ============================================================================
  */
 
-import { createContext, useContext, useState, useCallback, type ReactNode } from 'react'
+import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react'
 
-/** User profile shape — minimal, no password stored in memory */
+/** User profile shape — mirrors the server's "safe" user (no password hash) */
 export interface User {
   id: string
   name: string
   email: string
-  avatar: string // initials-based avatar color (fallback when no real image)
-  provider?: 'password' | 'github' // absent = legacy password account
+  provider: 'password' | 'github'
   githubUsername?: string
-  avatarUrl?: string // real avatar image, e.g. from GitHub
+  avatarUrl?: string
+  hasReviewedCourse: boolean
 }
 
-interface GitHubProfileResponse {
-  githubId: number
-  username: string
-  name: string
-  email: string
-  avatarUrl: string
-  profileUrl: string
+interface AuthResult {
+  ok: boolean
+  message: string
 }
 
 /** Auth context value exposed to consumers */
 interface AuthContextValue {
   user: User | null
   isLoggedIn: boolean
+  isLoadingUser: boolean
   isAuthModalOpen: boolean
   authModalMode: 'login' | 'register'
-  login: (email: string, password: string) => boolean
-  register: (name: string, email: string, password: string) => boolean
-  loginWithGitHub: (code: string) => Promise<{ ok: boolean; message: string }>
-  logout: () => void
+  login: (email: string, password: string) => Promise<AuthResult>
+  register: (name: string, email: string, password: string) => Promise<AuthResult>
+  loginWithGitHub: (code: string) => Promise<AuthResult>
+  logout: () => Promise<void>
+  refreshUser: () => Promise<void>
   openAuthModal: (mode?: 'login' | 'register') => void
   closeAuthModal: () => void
 }
 
-// Create the context with a default undefined value
 const AuthContext = createContext<AuthContextValue | undefined>(undefined)
 
-/**
- * Generate a deterministic color from a name string.
- * Used for avatar backgrounds so each user gets a unique color, and as a
- * fallback for GitHub users before/if their avatar image fails to load.
- */
-function nameToColor(name: string): string {
-  const colors = ['#FF4D6D', '#F7B731', '#3CCF4A', '#4A90D9', '#9B59B6', '#E67E22']
-  let hash = 0
-  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash)
-  return colors[Math.abs(hash) % colors.length]
+/** login/register/github all return the same { user } | { error } shape. */
+async function parseAuthResponse(response: Response): Promise<{ user?: User; error?: string }> {
+  try {
+    return await response.json()
+  } catch {
+    return { error: 'Unexpected response from the server.' }
+  }
 }
 
 /** Provider component — wrap the app with this */
 export function AuthProvider({ children }: { children: ReactNode }) {
-  // Load user from localStorage on initial mount (persistent sessions)
-  const [user, setUser] = useState<User | null>(() => {
-    const saved = localStorage.getItem('devflow_user')
-    return saved ? JSON.parse(saved) : null
-  })
+  const [user, setUser] = useState<User | null>(null)
+  const [isLoadingUser, setIsLoadingUser] = useState(true)
 
   // Auth modal visibility state
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
   const [authModalMode, setAuthModalMode] = useState<'login' | 'register'>('login')
 
-  /**
-   * Login handler — validates against stored users in localStorage.
-   * Returns true on success, false on failure.
-   */
-  const login = useCallback((email: string, password: string): boolean => {
-    const users = JSON.parse(localStorage.getItem('devflow_users') || '[]')
-    const found = users.find((u: { email: string; password: string; name: string }) =>
-      u.email === email && u.password === password
-    )
-    if (found) {
-      const userObj: User = {
-        id: btoa(email),
-        name: found.name,
-        email: found.email,
-        avatar: nameToColor(found.name),
-        provider: 'password',
-      }
-      setUser(userObj)
-      localStorage.setItem('devflow_user', JSON.stringify(userObj))
-      return true
-    }
-    return false
-  }, [])
-
-  /**
-   * Register handler — creates a new user account.
-   * Returns true on success, false if email already exists.
-   */
-  const register = useCallback((name: string, email: string, password: string): boolean => {
-    const users = JSON.parse(localStorage.getItem('devflow_users') || '[]')
-    // Prevent duplicate registrations
-    if (users.some((u: { email: string }) => u.email === email)) return false
-
-    users.push({ name, email, password })
-    localStorage.setItem('devflow_users', JSON.stringify(users))
-
-    // Auto-login after registration
-    const userObj: User = {
-      id: btoa(email),
-      name,
-      email,
-      avatar: nameToColor(name),
-      provider: 'password',
-    }
-    setUser(userObj)
-    localStorage.setItem('devflow_user', JSON.stringify(userObj))
-    return true
-  }, [])
-
-  /**
-   * GitHub OAuth login — takes the one-time `code` GitHub sent back to
-   * the callback page, has the server exchange it for a profile, and
-   * creates a session from that. No password anywhere in this path.
-   *
-   * The user's id is namespaced (`github:<id>`) so it never collides with
-   * a password-account id, and stays stable across future GitHub logins
-   * so progress keeps working (progress is keyed to user.id elsewhere).
-   */
-  const loginWithGitHub = useCallback(async (code: string): Promise<{ ok: boolean; message: string }> => {
+  /** Ask the server who the current session cookie belongs to, if anyone. */
+  const refreshUser = useCallback(async () => {
     try {
-      const response = await fetch('/api/auth/github', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code }),
-      })
+      const response = await fetch('/api/auth/me', { credentials: 'same-origin' })
       const data = await response.json()
+      setUser(data.user || null)
+    } catch {
+      setUser(null)
+    }
+  }, [])
 
-      if (!response.ok) {
-        return { ok: false, message: data.message || data.error || 'GitHub sign-in failed.' }
+  // On mount: restore session from the cookie, not localStorage.
+  useEffect(() => {
+    refreshUser().finally(() => setIsLoadingUser(false))
+  }, [refreshUser])
+
+  /** Login handler — verifies against the server. Returns { ok, message }. */
+  const login = useCallback(async (email: string, password: string): Promise<AuthResult> => {
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      })
+      const data = await parseAuthResponse(response)
+      if (!response.ok || !data.user) {
+        return { ok: false, message: data.error || 'Invalid email or password.' }
       }
-
-      const gh = data.user as GitHubProfileResponse
-      const userObj: User = {
-        id: `github:${gh.githubId}`,
-        name: gh.name,
-        email: gh.email,
-        avatar: nameToColor(gh.name),
-        provider: 'github',
-        githubUsername: gh.username,
-        avatarUrl: gh.avatarUrl,
-      }
-
-      setUser(userObj)
-      localStorage.setItem('devflow_user', JSON.stringify(userObj))
-      return { ok: true, message: `Signed in as @${gh.username}.` }
+      setUser(data.user)
+      return { ok: true, message: 'Welcome back!' }
     } catch {
       return { ok: false, message: 'Could not reach the server. Please try again.' }
     }
   }, [])
 
-  /** Logout — clears all auth state */
-  const logout = useCallback(() => {
+  /** Register handler — creates a real server-side account. */
+  const register = useCallback(async (name: string, email: string, password: string): Promise<AuthResult> => {
+    try {
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, password }),
+      })
+      const data = await parseAuthResponse(response)
+      if (!response.ok || !data.user) {
+        return { ok: false, message: data.error || 'Could not create your account.' }
+      }
+      setUser(data.user)
+      return { ok: true, message: 'Account created!' }
+    } catch {
+      return { ok: false, message: 'Could not reach the server. Please try again.' }
+    }
+  }, [])
+
+  /**
+   * GitHub OAuth login — takes the one-time `code` GitHub sent back to
+   * the callback page. The server exchanges it, finds-or-creates the
+   * matching account, and signs a session cookie. No password anywhere
+   * in this path.
+   */
+  const loginWithGitHub = useCallback(async (code: string): Promise<AuthResult> => {
+    try {
+      const response = await fetch('/api/auth/github', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code }),
+      })
+      const data = await parseAuthResponse(response)
+      if (!response.ok || !data.user) {
+        return { ok: false, message: data.error || 'GitHub sign-in failed.' }
+      }
+      setUser(data.user)
+      return { ok: true, message: `Signed in as @${data.user.githubUsername || data.user.name}.` }
+    } catch {
+      return { ok: false, message: 'Could not reach the server. Please try again.' }
+    }
+  }, [])
+
+  /** Logout — clears the session cookie server-side and local state. */
+  const logout = useCallback(async () => {
     setUser(null)
-    localStorage.removeItem('devflow_user')
+    try {
+      await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' })
+    } catch {
+      // The UI has already logged out either way; the cookie will expire on its own.
+    }
   }, [])
 
   /** Open the auth modal in a specific mode (login or register) */
@@ -194,12 +192,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     <AuthContext.Provider value={{
       user,
       isLoggedIn: !!user,
+      isLoadingUser,
       isAuthModalOpen,
       authModalMode,
       login,
       register,
       loginWithGitHub,
       logout,
+      refreshUser,
       openAuthModal,
       closeAuthModal,
     }}>

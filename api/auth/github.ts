@@ -13,17 +13,18 @@
 //   3. The callback page POSTs { code } here.
 //   4. This function exchanges the code for a short-lived GitHub access
 //      token, fetches the user's public profile (+ primary email if the
-//      profile email is private), and returns just enough profile data
-//      for the frontend to create a session.
+//      profile email is private) — then finds-or-creates a real
+//      server-side account for that GitHub identity (api/_lib/users.ts)
+//      and signs the person in with the same httpOnly session cookie
+//      that email/password login uses.
 //
 // IMPORTANT: the GitHub access token itself is never sent back to the
 // browser or persisted anywhere — it's used once, server-side, to fetch
-// the profile, then discarded. If a future feature needs authenticated
-// GitHub API calls on the user's behalf, that token would need to be
-// stored server-side (e.g. in a real database), which this project
-// currently doesn't have.
+// the profile, then discarded.
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
+import { upsertGithubUser, toSafeUser } from '../_lib/users'
+import { createSessionCookie } from '../_lib/session'
 
 interface GitHubTokenResponse {
   access_token?: string
@@ -123,17 +124,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     }
 
-    // Only the minimum needed to create a session goes back to the client.
-    res.status(200).json({
-      user: {
-        githubId: githubUser.id,
-        username: githubUser.login,
-        name: githubUser.name || githubUser.login,
-        email: email || `${githubUser.login}@users.noreply.github.com`,
-        avatarUrl: githubUser.avatar_url,
-        profileUrl: githubUser.html_url,
-      },
+    // ---- Step 4: find-or-create the server-side account, sign a session ----
+    const user = await upsertGithubUser({
+      githubId: githubUser.id,
+      username: githubUser.login,
+      name: githubUser.name || githubUser.login,
+      email: email || `${githubUser.login}@users.noreply.github.com`,
+      avatarUrl: githubUser.avatar_url,
     })
+
+    res.setHeader('Set-Cookie', createSessionCookie(user.id))
+    res.status(200).json({ user: toSafeUser(user) })
   } catch {
     res.status(502).json({ error: 'Failed to reach GitHub. Please try again.' })
   }

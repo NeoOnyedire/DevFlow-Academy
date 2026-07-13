@@ -7,7 +7,12 @@
  * Switches between modes dynamically. Validates inputs client-side.
  * Shows friendly error messages. Auto-focuses first input on open.
  *
- * Now also offers "Continue with GitHub" above the form — redirects to
+ * login()/register() now hit real server endpoints (api/auth/login.ts,
+ * api/auth/register.ts) and are async, so submission shows a loading
+ * state and surfaces the server's actual error message (e.g. "email
+ * already exists") rather than a generic client-side guess.
+ *
+ * Also offers "Continue with GitHub" above the form — redirects to
  * GitHub's OAuth authorize page, which eventually lands the user back on
  * /auth/github/callback, fully signed in, with no password ever created.
  * The GitHub button only renders if VITE_GITHUB_CLIENT_ID is configured,
@@ -65,12 +70,12 @@ export default function AuthModal() {
     window.location.href = url
   }
 
-  /** Handle form submission — validates inputs and calls auth functions */
-  const handleSubmit = (e: React.FormEvent) => {
+  /** Handle form submission — validates inputs, then awaits the server call */
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
 
-    // Basic validation
+    // Basic client-side validation (server re-validates everything too)
     if (authModalMode === 'register' && !name.trim()) {
       setError('Please enter your name')
       return
@@ -86,28 +91,20 @@ export default function AuthModal() {
 
     setIsSubmitting(true)
 
-    if (authModalMode === 'login') {
-      const success = login(email, password)
-      if (success) {
-        closeAuthModal()
-        setEmail('')
-        setPassword('')
-      } else {
-        setError('Invalid email or password. Try registering first!')
-      }
-    } else {
-      const success = register(name, email, password)
-      if (success) {
-        closeAuthModal()
-        setName('')
-        setEmail('')
-        setPassword('')
-      } else {
-        setError('An account with this email already exists')
-      }
-    }
+    const result = authModalMode === 'login'
+      ? await login(email, password)
+      : await register(name, email, password)
 
     setIsSubmitting(false)
+
+    if (result.ok) {
+      closeAuthModal()
+      setName('')
+      setEmail('')
+      setPassword('')
+    } else {
+      setError(result.message)
+    }
   }
 
   // Don't render if modal is closed
@@ -194,8 +191,9 @@ export default function AuthModal() {
                 value={name}
                 onChange={e => setName(e.target.value)}
                 placeholder="Alex Johnson"
+                disabled={isSubmitting}
                 className="w-full px-4 py-3 rounded-xl bg-white/10 text-white placeholder-white/30 border border-white/10
-                  focus:border-[#F7B731]/50 focus:outline-none transition-colors"
+                  focus:border-[#F7B731]/50 focus:outline-none transition-colors disabled:opacity-60"
               />
             </div>
           )}
@@ -211,8 +209,9 @@ export default function AuthModal() {
               value={email}
               onChange={e => setEmail(e.target.value)}
               placeholder="alex@example.com"
+              disabled={isSubmitting}
               className="w-full px-4 py-3 rounded-xl bg-white/10 text-white placeholder-white/30 border border-white/10
-                focus:border-[#F7B731]/50 focus:outline-none transition-colors"
+                focus:border-[#F7B731]/50 focus:outline-none transition-colors disabled:opacity-60"
             />
           </div>
 
@@ -227,8 +226,9 @@ export default function AuthModal() {
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 placeholder="Min 6 characters"
+                disabled={isSubmitting}
                 className="w-full px-4 py-3 pr-12 rounded-xl bg-white/10 text-white placeholder-white/30 border border-white/10
-                  focus:border-[#F7B731]/50 focus:outline-none transition-colors"
+                  focus:border-[#F7B731]/50 focus:outline-none transition-colors disabled:opacity-60"
               />
               <button
                 type="button"
