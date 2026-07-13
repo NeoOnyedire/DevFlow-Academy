@@ -5,30 +5,27 @@
  *
  * Authentication context provider for DevFlow Academy.
  *
- * Accounts are now real, server-side records (see api/_lib/users.ts),
- * not localStorage. Two ways to sign in, both end the same way — a
- * signed, httpOnly session cookie set by the server:
+ * Accounts are real, server-side records (see api/_lib/users.ts). Two
+ * ways to sign in, both end the same way — a signed, httpOnly session
+ * cookie set by the server:
  *
  * - Email + password — api/auth/register.ts and api/auth/login.ts.
  *   Passwords are hashed server-side (scrypt) before ever touching
- *   storage; this app never sees or stores a plaintext password after
- *   the initial request.
- * - GitHub OAuth — unchanged redirect flow (see githubOAuth.ts /
- *   GitHubCallbackPage.tsx), but api/auth/github.ts now creates or
- *   finds a real server-side account and signs the same kind of
- *   session cookie, instead of handing the browser a profile to store
- *   itself.
+ *   storage. Registering sends a verification email (best-effort); the
+ *   account works immediately either way, and `user.emailVerified`
+ *   reflects whether that link has been clicked yet.
+ * - GitHub OAuth — api/auth/github.ts creates or finds a real
+ *   server-side account and signs the same kind of session cookie.
+ *   GitHub accounts are always emailVerified: true, since GitHub only
+ *   ever hands us a verified email in the first place.
+ *
+ * Also handles the "forgot password" flow: requestPasswordReset() kicks
+ * off an emailed reset link, and resetPassword() consumes that link's
+ * token to set a new password and sign the person in.
  *
  * On mount, this provider asks the server "who am I?" via
  * GET /api/auth/me (the cookie travels automatically) rather than
- * reading a cached user out of localStorage. This also means things
- * like "have I already submitted a review" are real, server-verified
- * facts tied to the account (user.hasReviewedCourse), not a flag that
- * resets when someone clears their browser.
- *
- * NOTE ON MIGRATION: accounts created under the old localStorage-based
- * system do not carry over — this is a genuinely different storage
- * backend. Existing test users will need to register again.
+ * reading a cached user out of localStorage.
  * ============================================================================
  */
 
@@ -43,6 +40,7 @@ export interface User {
   githubUsername?: string
   avatarUrl?: string
   hasReviewedCourse: boolean
+  emailVerified: boolean
 }
 
 interface AuthResult {
@@ -50,30 +48,36 @@ interface AuthResult {
   message: string
 }
 
+export type AuthModalMode = 'login' | 'register' | 'forgot-password'
+
 /** Auth context value exposed to consumers */
 interface AuthContextValue {
   user: User | null
   isLoggedIn: boolean
   isLoadingUser: boolean
   isAuthModalOpen: boolean
-  authModalMode: 'login' | 'register'
+  authModalMode: AuthModalMode
   login: (email: string, password: string) => Promise<AuthResult>
   register: (name: string, email: string, password: string) => Promise<AuthResult>
   loginWithGitHub: (code: string) => Promise<AuthResult>
   logout: () => Promise<void>
   refreshUser: () => Promise<void>
-  openAuthModal: (mode?: 'login' | 'register') => void
+  requestPasswordReset: (email: string) => Promise<AuthResult>
+  resetPassword: (token: string, newPassword: string) => Promise<AuthResult>
+  verifyEmail: (token: string) => Promise<AuthResult>
+  resendVerificationEmail: () => Promise<AuthResult>
+  openAuthModal: (mode?: AuthModalMode) => void
   closeAuthModal: () => void
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined)
 
-/** login/register/github all return the same { user } | { error } shape. */
-async function parseAuthResponse(response: Response): Promise<{ user?: User; error?: string }> {
+/** Most of these endpoints return the same { user } | { error } shape. */
+async function parseJsonResponse<T>(response: Response): Promise<T> {
   try {
     return await response.json()
   } catch {
-    return { error: 'Unexpected response from the server.' }
+    return { error: 'Unexpected response from the server.' } as T
   }
 }
 
@@ -84,7 +88,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Auth modal visibility state
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
-  const [authModalMode, setAuthModalMode] = useState<'login' | 'register'>('login')
+  const [authModalMode, setAuthModalMode] = useState<AuthModalMode>('login')
 
   /** Ask the server who the current session cookie belongs to, if anyone. */
   const refreshUser = useCallback(async () => {
@@ -102,7 +106,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     refreshUser().finally(() => setIsLoadingUser(false))
   }, [refreshUser])
 
-  /** Login handler — verifies against the server. Returns { ok, message }. */
   const login = useCallback(async (email: string, password: string): Promise<AuthResult> => {
     try {
       const response = await fetch('/api/auth/login', {
@@ -111,7 +114,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       })
-      const data = await parseAuthResponse(response)
+      const data = await parseJsonResponse<{ user?: User; error?: string }>(response)
       if (!response.ok || !data.user) {
         return { ok: false, message: data.error || 'Invalid email or password.' }
       }
@@ -122,7 +125,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  /** Register handler — creates a real server-side account. */
   const register = useCallback(async (name: string, email: string, password: string): Promise<AuthResult> => {
     try {
       const response = await fetch('/api/auth/register', {
@@ -131,23 +133,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, email, password }),
       })
-      const data = await parseAuthResponse(response)
+      const data = await parseJsonResponse<{ user?: User; error?: string }>(response)
       if (!response.ok || !data.user) {
         return { ok: false, message: data.error || 'Could not create your account.' }
       }
       setUser(data.user)
-      return { ok: true, message: 'Account created!' }
+      return { ok: true, message: "Account created! We've sent a verification email — no rush." }
     } catch {
       return { ok: false, message: 'Could not reach the server. Please try again.' }
     }
   }, [])
 
-  /**
-   * GitHub OAuth login — takes the one-time `code` GitHub sent back to
-   * the callback page. The server exchanges it, finds-or-creates the
-   * matching account, and signs a session cookie. No password anywhere
-   * in this path.
-   */
   const loginWithGitHub = useCallback(async (code: string): Promise<AuthResult> => {
     try {
       const response = await fetch('/api/auth/github', {
@@ -156,7 +152,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ code }),
       })
-      const data = await parseAuthResponse(response)
+      const data = await parseJsonResponse<{ user?: User; error?: string }>(response)
       if (!response.ok || !data.user) {
         return { ok: false, message: data.error || 'GitHub sign-in failed.' }
       }
@@ -167,7 +163,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  /** Logout — clears the session cookie server-side and local state. */
   const logout = useCallback(async () => {
     setUser(null)
     try {
@@ -177,13 +172,84 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  /** Open the auth modal in a specific mode (login or register) */
-  const openAuthModal = useCallback((mode: 'login' | 'register' = 'login') => {
+  /** Kicks off a password reset email. Always resolves ok — see the endpoint for why. */
+  const requestPasswordReset = useCallback(async (email: string): Promise<AuthResult> => {
+    try {
+      const response = await fetch('/api/auth/request-password-reset', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      })
+      const data = await parseJsonResponse<{ ok?: boolean; message?: string; error?: string }>(response)
+      if (!response.ok) {
+        return { ok: false, message: data.error || 'Could not process that request. Please try again.' }
+      }
+      return { ok: true, message: data.message || "If that email has an account, we've sent a reset link." }
+    } catch {
+      return { ok: false, message: 'Could not reach the server. Please try again.' }
+    }
+  }, [])
+
+  /** Consumes a reset-password link's token and sets a new password, signing the person in. */
+  const resetPassword = useCallback(async (token: string, newPassword: string): Promise<AuthResult> => {
+    try {
+      const response = await fetch('/api/auth/reset-password', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, newPassword }),
+      })
+      const data = await parseJsonResponse<{ user?: User; error?: string }>(response)
+      if (!response.ok || !data.user) {
+        return { ok: false, message: data.error || 'Could not reset your password.' }
+      }
+      setUser(data.user)
+      return { ok: true, message: 'Password updated — you are signed in.' }
+    } catch {
+      return { ok: false, message: 'Could not reach the server. Please try again.' }
+    }
+  }, [])
+
+  /** Consumes an email-verification link's token. */
+  const verifyEmail = useCallback(async (token: string): Promise<AuthResult> => {
+    try {
+      const response = await fetch('/api/auth/verify-email', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token }),
+      })
+      const data = await parseJsonResponse<{ user?: User; error?: string }>(response)
+      if (!response.ok || !data.user) {
+        return { ok: false, message: data.error || 'Could not verify your email.' }
+      }
+      setUser(data.user)
+      return { ok: true, message: 'Email verified!' }
+    } catch {
+      return { ok: false, message: 'Could not reach the server. Please try again.' }
+    }
+  }, [])
+
+  /** Requests another verification email for the currently logged-in account. */
+  const resendVerificationEmail = useCallback(async (): Promise<AuthResult> => {
+    try {
+      const response = await fetch('/api/auth/resend-verification', { method: 'POST', credentials: 'same-origin' })
+      const data = await parseJsonResponse<{ ok?: boolean; message?: string; error?: string }>(response)
+      if (!response.ok) {
+        return { ok: false, message: data.error || 'Could not send the email right now.' }
+      }
+      return { ok: true, message: data.message || 'Verification email sent.' }
+    } catch {
+      return { ok: false, message: 'Could not reach the server. Please try again.' }
+    }
+  }, [])
+
+  const openAuthModal = useCallback((mode: AuthModalMode = 'login') => {
     setAuthModalMode(mode)
     setIsAuthModalOpen(true)
   }, [])
 
-  /** Close the auth modal */
   const closeAuthModal = useCallback(() => {
     setIsAuthModalOpen(false)
   }, [])
@@ -200,6 +266,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loginWithGitHub,
       logout,
       refreshUser,
+      requestPasswordReset,
+      resetPassword,
+      verifyEmail,
+      resendVerificationEmail,
       openAuthModal,
       closeAuthModal,
     }}>

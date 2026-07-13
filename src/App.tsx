@@ -17,6 +17,8 @@
  *   /terms                  Terms of use
  *   /support                Support / contact / socials
  *   /auth/github/callback   GitHub OAuth redirect target (no nav, brief only)
+ *   /verify-email           Email verification link target (no nav, brief only)
+ *   /reset-password         Password reset link target (no nav, brief only)
  */
 
 import { Routes, Route } from 'react-router-dom'
@@ -45,6 +47,8 @@ import PrivacyPage        from './pages/PrivacyPage'
 import TermsPage          from './pages/TermsPage'
 import SupportPage        from './pages/SupportPage'
 import GitHubCallbackPage from './pages/GitHubCallbackPage'
+import VerifyEmailPage    from './pages/VerifyEmailPage'
+import ResetPasswordPage  from './pages/ResetPasswordPage'
 
 gsap.registerPlugin(ScrollTrigger)
 
@@ -70,6 +74,8 @@ function AppInner() {
         <Route path="/terms"                element={<TermsPage />} />
         <Route path="/support"              element={<SupportPage />} />
         <Route path="/auth/github/callback" element={<GitHubCallbackPage />} />
+        <Route path="/verify-email"         element={<VerifyEmailPage />} />
+        <Route path="/reset-password"       element={<ResetPasswordPage />} />
         {/* Fallback */}
         <Route path="*"                     element={<LandingPage />} />
       </Routes>
