@@ -21,13 +21,22 @@
  * - Typing indicator, avatar messages, greeting by name
  * - Login gate, 340px width cap
  *
- * UPDATE: the AI / key settings panel now has an explicit "Close" button
- * in both its states (mid-setup, and already-connected), instead of
- * relying on the person noticing the key icon in the header is a toggle.
+ * FIXED: the proactive "you just finished X" message used to find the
+ * finished module by array index into `modules` — but `modules` gets
+ * re-sorted whenever `rolePath` changes, so after a role switch the
+ * index could point at the wrong module. It now diffs `completedModules`
+ * by id (the newly-added id is always the one that just finished,
+ * regardless of how `modules` happens to be sorted).
+ *
+ * ADDED: chat history now persists to sessionStorage, so closing the
+ * panel or reloading the tab doesn't wipe the conversation. It's
+ * cleared automatically on logout (so the next person signing in on the
+ * same tab doesn't see someone else's chat), and there's a small clear
+ * button in the header for starting fresh manually.
  */
 
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
-import { Bot, ChevronDown, MessageCircle, Send, Sparkles, Star, KeyRound, Zap, ChevronRight } from 'lucide-react'
+import { Bot, ChevronDown, MessageCircle, Send, Sparkles, Star, KeyRound, Zap, ChevronRight, Trash2 } from 'lucide-react'
 import { useApp } from '../context/AppContext'
 import { useAuth } from '../context/AuthContext'
 import { answerWithGitterLite } from '../lib/gitterLite'
@@ -42,6 +51,7 @@ type AiProvider = 'gemini' | 'groq'
 
 const API_KEY_STORAGE = 'devflow_gitter_api_key'
 const PROVIDER_STORAGE = 'devflow_gitter_provider'
+const CHAT_STORAGE = 'devflow_gitter_messages'
 
 const PROVIDER_INFO: Record<AiProvider, { name: string; url: string; host: string; steps: string[] }> = {
   gemini: {
@@ -71,17 +81,28 @@ interface Message {
   text: string
 }
 
+function loadStoredMessages(): Message[] {
+  try {
+    const saved = sessionStorage.getItem(CHAT_STORAGE)
+    return saved ? JSON.parse(saved) : []
+  } catch {
+    return []
+  }
+}
+
 export default function GitterHelper() {
   const { rolePath, completedModules, modules, githubProfile, weeklyChallenge } = useApp()
   const { isLoggedIn, user } = useAuth()
 
   const [isOpen, setIsOpen]           = useState(false)
   const [question, setQuestion]       = useState('')
-  const [messages, setMessages]       = useState<Message[]>([])
+  const [messages, setMessages]       = useState<Message[]>(loadStoredMessages)
   const [isTyping, setIsTyping]       = useState(false)
-  const [hasGreeted, setHasGreeted]   = useState(false)
+  // If we restored a conversation from a previous session, don't re-greet.
+  const [hasGreeted, setHasGreeted]   = useState(() => loadStoredMessages().length > 0)
   const [panelHeight, setPanelHeight] = useState('72vh')
-  const prevCompletedCount            = useRef(completedModules.length)
+  const prevCompletedIdsRef           = useRef<string[]>(completedModules)
+  const prevIsLoggedInRef             = useRef(isLoggedIn)
   const messagesEndRef                = useRef<HTMLDivElement>(null)
   const inputRef                      = useRef<HTMLInputElement>(null)
 
@@ -126,7 +147,28 @@ export default function GitterHelper() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, isTyping])
 
-  // Greeting on first open
+  // Persist chat history so closing the panel or reloading doesn't wipe it.
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(CHAT_STORAGE, JSON.stringify(messages))
+    } catch {
+      // sessionStorage may be unavailable in some private-browsing edge
+      // cases — the chat still works within the tab, it just won't persist.
+    }
+  }, [messages])
+
+  // Clear this tab's chat on logout, so the next person signing in on the
+  // same tab doesn't see the previous person's conversation.
+  useEffect(() => {
+    if (prevIsLoggedInRef.current && !isLoggedIn) {
+      setMessages([])
+      setHasGreeted(false)
+      try { sessionStorage.removeItem(CHAT_STORAGE) } catch { /* noop */ }
+    }
+    prevIsLoggedInRef.current = isLoggedIn
+  }, [isLoggedIn])
+
+  // Greeting on first open — skipped if a persisted conversation already exists
   useEffect(() => {
     if (isOpen && isLoggedIn && user && !hasGreeted) {
       const firstName = user.name.split(' ')[0]
@@ -144,13 +186,18 @@ export default function GitterHelper() {
 
   // Proactive message when user completes a module
   useEffect(() => {
-    const prev = prevCompletedCount.current
-    const curr = completedModules.length
-    prevCompletedCount.current = curr
+    const prevIds = prevCompletedIdsRef.current
+    const currIds = completedModules
+    prevCompletedIdsRef.current = currIds
 
-    if (curr > prev && isLoggedIn && hasGreeted) {
-      const justFinished = modules.find((_, i) => i === prev)
-      const upNext = modules.find(m => !completedModules.includes(m.id))
+    if (currIds.length > prevIds.length && isLoggedIn && hasGreeted) {
+      // Diff by id, not index — `modules` gets re-sorted whenever the role
+      // path changes, so an index into it can point at the wrong module
+      // after a role switch. The newly-added id in completedModules is
+      // always the one that just finished, regardless of sort order.
+      const newlyCompletedId = currIds.find(id => !prevIds.includes(id))
+      const justFinished = modules.find(m => m.id === newlyCompletedId)
+      const upNext = modules.find(m => !currIds.includes(m.id))
 
       const proactiveText = upNext
         ? `Nice work finishing "${justFinished?.title}"! 🎉 Up next: "${upNext.title}" — want a quick 30-second summary before you start?`
@@ -162,7 +209,7 @@ export default function GitterHelper() {
         if (!isOpen) setIsOpen(true) // pop open if closed
       }, 1200)
     }
-  }, [completedModules.length]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [completedModules, isLoggedIn, hasGreeted, modules, isOpen])
 
   // Focus input on open
   useEffect(() => {
@@ -200,6 +247,13 @@ export default function GitterHelper() {
       role: 'gitter',
       text: "Back to Gitter Lite — still free, still here, just working from my built-in Git knowledge instead of live AI.",
     }])
+  }
+
+  /** Clears the on-screen conversation and its persisted copy — a fresh start. */
+  const clearChat = () => {
+    setMessages([])
+    setHasGreeted(false)
+    try { sessionStorage.removeItem(CHAT_STORAGE) } catch { /* noop */ }
   }
 
   const sendMessage = useCallback(async (prompt = question) => {
@@ -299,6 +353,16 @@ export default function GitterHelper() {
               </div>
             </div>
             <div className="flex items-center gap-1">
+              {messages.length > 0 && (
+                <button
+                  onClick={clearChat}
+                  className="rounded-lg p-1.5 text-white/50 hover:bg-white/10 hover:text-white transition-colors"
+                  aria-label="Clear conversation"
+                  title="Clear conversation"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              )}
               <button
                 onClick={() => setShowKeySettings(v => !v)}
                 className="rounded-lg p-1.5 text-white/50 hover:bg-white/10 hover:text-white transition-colors"
