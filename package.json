@@ -10,6 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@neondatabase/serverless": "^1.1.0",
     "@upstash/redis": "^1.38.0",
     "@vercel/postgres": "^0.10.0",
     "gsap": "^3.15.0",
