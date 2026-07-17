@@ -17,7 +17,11 @@
  *   them. `hasSubmittedReview` itself stays a local, per-browser flag —
  *   it just gates this browser's own "have I already reviewed?" UI, the
  *   same way course progress does.
- * - Completed modules tracking
+ * - Completed modules tracking — synced to Postgres via /api/progress
+ *   for logged-in users (see db/schema.sql's user_progress table), so
+ *   progress survives a cleared browser or a different device. Guests
+ *   (no account) fall back to a local, per-browser localStorage key,
+ *   since there's no account to attach server-side progress to.
  * - Repo Royale leaderboard — real, shared data from a Postgres-backed
  *   /api/leaderboard endpoint. Points are recorded server-side against
  *   the signed-in account when a weekly challenge is completed; the
@@ -27,7 +31,7 @@
  * ============================================================================
  */
 
-import { createContext, useContext, useState, useCallback, useMemo, useEffect, type ReactNode } from 'react'
+import { createContext, useContext, useState, useCallback, useMemo, useEffect, useRef, type ReactNode } from 'react'
 import { useAuth } from './AuthContext'
 
 export type LearningRole = 'junior-dev' | 'devops' | 'career-switcher'
@@ -113,10 +117,12 @@ interface AppContextValue {
   reviewsError: string | null
   refreshReviews: () => Promise<void>
 
-  // Progress
+  // Progress — server-synced for logged-in users via /api/progress,
+  // localStorage fallback for guests
   completedModules: string[]
   toggleModuleComplete: (id: string) => void
   isCourseComplete: boolean
+  isLoadingProgress: boolean
 
   // GitHub integration
   githubProfile: GitHubProfile | null
@@ -384,10 +390,48 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [refreshLeaderboard])
 
   // ---- Progress State ----
+  // Guests: localStorage is the only source of truth, per browser.
+  // Logged-in users: this state is populated from /api/progress below
+  // (a real Postgres table — db/schema.sql) and every toggle syncs
+  // there too, so progress survives a cleared browser or a new device.
   const [completedModules, setCompletedModules] = useState<string[]>(() => {
-    const saved = localStorage.getItem(`devflow_progress_${user?.id || 'guest'}`)
+    const saved = localStorage.getItem('devflow_progress_guest')
     return saved ? JSON.parse(saved) : []
   })
+  const [isLoadingProgress, setIsLoadingProgress] = useState(false)
+  const prevUserIdRef = useRef<string | null>(null)
+
+  // Fetch real progress whenever a real account becomes available
+  // (fresh login, or page load with an existing session cookie).
+  useEffect(() => {
+    if (!user) return
+    let cancelled = false
+    setIsLoadingProgress(true)
+    fetch('/api/progress', { credentials: 'same-origin' })
+      .then(res => res.json())
+      .then(data => {
+        if (cancelled) return
+        setCompletedModules(Array.isArray(data.completedModules) ? data.completedModules : [])
+      })
+      .catch(() => {
+        // Network hiccup — leave whatever was already on screen (likely
+        // the guest list) rather than wiping progress out from under the user.
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingProgress(false)
+      })
+    return () => { cancelled = true }
+  }, [user])
+
+  // On logout, fall back to the guest's local progress rather than
+  // continuing to show the previous account's completed modules.
+  useEffect(() => {
+    if (prevUserIdRef.current && !user) {
+      const saved = localStorage.getItem('devflow_progress_guest')
+      setCompletedModules(saved ? JSON.parse(saved) : [])
+    }
+    prevUserIdRef.current = user?.id ?? null
+  }, [user])
 
   const rolePath = useMemo(() => {
     return ROLE_PATHS.find(path => path.id === role) || ROLE_PATHS[0]
@@ -464,11 +508,32 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [refreshReviews, refreshUser])
 
   // ---- Progress Handlers ----
-  /** Toggle a module's completion status and persist to localStorage */
+  /**
+   * Toggle a module's completion status. Updates on-screen state
+   * immediately either way. Logged-in users sync the change to
+   * /api/progress (best-effort — a failed request doesn't roll back
+   * the UI, it just means the next load reconciles from the server).
+   * Guests persist to a local, per-browser localStorage key instead,
+   * since there's no account to attach server-side progress to.
+   */
   const toggleModuleComplete = useCallback((id: string) => {
     setCompletedModules(prev => {
-      const next = prev.includes(id) ? prev.filter(m => m !== id) : [...prev, id]
-      localStorage.setItem(`devflow_progress_${user?.id || 'guest'}`, JSON.stringify(next))
+      const willComplete = !prev.includes(id)
+      const next = willComplete ? [...prev, id] : prev.filter(m => m !== id)
+
+      if (user) {
+        fetch('/api/progress', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ moduleId: id, completed: willComplete }),
+        }).catch(() => {
+          // Best-effort — local state already reflects the toggle.
+        })
+      } else {
+        localStorage.setItem('devflow_progress_guest', JSON.stringify(next))
+      }
+
       return next
     })
   }, [user])
@@ -570,6 +635,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       completedModules,
       toggleModuleComplete,
       isCourseComplete,
+      isLoadingProgress,
       githubProfile,
       connectGitHub,
       disconnectGitHub,

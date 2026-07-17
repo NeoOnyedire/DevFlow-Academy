@@ -28,3 +28,17 @@ CREATE INDEX IF NOT EXISTS idx_leaderboard_week
 -- click can't double-count points (see the ON CONFLICT in leaderboard.ts).
 CREATE UNIQUE INDEX IF NOT EXISTS idx_leaderboard_user_challenge
   ON leaderboard_entries (user_id, challenge_id);
+
+-- ----------------------------------------------------------------------
+-- Course progress — replaces the old `devflow_progress_<userId>`
+-- localStorage key. One row per completed module per user; a module is
+-- "completed" if a row exists, "not completed" if it doesn't. This is
+-- the app's actual core data, so it belongs in the shared database, not
+-- a browser that can be cleared or swapped.
+-- ----------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS user_progress (
+  user_id TEXT NOT NULL,
+  module_id TEXT NOT NULL,
+  completed_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  PRIMARY KEY (user_id, module_id)
+);
