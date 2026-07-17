@@ -1,73 +1,38 @@
-# React + TypeScript + Vite
+# DevFlow Academy
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+**Master Git and real-world development workflows — through practice, not just theory.**
 
-Currently, two official plugins are available:
+A free, interactive platform to help developers (especially new grads and self-taught engineers) truly understand and master Git — the way industry professionals use it every day.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
 
-## React Compiler
+## The Problem
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Many Computer Science graduates finish university with strong theoretical knowledge but still struggle with essential tools like Git. They can explain concepts but freeze when it comes to real workflows — branching strategies, resolving merge conflicts, rebasing, or collaborating effectively in a team.
 
-## Expanding the ESLint configuration
+We believe **practical practice beats passive learning**.
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Our Solution
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+DevFlow Academy combines **bite-sized lessons** with **interactive, real-world exercises** in a safe environment. Think Duolingo meets Git — gamified, habit-forming, and completely free.
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+### Key Features
+- **Interactive Git Playground** — Practice real commands without fear of breaking anything
+- **Structured Learning Paths** — From absolute beginner to advanced workflows
+- **Realistic Scenarios** — Merge conflicts, pull requests, monorepos, CI/CD integration, and more
+- **Progress Tracking & Streaks** — Built to help you build consistent learning habits
+- **Community Challenges** — Learn together with others
+- **100% Free Forever** — No paywalls, no premium tiers
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+## Why We Built This
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+After seeing friends graduate with CompSci degrees yet still struggle with Git, I decided to take action. Having learned Git hands-on from day one at **WeThinkCode**, I knew the value of practical, work-simulated training.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+So instead of just sharing resources, we’re building a platform that makes learning Git feel natural, engaging, and effective.
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+## Tech Stack
+
+- **Frontend**: Next.js / React (TypeScript)
+- **Backend**: (To be confirmed — likely Node.js / NestJS or Python FastAPI)
+- **Interactive Terminal**: xterm.js + custom backend simulation
+- **Styling**: Tailwind CSS
+- **Database**: (TBD)
