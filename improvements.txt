@@ -8,6 +8,7 @@
 - **GitHub OAuth.** Full authorization-code flow in `api/auth/github.ts`, with CSRF state verification client-side.
 - **Gitter chat persistence.** Conversations now persist to `sessionStorage` and clear on logout (`GitterHelper.tsx`).
 - **`GitterHelper`'s index bug is fixed.** The "just finished" module is now found by diffing `completedModules` ids, not by array index, so it survives a `rolePath` re-sort.
+- **A small SQL layer for reporting.** Even scoped narrowly — a `reviews_summary` or `leaderboard` table fed by a scheduled job that reads from Redis and writes aggregates to Postgres — would unlock real `GROUP BY`/`JOIN`/`ORDER BY` queries for a leaderboard and admin dashboard, without a full migration of the existing auth/reviews system.
 
 ## 🔴 Fix first: remaining data issues
 
@@ -39,4 +40,4 @@ the leaderboard and admin views can't really be built on it.
 - **Search/filter on the Learn page.** Right now it's the fixed fanned card list; filtering by difficulty/role would help as the curriculum grows.
 - **Basic first-party analytics** (Plausible or a simple self-hosted counter) — the privacy policy already commits to no third-party trackers, so this needs to stay first-party.
 - **Tests.** Still no test suite visible. Vitest unit tests around `AppContext`/`AuthContext` logic (progress toggling, role switching, weekly challenge hashing, the review submission flow) would catch regressions early.
-- **A small SQL layer for reporting.** Even scoped narrowly — a `reviews_summary` or `leaderboard` table fed by a scheduled job that reads from Redis and writes aggregates to Postgres — would unlock real `GROUP BY`/`JOIN`/`ORDER BY` queries for a leaderboard and admin dashboard, without a full migration of the existing auth/reviews system.
+
