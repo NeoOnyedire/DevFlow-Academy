@@ -1,29 +1,42 @@
 ## Disclaimer: I made this public to document the journey of this project, so no you are not seeing this by mistake lol
-## 🔴 Fix first: security/data issues
 
-- **Plaintext passwords in localStorage.** `AuthContext` stores `password` directly in `devflow_users` with no hashing. Anyone with dev tools open can read every user's password. Even for a demo, at minimum hash with something like bcrypt server-side — this really needs a real backend auth flow (or swap to GitHub OAuth, which fits the theme perfectly and removes password handling entirely).
-- **"Reviews are shown publicly" is misleading.** `ReviewsSection` reads from the *same browser's* localStorage, so reviews aren't actually shared between users — the review modal's copy overpromises. If you want real public reviews, you need a backend (Supabase/Firebase/Postgres are quick to bolt on).
-- **Progress is keyed to `guest` for logged-out users** and to `btoa(email)` for logged-in ones — if two people log in on the same browser, or a user clears storage, progress silently resets or merges oddly. Worth flagging in the privacy page (partially already done) but also worth hardening.
+## ✅ Resolved since last pass
+- **Real backend is live.** Auth, sessions, and reviews now run through `api/auth/*`, `api/_lib/users.ts`, and `api/_lib/upstash.ts` — passwords are scrypt-hashed server-side, sessions are signed httpOnly cookies, and reviews are genuinely shared across every visitor via Upstash Redis. The old "plaintext localStorage passwords" and "reviews aren't actually public" issues are gone.
+- **Error boundaries added.** `ErrorBoundary.tsx` wraps both the overlay group and the routed pages in `App.tsx` — a crash in one no longer takes down the other.
+- **Real 404 page.** Unknown routes hit `NotFoundPage`, not a silent `LandingPage` fallback.
+- **Email verification + password reset.** Both flows exist end-to-end (`api/auth/verify-email.ts`, `api/auth/reset-password.ts`, `api/auth/request-password-reset.ts`), with rate limiting and generic responses that don't leak account existence.
+- **GitHub OAuth.** Full authorization-code flow in `api/auth/github.ts`, with CSRF state verification client-side.
+- **Gitter chat persistence.** Conversations now persist to `sessionStorage` and clear on logout (`GitterHelper.tsx`).
+- **`GitterHelper`'s index bug is fixed.** The "just finished" module is now found by diffing `completedModules` ids, not by array index, so it survives a `rolePath` re-sort.
+
+## 🔴 Fix first: remaining data issues
+
+- **Progress is still local-only.** `completedModules` is keyed to `guest` or the user id in `localStorage` (`AppContext.tsx`) — it doesn't sync across devices or browsers, and clearing site data wipes it. Reviews and accounts already moved server-side; progress hasn't yet.
+- **GitHub profile connection is also local-only.** `connectGitHub` stores the fetched profile in `localStorage`, not tied to the account server-side — reconnecting is required per browser.
+- **Weekly challenge completion and scenario points are local-only** (`devflow_completed_challenges`, `devflow_scenario_points` in `localStorage`) — same cross-device gap as progress.
 
 ## 🟠 Architecture/robustness
 
-- **No error boundaries.** A single component throw currently takes down the whole app (no `<ErrorBoundary>` around routes/overlays).
-- **No real 404 page** — unknown routes silently fall back to `LandingPage`, which is confusing for shareable/bookmarked bad links.
-- **`GitterHelper`'s proactive-message effect** has an `eslint-disable` on `completedModules.length` and derives `justFinished` via `modules.find((_, i) => i === prev)` — this assumes module order is stable, but `modules` gets *re-sorted* whenever `rolePath` changes, so "just finished" can point at the wrong module after a role switch. Worth tracking finished module by `id`, not index.
-- **Backend-less by design** is fine for a free tool, but it caps you: no cross-device sync, no real leaderboard, no admin visibility into how people are actually using it. If you want to scale past "cool portfolio project," this is the next big lift — Supabase would get you auth + Postgres + row-level security without much extra code.
+- **Redis is a key-value store, not relational — 
+the leaderboard and admin views can't really be built on it.
+** The `LEADERBOARD` array in `ChallengeSection.tsx` is hardcoded mock data.
+ A real leaderboard needs aggregation (rank by points, over a time window, across users) 
+ that's awkward on flat Redis keys. This is a good argument for adding a small Postgres database (Vercel Postgres or Neon both drop into the existing Vercel project easily) for just the relational pieces — leaderboard history, review analytics, module completion rates — without necessarily migrating users/reviews off Redis.
+- **No admin visibility.** There's still no way to see aggregate stats — total signups, completion rates per module, review sentiment over time — short of querying Redis by hand. This is the same underlying gap the "no real leaderboard" note above points at, and would come along for free with a small SQL layer.
+- **Rate limiters are in-memory and per-instance.** `api/_lib/rateLimit.ts`, plus the separate copies in `api/gitter.ts` and `api/reviews.ts`, reset on cold start and don't share state across serverless instances. Fine as abuse deterrence, not a hard guarantee — worth consolidating into the one shared helper at least, even before considering a durable store.
+- **Lazy-load routes.** `App.tsx` still imports every page eagerly. Switching to `React.lazy` + `Suspense` per route would shrink the initial bundle given how much GSAP/lucide/page code is loaded up front.
+- **No loading skeleton on first paint** for GSAP-heavy sections — still pops in via ScrollTrigger with no fallback for a slow first load.
 
 ## 🟡 UX polish
 
-- **No password reset / no email verification** — currently if a user forgets their password there's no recovery path at all.
-- **No loading skeleton on first paint** for GSAP-heavy sections — everything pops in via ScrollTrigger, which is nice, but a first-load flash of unstyled layout could be smoothed with a lightweight skeleton or fade-in root wrapper.
-- **Lazy-load routes.** `App.tsx` imports every page eagerly; switching to `React.lazy` + `Suspense` per route would shrink the initial bundle noticeably given how much GSAP/lucide/page code you have.
-- **Gitter chat has no persistence** — closing the panel or reloading wipes the conversation. Even simple sessionStorage persistence would feel much less throwaway.
-- **Gitter doesn't stream** — for a "friendly, snappy" assistant, a streaming response (SSE) would feel a lot more alive than one big `await` blob, especially since you already have a typing indicator built.
-- **Certificates are conceptual only** — "earn your certificate" is promised on review completion, but there's no actual certificate artifact (PDF/shareable image). That's a nice, fairly cheap feature to add (canvas or PDF-lib generated cert with name + completion date).
+- **Gitter AI doesn't stream.** Responses come back as one `await` blob even though there's already a typing indicator built — SSE streaming would feel more alive.
+- **Certificates are still conceptual only.** "Earn your certificate" is promised on review completion, but no certificate artifact exists (PDF or shareable image). Canvas or PDF-lib generated cert with name + completion date is a cheap add.
+- **Dashboard streak, badges, and ranking are cosmetic placeholders**, not derived from real data (`DashboardSection.tsx` hardcodes streak as `3` once any module is done, badges as `floor(completed/2)`, ranking as a fixed "Top 25%/8%" split). Worth deriving these for real once progress moves server-side.
 
 ## 🟢 Feature ideas worth considering
-- **More weekly challenges** — only 4 templates rotate by hash; the pool feels thin over a few months. Worth growing this list or generating challenges dynamically.
-- **Search/filter on the Learn page** — right now it's just the fixed fanned card list; a filter by difficulty/role would help as the curriculum grows.
-- **Basic analytics you control** (privacy-respecting, e.g., Plausible or a simple self-hosted counter) so you can actually see which modules/pages get used — your privacy policy already commits to no third-party trackers, so this would need to be first-party.
-- **Tests** — there's currently no test suite visible. Even a handful of Vitest unit tests around `AppContext`/`AuthContext` logic (progress toggling, role switching, weekly challenge hashing) would catch regressions like the `GitterHelper` index-bug above.
 
+- **More weekly challenges.** Only 4 templates rotate by hash (`CHALLENGE_TEMPLATES` in `AppContext.tsx`) — the pool is thin over a few months.
+- **Search/filter on the Learn page.** Right now it's the fixed fanned card list; filtering by difficulty/role would help as the curriculum grows.
+- **Basic first-party analytics** (Plausible or a simple self-hosted counter) — the privacy policy already commits to no third-party trackers, so this needs to stay first-party.
+- **Tests.** Still no test suite visible. Vitest unit tests around `AppContext`/`AuthContext` logic (progress toggling, role switching, weekly challenge hashing, the review submission flow) would catch regressions early.
+- **A small SQL layer for reporting.** Even scoped narrowly — a `reviews_summary` or `leaderboard` table fed by a scheduled job that reads from Redis and writes aggregates to Postgres — would unlock real `GROUP BY`/`JOIN`/`ORDER BY` queries for a leaderboard and admin dashboard, without a full migration of the existing auth/reviews system.

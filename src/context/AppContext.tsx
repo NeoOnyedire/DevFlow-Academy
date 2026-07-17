@@ -18,6 +18,12 @@
  *   it just gates this browser's own "have I already reviewed?" UI, the
  *   same way course progress does.
  * - Completed modules tracking
+ * - Repo Royale leaderboard — real, shared data from a Postgres-backed
+ *   /api/leaderboard endpoint. Points are recorded server-side against
+ *   the signed-in account when a weekly challenge is completed; the
+ *   "have I completed this challenge" flag itself stays local (same
+ *   pattern as hasSubmittedReview) since it's purely a per-browser UI
+ *   gate, not something that needs to be globally true.
  * ============================================================================
  */
 
@@ -58,6 +64,13 @@ export interface PublicReview {
   comment: string
   date: string
   userName: string
+}
+
+/** One ranked row, as returned by GET /api/leaderboard (Postgres-backed). */
+export interface LeaderboardEntry {
+  user_name: string
+  total_points: number
+  rank: number
 }
 
 /** A single curriculum module containing a YouTube video */
@@ -113,7 +126,12 @@ interface AppContextValue {
   // Weekly challenge
   weeklyChallenge: WeeklyChallenge
   hasCompletedWeeklyChallenge: boolean
-  completeWeeklyChallenge: () => void
+  completeWeeklyChallenge: () => Promise<void>
+
+  // Leaderboard — real data, shared across everyone, via /api/leaderboard
+  leaderboard: LeaderboardEntry[]
+  isLoadingLeaderboard: boolean
+  refreshLeaderboard: () => Promise<void>
 
   // Curriculum data
   modules: CurriculumModule[]
@@ -340,6 +358,31 @@ export function AppProvider({ children }: { children: ReactNode }) {
     refreshReviews()
   }, [refreshReviews])
 
+  // ---- Leaderboard — shared across everyone, via /api/leaderboard ----
+  // Backed by a real Postgres table (db/schema.sql) rather than Redis —
+  // ranking users by summed points is a GROUP BY + RANK() query, which
+  // doesn't fit the flat key-value shape everything else in this app uses.
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([])
+  const [isLoadingLeaderboard, setIsLoadingLeaderboard] = useState(true)
+
+  const refreshLeaderboard = useCallback(async () => {
+    setIsLoadingLeaderboard(true)
+    try {
+      const response = await fetch(`/api/leaderboard?week=${encodeURIComponent(getWeekKey())}`)
+      const data = await response.json()
+      setLeaderboard(Array.isArray(data.entries) ? data.entries : [])
+    } catch {
+      // Leave whatever was last successfully loaded in place — the
+      // leaderboard just won't refresh this time.
+    } finally {
+      setIsLoadingLeaderboard(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    refreshLeaderboard()
+  }, [refreshLeaderboard])
+
   // ---- Progress State ----
   const [completedModules, setCompletedModules] = useState<string[]>(() => {
     const saved = localStorage.getItem(`devflow_progress_${user?.id || 'guest'}`)
@@ -466,14 +509,40 @@ export function AppProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem('devflow_github_profile')
   }, [])
 
-  const completeWeeklyChallenge = useCallback(() => {
+  /**
+   * Marks the current weekly challenge complete. The local "have I
+   * completed this" flag (below) is what actually gates the UI — same
+   * pattern as hasSubmittedReview — so it updates instantly regardless
+   * of network conditions. The POST to /api/leaderboard is best-effort:
+   * it's what gets the points onto the real, shared leaderboard, but a
+   * hiccup there shouldn't block the user from seeing their own
+   * "completed" state update immediately.
+   */
+  const completeWeeklyChallenge = useCallback(async () => {
     setCompletedChallengeIds(prev => {
       if (prev.includes(weeklyChallenge.id)) return prev
       const next = [...prev, weeklyChallenge.id]
       localStorage.setItem('devflow_completed_challenges', JSON.stringify(next))
       return next
     })
-  }, [weeklyChallenge])
+
+    try {
+      await fetch('/api/leaderboard', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          points: weeklyChallenge.reward,
+          weekKey: getWeekKey(),
+          challengeId: weeklyChallenge.id,
+        }),
+      })
+      refreshLeaderboard()
+    } catch {
+      // Points just won't show up on the shared leaderboard until the
+      // next successful sync — the user's own completed state is unaffected.
+    }
+  }, [weeklyChallenge, refreshLeaderboard])
 
   // Course is complete when ALL modules are done AND a review is submitted
   const allModulesDone = completedModules.length === CURRICULUM_MODULES.length
@@ -507,6 +576,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       weeklyChallenge,
       hasCompletedWeeklyChallenge,
       completeWeeklyChallenge,
+      leaderboard,
+      isLoadingLeaderboard,
+      refreshLeaderboard,
       modules,
     }}>
       {children}

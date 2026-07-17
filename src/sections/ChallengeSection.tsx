@@ -4,6 +4,11 @@
  * Converted from absolute positioning to CSS Grid.
  * Left column: photo card. Right column: title + challenge + leaderboard.
  * No position:absolute on content — safe next to other sections.
+ *
+ * Leaderboard is now real data from /api/leaderboard (Postgres-backed —
+ * see db/schema.sql), not a hardcoded array. It's ranked server-side with
+ * a GROUP BY + RANK() query over summed points per user for the current
+ * week, and updates automatically after completing a challenge.
  */
 
 import { useRef, useLayoutEffect } from 'react'
@@ -17,17 +22,15 @@ gsap.registerPlugin(ScrollTrigger)
 
 interface Props { className?: string }
 
-const LEADERBOARD = [
-  { rank: 1, name: 'Alex',   points: 1240, color: '#F7B731' },
-  { rank: 2, name: 'Sam',    points: 1105, color: '#C0C0C0' },
-  { rank: 3, name: 'Jordan', points: 980,  color: '#CD7F32' },
-  { rank: 4, name: 'Taylor', points: 875,  color: '#888'    },
-  { rank: 5, name: 'Casey',  points: 720,  color: '#888'    },
-]
+// Colors for ranks 1-3; anything beyond that falls back to a neutral gray.
+const RANK_COLORS = ['#F7B731', '#C0C0C0', '#CD7F32']
 
 export default function ChallengeSection({ className = '' }: Props) {
   const { isLoggedIn, openAuthModal } = useAuth()
-  const { openCurriculum, weeklyChallenge, hasCompletedWeeklyChallenge, completeWeeklyChallenge, rolePath, githubProfile } = useApp()
+  const {
+    openCurriculum, weeklyChallenge, hasCompletedWeeklyChallenge, completeWeeklyChallenge,
+    rolePath, githubProfile, leaderboard, isLoadingLeaderboard,
+  } = useApp()
 
   const sectionRef  = useRef<HTMLDivElement>(null)
   const photoRef    = useRef<HTMLDivElement>(null)
@@ -132,23 +135,35 @@ export default function ChallengeSection({ className = '' }: Props) {
             </p>
           )}
 
-          {/* Leaderboard */}
-          <p className="font-accent text-[10px] uppercase tracking-[0.14em] text-white/40 mb-3">Leaderboard</p>
-          {LEADERBOARD.map((entry, i) => (
-            <div key={entry.name} ref={el => { rowsRef.current[i] = el }}
-              className="flex items-center gap-4 mb-2 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors">
-              <span className="font-display font-bold text-white/40 w-5 text-center">{entry.rank}</span>
-              <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
-                style={{ backgroundColor: `${entry.color}20` }}>
-                {entry.rank === 1
-                  ? <Crown className="w-4 h-4" style={{ color: entry.color }} />
-                  : <span className="font-display font-bold text-xs" style={{ color: entry.color }}>{entry.name[0]}</span>
-                }
+          {/* Leaderboard — real data from Postgres via /api/leaderboard */}
+          <p className="font-accent text-[10px] uppercase tracking-[0.14em] text-white/40 mb-3">
+            Leaderboard {isLoadingLeaderboard && '· loading…'}
+          </p>
+
+          {!isLoadingLeaderboard && leaderboard.length === 0 && (
+            <p className="text-white/40 text-sm mb-2">
+              No scores yet this week — be the first to complete the challenge.
+            </p>
+          )}
+
+          {leaderboard.map((entry, i) => {
+            const color = RANK_COLORS[entry.rank - 1] || '#888'
+            return (
+              <div key={`${entry.user_name}-${entry.rank}`} ref={el => { rowsRef.current[i] = el }}
+                className="flex items-center gap-4 mb-2 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors">
+                <span className="font-display font-bold text-white/40 w-5 text-center">{entry.rank}</span>
+                <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
+                  style={{ backgroundColor: `${color}20` }}>
+                  {entry.rank === 1
+                    ? <Crown className="w-4 h-4" style={{ color }} />
+                    : <span className="font-display font-bold text-xs" style={{ color }}>{entry.user_name[0]}</span>
+                  }
+                </div>
+                <span className="font-medium text-white text-sm flex-1">{entry.user_name}</span>
+                <span className="font-display font-semibold text-white/80 text-sm">{entry.total_points.toLocaleString()} pts</span>
               </div>
-              <span className="font-medium text-white text-sm flex-1">{entry.name}</span>
-              <span className="font-display font-semibold text-white/80 text-sm">{entry.points.toLocaleString()} pts</span>
-            </div>
-          ))}
+            )
+          })}
         </div>
       </div>
     </section>
