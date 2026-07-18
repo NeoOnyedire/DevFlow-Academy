@@ -24,10 +24,11 @@
  *   since there's no account to attach server-side progress to.
  * - Repo Royale leaderboard — real, shared data from a Postgres-backed
  *   /api/leaderboard endpoint. Points are recorded server-side against
- *   the signed-in account when a weekly challenge is completed; the
- *   "have I completed this challenge" flag itself stays local (same
- *   pattern as hasSubmittedReview) since it's purely a per-browser UI
- *   gate, not something that needs to be globally true.
+ *   the signed-in account when a weekly challenge is completed, and
+ *   "have I completed this challenge" is derived from that same data
+ *   (GET /api/leaderboard?mine=1) rather than a separate local flag —
+ *   a leaderboard_entries row for (user_id, challengeId) already is
+ *   proof of completion.
  * ============================================================================
  */
 
@@ -444,11 +445,33 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [rolePath])
 
   const weeklyChallenge = useMemo(() => buildWeeklyChallenge(role), [role])
-  const [completedChallengeIds, setCompletedChallengeIds] = useState<string[]>(() => {
-    const saved = localStorage.getItem('devflow_completed_challenges')
-    return saved ? JSON.parse(saved) : []
-  })
+
+  // "Have I completed this challenge?" is now derived entirely from
+  // /api/leaderboard?mine=1 — a row for (user_id, challengeId) in
+  // leaderboard_entries already is proof of completion, so there's no
+  // separate flag to keep in sync or lose when a browser is cleared.
+  const [completedChallengeIds, setCompletedChallengeIds] = useState<string[]>([])
   const hasCompletedWeeklyChallenge = completedChallengeIds.includes(weeklyChallenge.id)
+
+  useEffect(() => {
+    if (!user) {
+      setCompletedChallengeIds([])
+      return
+    }
+    let cancelled = false
+    fetch('/api/leaderboard?mine=1', { credentials: 'same-origin' })
+      .then(res => res.json())
+      .then(data => {
+        if (cancelled) return
+        setCompletedChallengeIds(Array.isArray(data.challengeIds) ? data.challengeIds : [])
+      })
+      .catch(() => {
+        // Leave whatever was already loaded — worst case, the "Mark
+        // Complete" button briefly shows the wrong state until the next
+        // successful fetch.
+      })
+    return () => { cancelled = true }
+  }, [user])
 
   const setRole = useCallback((nextRole: LearningRole) => {
     setRoleState(nextRole)
@@ -575,21 +598,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [])
 
   /**
-   * Marks the current weekly challenge complete. The local "have I
-   * completed this" flag (below) is what actually gates the UI — same
-   * pattern as hasSubmittedReview — so it updates instantly regardless
-   * of network conditions. The POST to /api/leaderboard is best-effort:
-   * it's what gets the points onto the real, shared leaderboard, but a
-   * hiccup there shouldn't block the user from seeing their own
-   * "completed" state update immediately.
+   * Marks the current weekly challenge complete. Updates the local
+   * "completed" list optimistically for instant UI feedback, then POSTs
+   * to /api/leaderboard — the same write that both awards the points
+   * and (via the unique index on user_id + challenge_id) becomes the
+   * durable record that this challenge is done. If the request fails,
+   * the optimistic state may be briefly wrong, but it self-corrects on
+   * the next mount's refetch, and the ON CONFLICT DO NOTHING on the
+   * server makes a retry safe either way.
    */
   const completeWeeklyChallenge = useCallback(async () => {
-    setCompletedChallengeIds(prev => {
-      if (prev.includes(weeklyChallenge.id)) return prev
-      const next = [...prev, weeklyChallenge.id]
-      localStorage.setItem('devflow_completed_challenges', JSON.stringify(next))
-      return next
-    })
+    if (completedChallengeIds.includes(weeklyChallenge.id)) return
+
+    setCompletedChallengeIds(prev =>
+      prev.includes(weeklyChallenge.id) ? prev : [...prev, weeklyChallenge.id]
+    )
 
     try {
       await fetch('/api/leaderboard', {
@@ -604,10 +627,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
       })
       refreshLeaderboard()
     } catch {
-      // Points just won't show up on the shared leaderboard until the
-      // next successful sync — the user's own completed state is unaffected.
+      // Points/leaderboard sync failed — the optimistic "completed"
+      // state above may not match the server yet, but it'll reconcile
+      // on the next fetch of /api/leaderboard?mine=1.
     }
-  }, [weeklyChallenge, refreshLeaderboard])
+  }, [completedChallengeIds, weeklyChallenge, refreshLeaderboard])
 
   // Course is complete when ALL modules are done AND a review is submitted
   const allModulesDone = completedModules.length === CURRICULUM_MODULES.length

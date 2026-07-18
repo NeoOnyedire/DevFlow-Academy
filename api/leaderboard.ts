@@ -10,6 +10,11 @@
 // key-value storage.
 //
 // GET  ?week=<weekKey>   -> public, top 10 for that week (or all-time if omitted)
+// GET  ?mine=1           -> requires login, returns this account's own
+//   completed challenge ids. A row in leaderboard_entries for
+//   (user_id, challengeId) already is proof that challenge was
+//   completed, so this reads that directly instead of relying on a
+//   separate "completed" flag stored anywhere else.
 // POST { points, weekKey, challengeId } -> requires login, records this
 //   account's points for one challenge. ON CONFLICT DO NOTHING (see
 //   db/schema.sql's unique index) means clicking "complete" twice never
@@ -25,6 +30,25 @@ const MAX_POINTS_PER_CHALLENGE = 1000
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // ---- Read: public, no auth needed ----
   if (req.method === 'GET') {
+    // "Which challenges have I already completed?" — used to derive
+    // hasCompletedWeeklyChallenge without a separate local flag.
+    if (req.query.mine === '1' || req.query.mine === 'true') {
+      const userId = getUserIdFromRequest(req)
+      if (!userId) {
+        res.status(401).json({ error: 'You need to be logged in to see your challenge history.' })
+        return
+      }
+      try {
+        const result = await sql`
+          SELECT challenge_id FROM leaderboard_entries WHERE user_id = ${userId}
+        `
+        res.status(200).json({ challengeIds: result.rows.map(row => row.challenge_id) })
+      } catch {
+        res.status(502).json({ error: 'Could not load your challenge history right now.' })
+      }
+      return
+    }
+
     const weekKey = typeof req.query.week === 'string' ? req.query.week : null
 
     try {
