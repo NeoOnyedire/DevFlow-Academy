@@ -6,10 +6,10 @@
 // provider hiccup should never block signup).
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { createPasswordUser, toSafeUser } from '../_lib/users'
-import { createSessionCookie } from '../_lib/session'
-import { createVerificationToken } from '../_lib/tokens'
-import { sendEmail, buildVerificationEmail } from '../_lib/mail'
+import { createPasswordUser, toSafeUser } from '../_lib/users.js'
+import { createSessionCookie } from '../_lib/session.js'
+import { createVerificationToken } from '../_lib/tokens.js'
+import { sendEmail, buildVerificationEmail } from '../_lib/mail.js'
 
 function getBaseUrl(req: VercelRequest): string {
   const host = req.headers.host

@@ -25,9 +25,9 @@
 //      file). You'll also need SESSION_SECRET set — see api/_lib/session.ts.
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { getUpstashConfig } from './_lib/upstash'
-import { getUserIdFromRequest } from './_lib/session'
-import { getUserById, saveUser } from './_lib/users'
+import { getUpstashConfig } from './_lib/upstash.js'
+import { getUserIdFromRequest } from './_lib/session.js'
+import { getUserById, saveUser } from './_lib/users.js'
 
 interface StoredReview {
   rating: number

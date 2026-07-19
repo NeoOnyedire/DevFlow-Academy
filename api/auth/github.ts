@@ -23,8 +23,8 @@
 // the profile, then discarded.
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { upsertGithubUser, toSafeUser } from '../_lib/users'
-import { createSessionCookie } from '../_lib/session'
+import { upsertGithubUser, toSafeUser } from '../_lib/users.js'
+import { createSessionCookie } from '../_lib/session.js'
 
 interface GitHubTokenResponse {
   access_token?: string

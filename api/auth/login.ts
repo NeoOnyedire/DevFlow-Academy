@@ -4,8 +4,8 @@
 // the person in with an httpOnly session cookie.
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { getUserByEmail, verifyPassword, toSafeUser } from '../_lib/users'
-import { createSessionCookie } from '../_lib/session'
+import { getUserByEmail, verifyPassword, toSafeUser } from '../_lib/users.js'
+import { createSessionCookie } from '../_lib/session.js'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {

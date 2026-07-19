@@ -13,8 +13,8 @@
 // POST { moduleId, completed } -> marks or unmarks one module
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { sql } from './_lib/db'
-import { getUserIdFromRequest } from './_lib/session'
+import { sql } from './_lib/db.js'
+import { getUserIdFromRequest } from './_lib/session.js'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const userId = getUserIdFromRequest(req)

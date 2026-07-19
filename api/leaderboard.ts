@@ -21,9 +21,9 @@
 //   double-counts the same challenge.
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { sql } from './_lib/db'
-import { getUserIdFromRequest } from './_lib/session'
-import { getUserById } from './_lib/users'
+import { sql } from './_lib/db.js'
+import { getUserIdFromRequest } from './_lib/session.js'
+import { getUserById } from './_lib/users.js'
 
 const MAX_POINTS_PER_CHALLENGE = 1000
 

@@ -9,8 +9,8 @@
 // is a normal, expected state, not an error.
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { getUserIdFromRequest } from '../_lib/session'
-import { getUserById, toSafeUser } from '../_lib/users'
+import { getUserIdFromRequest } from '../_lib/session.js'
+import { getUserById, toSafeUser } from '../_lib/users.js'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'GET') {

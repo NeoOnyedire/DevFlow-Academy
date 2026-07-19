@@ -5,9 +5,9 @@
 // Tokens are single-use and expire after 1 hour (see api/_lib/tokens.ts).
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { consumeResetToken } from '../_lib/tokens'
-import { getUserById, saveUser, hashPassword, toSafeUser } from '../_lib/users'
-import { createSessionCookie } from '../_lib/session'
+import { consumeResetToken } from '../_lib/tokens.js'
+import { getUserById, saveUser, hashPassword, toSafeUser } from '../_lib/users.js'
+import { createSessionCookie } from '../_lib/session.js'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {

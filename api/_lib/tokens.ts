@@ -6,7 +6,7 @@
 // token itself has no meaningful payload beyond "look up this key".
 
 import { randomBytes } from 'crypto'
-import { upstashSetEx, upstashGet, upstashDel } from './upstash'
+import { upstashSetEx, upstashGet, upstashDel } from './upstash.js'
 
 const VERIFY_TTL_SECONDS = 60 * 60 * 24 // 24 hours
 const RESET_TTL_SECONDS = 60 * 60 // 1 hour

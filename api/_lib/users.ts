@@ -14,7 +14,7 @@
 //   devflow:github-index:<githubId>   -> id           (GitHub accounts)
 
 import { randomUUID, randomBytes, scryptSync, timingSafeEqual } from 'crypto'
-import { upstashGet, upstashSet, upstashSetNX } from './upstash'
+import { upstashGet, upstashSet, upstashSetNX } from './upstash.js'
 
 export interface StoredUser {
   id: string

@@ -5,8 +5,8 @@
 // expire after 24 hours (see api/_lib/tokens.ts).
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { consumeVerificationToken } from '../_lib/tokens'
-import { getUserById, saveUser, toSafeUser } from '../_lib/users'
+import { consumeVerificationToken } from '../_lib/tokens.js'
+import { getUserById, saveUser, toSafeUser } from '../_lib/users.js'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {

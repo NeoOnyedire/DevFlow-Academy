@@ -13,10 +13,10 @@
 // - Email matches nothing -> no email sent, same response either way.
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { getUserByEmail } from '../_lib/users'
-import { createResetToken } from '../_lib/tokens'
-import { sendEmail, buildPasswordResetEmail, buildGithubAccountNoticeEmail } from '../_lib/mail'
-import { isRateLimited } from '../_lib/rateLimit'
+import { getUserByEmail } from '../_lib/users.js'
+import { createResetToken } from '../_lib/tokens.js'
+import { sendEmail, buildPasswordResetEmail, buildGithubAccountNoticeEmail } from '../_lib/mail.js'
+import { isRateLimited } from '../_lib/rateLimit.js'
 
 function getBaseUrl(req: VercelRequest): string {
   const host = req.headers.host

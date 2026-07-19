@@ -6,11 +6,11 @@
 // email, never an arbitrary address someone types in.
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { getUserIdFromRequest } from '../_lib/session'
-import { getUserById } from '../_lib/users'
-import { createVerificationToken } from '../_lib/tokens'
-import { sendEmail, buildVerificationEmail } from '../_lib/mail'
-import { isRateLimited } from '../_lib/rateLimit'
+import { getUserIdFromRequest } from '../_lib/session.js'
+import { getUserById } from '../_lib/users.js'
+import { createVerificationToken } from '../_lib/tokens.js'
+import { sendEmail, buildVerificationEmail } from '../_lib/mail.js'
+import { isRateLimited } from '../_lib/rateLimit.js'
 
 function getBaseUrl(req: VercelRequest): string {
   const host = req.headers.host
