@@ -3,13 +3,15 @@
  * AuthModal.tsx
  * ============================================================================
  *
- * Authentication modal — now three modes instead of two:
- *   - 'login'           email/password login, or "Continue with GitHub"
- *   - 'register'        create a password account (sends a verification email)
- *   - 'forgot-password' request a password reset link by email
+ * Authentication modal.
  *
- * All three hit real server endpoints and are async — submission shows a
- * loading state and surfaces the server's actual message.
+ * NOTE: Email/password login is temporarily paused (no custom domain
+ * secured yet for OAuth callback stability isn't the reason — this is
+ * simply a decision to launch with GitHub-only auth for now). Flip
+ * EMAIL_LOGIN_ENABLED back to true whenever you're ready to bring back
+ * email/password registration and login. The backend endpoints
+ * (api/auth/login.ts, api/auth/register.ts, etc.) are untouched — this
+ * only hides the UI path to them.
  *
  * Props: none — reads from AuthContext
  * ============================================================================
@@ -19,6 +21,9 @@ import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { X, LogIn, UserPlus, Eye, EyeOff, Github, KeyRound, Mail } from 'lucide-react'
 import { buildGitHubAuthorizeUrl, isGitHubOAuthConfigured } from '../lib/githubOAuth'
+
+// Flip this back to true whenever email/password auth should return.
+const EMAIL_LOGIN_ENABLED = false
 
 export default function AuthModal() {
   const { isAuthModalOpen, authModalMode, closeAuthModal, login, register, requestPasswordReset, openAuthModal } = useAuth()
@@ -127,7 +132,9 @@ export default function AuthModal() {
   if (!isAuthModalOpen) return null
 
   const isLogin = authModalMode === 'login'
-  const isForgotPassword = authModalMode === 'forgot-password'
+  // Forgot-password is only reachable from a link inside the email form,
+  // so it's naturally unreachable while EMAIL_LOGIN_ENABLED is false.
+  const isForgotPassword = EMAIL_LOGIN_ENABLED && authModalMode === 'forgot-password'
 
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
@@ -233,8 +240,8 @@ export default function AuthModal() {
               </div>
             )}
 
-            {/* GitHub OAuth — the recommended path, shown first */}
-            {githubEnabled && (
+            {/* GitHub OAuth — the only sign-in path while EMAIL_LOGIN_ENABLED is false */}
+            {githubEnabled ? (
               <>
                 <button
                   type="button"
@@ -246,115 +253,125 @@ export default function AuthModal() {
                   Continue with GitHub
                 </button>
                 <p className="text-white/35 text-xs text-center mb-5">
-                  Fastest option — no password to create, remember, or reset.
+                  {EMAIL_LOGIN_ENABLED
+                    ? 'Fastest option — no password to create, remember, or reset.'
+                    : 'Sign-in currently works through GitHub only.'}
                 </p>
+              </>
+            ) : (
+              <p className="text-white/50 text-sm text-center mb-5">
+                GitHub sign-in isn't configured yet — add your OAuth app credentials to enable login.
+              </p>
+            )}
 
+            {EMAIL_LOGIN_ENABLED && (
+              <>
                 <div className="flex items-center gap-3 mb-5">
                   <div className="h-px flex-1 bg-white/10" />
                   <span className="text-white/30 text-xs font-accent uppercase tracking-wider">or use email</span>
                   <div className="h-px flex-1 bg-white/10" />
                 </div>
+
+                {/* Form */}
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  {/* Name field — only for registration */}
+                  {!isLogin && (
+                    <div>
+                      <label className="block font-accent text-[10px] uppercase tracking-[0.14em] text-white/50 mb-1.5">
+                        Full Name
+                      </label>
+                      <input
+                        ref={firstInputRef}
+                        type="text"
+                        value={name}
+                        onChange={e => setName(e.target.value)}
+                        placeholder="Alex Johnson"
+                        disabled={isSubmitting}
+                        className="w-full px-4 py-3 rounded-xl bg-white/10 text-white placeholder-white/30 border border-white/10
+                          focus:border-[#F7B731]/50 focus:outline-none transition-colors disabled:opacity-60"
+                      />
+                    </div>
+                  )}
+
+                  {/* Email field */}
+                  <div>
+                    <label className="block font-accent text-[10px] uppercase tracking-[0.14em] text-white/50 mb-1.5">
+                      Email Address
+                    </label>
+                    <input
+                      ref={isLogin ? firstInputRef : undefined}
+                      type="email"
+                      value={email}
+                      onChange={e => setEmail(e.target.value)}
+                      placeholder="alex@example.com"
+                      disabled={isSubmitting}
+                      className="w-full px-4 py-3 rounded-xl bg-white/10 text-white placeholder-white/30 border border-white/10
+                        focus:border-[#F7B731]/50 focus:outline-none transition-colors disabled:opacity-60"
+                    />
+                  </div>
+
+                  {/* Password field with show/hide toggle */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="block font-accent text-[10px] uppercase tracking-[0.14em] text-white/50">
+                        Password
+                      </label>
+                      {isLogin && (
+                        <button
+                          type="button"
+                          onClick={() => { openAuthModal('forgot-password'); setError('') }}
+                          className="font-accent text-[10px] uppercase tracking-[0.1em] text-[#F7B731]/80 hover:text-[#F7B731] transition-colors"
+                        >
+                          Forgot password?
+                        </button>
+                      )}
+                    </div>
+                    <div className="relative">
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        value={password}
+                        onChange={e => setPassword(e.target.value)}
+                        placeholder="Min 6 characters"
+                        disabled={isSubmitting}
+                        className="w-full px-4 py-3 pr-12 rounded-xl bg-white/10 text-white placeholder-white/30 border border-white/10
+                          focus:border-[#F7B731]/50 focus:outline-none transition-colors disabled:opacity-60"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70 transition-colors"
+                      >
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Submit button */}
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="w-full bg-rose-punch text-white font-display font-semibold py-3.5 rounded-xl
+                      hover:bg-[#ff3d5d] disabled:opacity-50 transition-all duration-200 flex items-center justify-center gap-2"
+                  >
+                    {isSubmitting ? '...' : isLogin ? 'Log In' : 'Create Free Account'}
+                  </button>
+                </form>
+
+                {/* Toggle between login/register */}
+                <p className="text-center text-white/50 text-sm mt-5">
+                  {isLogin ? "Don't have an account? " : 'Already have an account? '}
+                  <button
+                    onClick={() => {
+                      openAuthModal(isLogin ? 'register' : 'login')
+                      setError('')
+                    }}
+                    className="text-[#F7B731] hover:underline font-medium"
+                  >
+                    {isLogin ? 'Join Free' : 'Log In'}
+                  </button>
+                </p>
               </>
             )}
-
-            {/* Form */}
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Name field — only for registration */}
-              {!isLogin && (
-                <div>
-                  <label className="block font-accent text-[10px] uppercase tracking-[0.14em] text-white/50 mb-1.5">
-                    Full Name
-                  </label>
-                  <input
-                    ref={firstInputRef}
-                    type="text"
-                    value={name}
-                    onChange={e => setName(e.target.value)}
-                    placeholder="Alex Johnson"
-                    disabled={isSubmitting}
-                    className="w-full px-4 py-3 rounded-xl bg-white/10 text-white placeholder-white/30 border border-white/10
-                      focus:border-[#F7B731]/50 focus:outline-none transition-colors disabled:opacity-60"
-                  />
-                </div>
-              )}
-
-              {/* Email field */}
-              <div>
-                <label className="block font-accent text-[10px] uppercase tracking-[0.14em] text-white/50 mb-1.5">
-                  Email Address
-                </label>
-                <input
-                  ref={isLogin ? firstInputRef : undefined}
-                  type="email"
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
-                  placeholder="alex@example.com"
-                  disabled={isSubmitting}
-                  className="w-full px-4 py-3 rounded-xl bg-white/10 text-white placeholder-white/30 border border-white/10
-                    focus:border-[#F7B731]/50 focus:outline-none transition-colors disabled:opacity-60"
-                />
-              </div>
-
-              {/* Password field with show/hide toggle */}
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="block font-accent text-[10px] uppercase tracking-[0.14em] text-white/50">
-                    Password
-                  </label>
-                  {isLogin && (
-                    <button
-                      type="button"
-                      onClick={() => { openAuthModal('forgot-password'); setError('') }}
-                      className="font-accent text-[10px] uppercase tracking-[0.1em] text-[#F7B731]/80 hover:text-[#F7B731] transition-colors"
-                    >
-                      Forgot password?
-                    </button>
-                  )}
-                </div>
-                <div className="relative">
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    value={password}
-                    onChange={e => setPassword(e.target.value)}
-                    placeholder="Min 6 characters"
-                    disabled={isSubmitting}
-                    className="w-full px-4 py-3 pr-12 rounded-xl bg-white/10 text-white placeholder-white/30 border border-white/10
-                      focus:border-[#F7B731]/50 focus:outline-none transition-colors disabled:opacity-60"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70 transition-colors"
-                  >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-              </div>
-
-              {/* Submit button */}
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="w-full bg-rose-punch text-white font-display font-semibold py-3.5 rounded-xl
-                  hover:bg-[#ff3d5d] disabled:opacity-50 transition-all duration-200 flex items-center justify-center gap-2"
-              >
-                {isSubmitting ? '...' : isLogin ? 'Log In' : 'Create Free Account'}
-              </button>
-            </form>
-
-            {/* Toggle between login/register */}
-            <p className="text-center text-white/50 text-sm mt-5">
-              {isLogin ? "Don't have an account? " : 'Already have an account? '}
-              <button
-                onClick={() => {
-                  openAuthModal(isLogin ? 'register' : 'login')
-                  setError('')
-                }}
-                className="text-[#F7B731] hover:underline font-medium"
-              >
-                {isLogin ? 'Join Free' : 'Log In'}
-              </button>
-            </p>
           </>
         )}
       </div>
