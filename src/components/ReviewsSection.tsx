@@ -5,45 +5,16 @@
  *
  * Displays user reviews in a horizontal scrolling card layout.
  *
- * Reviews now come from AppContext.reviews, which is fetched from the
- * shared /api/reviews backend — every visitor sees the same list, unlike
- * the earlier localStorage-only version where reviews were effectively
- * private to whichever browser wrote them.
- *
- * A small set of curated "seed" reviews is always shown first so the
- * section never looks empty for new visitors, clearly labelled as such.
+ * Reviews come from AppContext.reviews, fetched from the shared
+ * /api/reviews backend — every visitor sees the same list.
  * ============================================================================
  */
 
-import { useApp, type PublicReview } from '../context/AppContext'
+import { useApp } from '../context/AppContext'
 import { Star, MessageCircle } from 'lucide-react'
-
-const SEED_REVIEWS: PublicReview[] = [
-  {
-    rating: 5,
-    comment: "This course made Git finally click for me. The workplace scenarios feel so real — I actually knew what to do on my first day at my internship!",
-    date: '2026-05-20T10:00:00Z',
-    userName: 'Sarah Chen',
-  },
-  {
-    rating: 5,
-    comment: "Gitter is adorable and the troubleshooting section saved me when I got merge conflict panic. Highly recommend for any new dev!",
-    date: '2026-05-15T14:30:00Z',
-    userName: 'Marcus Johnson',
-  },
-  {
-    rating: 4,
-    comment: "Great free resource. The video curation is top-notch — pulled from the best YouTube channels. Loved the weekly challenges.",
-    date: '2026-05-10T09:15:00Z',
-    userName: 'Priya Patel',
-  },
-]
 
 export default function ReviewsSection() {
   const { reviews, isLoadingReviews, reviewsError } = useApp()
-
-  // Seed reviews first (stable ordering), then real submitted reviews.
-  const allReviews = [...SEED_REVIEWS, ...reviews]
 
   return (
     <section className="bg-espresso py-16 md:py-20 px-[6vw]">
@@ -55,7 +26,7 @@ export default function ReviewsSection() {
         <div>
           <h3 className="font-display font-bold text-white text-2xl md:text-3xl">What Learners Say</h3>
           <p className="text-white/50 text-sm font-accent uppercase tracking-wider">
-            {isLoadingReviews ? 'Loading reviews…' : `${allReviews.length} reviews`}
+            {isLoadingReviews ? 'Loading reviews…' : `${reviews.length} reviews`}
           </p>
         </div>
       </div>
@@ -66,10 +37,16 @@ export default function ReviewsSection() {
         </p>
       )}
 
+      {!isLoadingReviews && reviews.length === 0 && (
+        <p className="text-white/40 text-sm">
+          No reviews yet — be the first to complete the course and leave one!
+        </p>
+      )}
+
       {/* Cards */}
       <div className="flex md:grid md:grid-cols-3 gap-4 overflow-x-auto pb-4 snap-x snap-mandatory
         scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent">
-        {allReviews.map((review, i) => (
+        {reviews.map((review, i) => (
           <div
             key={`${review.userName}-${review.date}-${i}`}
             className="min-w-[280px] md:min-w-0 bg-[#4A2F2F] card-radius p-5 card-outline snap-start flex flex-col"
