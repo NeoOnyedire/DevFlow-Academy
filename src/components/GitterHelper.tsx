@@ -40,6 +40,11 @@ import { Bot, ChevronDown, MessageCircle, Send, Sparkles, Star, KeyRound, Zap, C
 import { useApp } from '../context/AppContext'
 import { useAuth } from '../context/AuthContext'
 import { answerWithGitterLite } from '../lib/gitterLite'
+import {
+  GITTER_API_KEY_STORAGE as API_KEY_STORAGE,
+  GITTER_PROVIDER_STORAGE as PROVIDER_STORAGE,
+  type AiProvider,
+} from '../lib/gitterKeys'
 
 const QUICK_PROMPTS = [
   'What should I learn next?',
@@ -49,8 +54,7 @@ const QUICK_PROMPTS = [
 
 type AiProvider = 'gemini' | 'groq'
 
-const API_KEY_STORAGE = 'devflow_gitter_api_key'
-const PROVIDER_STORAGE = 'devflow_gitter_provider'
+
 const CHAT_STORAGE = 'devflow_gitter_messages'
 
 const PROVIDER_INFO: Record<AiProvider, { name: string; url: string; host: string; steps: string[] }> = {
