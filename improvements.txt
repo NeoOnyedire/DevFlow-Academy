@@ -1,0 +1,129 @@
+## Disclaimer: I made this public to document the journey of this project, so no you are not seeing this by mistake lol
+
+## ✅ Resolved since last pass
+- **Real backend is live.** Auth, sessions, reviews, progress, and leaderboard data now run server-side through Vercel Functions, Upstash Redis, and Postgres.
+- **Error boundaries added.** `ErrorBoundary.tsx` wraps both the overlay group and the routed pages in `App.tsx`.
+- **Real 404 page.** Unknown routes hit `NotFoundPage`, not a silent `LandingPage` fallback.
+- **Email verification + password reset.** Complete verification/reset flows with rate limiting and generic responses.
+- **GitHub OAuth.** Full authorization-code flow with secure session creation.
+- **Gitter chat persistence.** Conversations persist in `sessionStorage` and clear on logout.
+- **`GitterHelper`'s index bug is fixed.** Newly completed modules are detected reliably.
+- **Real SQL leaderboard.** Weekly challenges now store and rank scores in Postgres instead of using hardcoded data.
+- **Server-side progress syncing.** Course progress now syncs across devices instead of living only in localStorage.
+- **Dynamic auth routing.** Auth endpoints were consolidated into a single dynamic route, reducing Vercel serverless function usage and leaving room for future APIs.
+- **Server-side progress.** User progress now lives in Postgres (`user_progress`) instead of browser localStorage, allowing progress to sync across devices.
+- **Weekly leaderboard persistence.** Challenge submissions are stored in SQL with proper indexes and duplicate protection.
+- **Single-use verification and reset tokens.** Tokens are invalidated immediately after use for improved security.
+- **Database schema introduced.** Postgres now stores leaderboard entries and course progress while Redis continues handling sessions, users, and tokens.
+- **Email/password login paused, GitHub-only for now.** A single `EMAIL_LOGIN_ENABLED` flag in `AuthModal.tsx` hides the email/password form and forgot-password flow while a custom domain isn't secured yet — GitHub becomes the only visible sign-in path. Backend auth endpoints (`api/auth/login.ts`, `register.ts`, etc.) are untouched, so flipping the flag back to `true` restores email login with no further changes.
+- **GitHub OAuth callback deep-link bug fixed.** `vite.config.ts`'s `base: './'` broke asset loading on any nested route loaded as a fresh page (like `/auth/github/callback` after GitHub's redirect), causing a blank white screen. Changed to `base: '/'` so assets resolve correctly regardless of the URL path.
+- **Added `vercel.json` SPA rewrite.** A missing rewrite rule meant fresh page loads on client-side routes (e.g. the GitHub callback) had nothing to serve. Added a rewrite that excludes `/api/*` so serverless functions keep working normally.
+- **Three AI providers for Gitter AI (BYOK).** Added Anthropic (Claude) alongside the existing Gemini and Groq options. Provider-calling logic was extracted into a shared `api/_lib/aiProviders.ts` so both the chat endpoint and the new review-moderation endpoint reuse the same code.
+- **AI-moderated reviews.** Reviews are now checked by Gitter AI (using the reviewer's own BYOK key) via a new `api/moderate-review.ts` endpoint before submission — it screens for spam, unrelated links/promotion, and off-topic or inappropriate content, and returns a tailored reply either thanking the reviewer or asking them to revise. Fails open (allows the review through) if the AI provider has a hiccup, so a formatting or network issue never blocks a genuine review.
+- **Gitter AI activation required for course completion.** Completing the first module now requires having activated Gitter AI at least once, so that by the time anyone reaches the review gate at course completion, they already have a working BYOK key to run the review check with.
+- **Privacy policy updated** to reflect AI-moderated reviews, the three BYOK providers, and that Anthropic isn't free forever (unlike Gemini/Groq) — new accounts get a small trial credit, then need a payment method on file.
+
+---
+
+## 🔴 Fix first: remaining data issues
+
+- **Email login is paused, not removed — needs a real decision.** Right now `EMAIL_LOGIN_ENABLED = false` is a stopgap because a stable custom domain isn't secured yet. Worth deciding: is the plan to re-enable email login once a domain is secured, or move to GitHub-only permanently? The GitHub OAuth callback URL is currently pinned to the `dev-flow-academy.vercel.app` production domain, which works but should be revisited if a custom domain gets added later (the OAuth App's callback URL will need updating to match).
+- **Gitter AI is now a hard requirement, not just an upgrade.** Since it gates both course completion and reviews, learners without a Gemini/Groq/Anthropic account (or without a card, if they only try Anthropic) hit a wall at Module 1. Worth watching drop-off here — the gate in `CurriculumPanel.tsx`'s `handleToggleComplete` is a single `if` block and easy to relax (e.g. gate only the review, not the first module) if this proves to be too much friction.
+- **Review moderation has no audit trail.** Rejected reviews and their AI replies aren't logged anywhere — if the AI moderation is ever wrong (rejecting a genuine review, or letting a bad one through), there's currently no way to review what happened after the fact.
+- **GitHub profile connection is still browser-specific.** GitHub OAuth accounts work correctly, but linking an existing password account to GitHub isn't persisted separately yet.
+- **No audit/event logging.** Important actions like registrations, password resets, review submissions, leaderboard entries, and logins aren't logged anywhere for debugging or analytics.
+- **Rate limiters are still fragmented.** `api/_lib/rateLimit.ts`, `api/gitter.ts`, `api/reviews.ts`, and now `api/moderate-review.ts` each implement or share slightly different in-memory rate limiting. A shared Redis-backed implementation would survive serverless cold starts and simplify maintenance.
+
+---
+
+## 🟠 Architecture/robustness
+
+- **Redis and Postgres are tightly coupled throughout the API layer.** Introducing repository/service abstractions would make future storage migrations much easier.
+- **Authentication logic is repeated.** Multiple endpoints manually call `getUserIdFromRequest()` and `getUserById()` instead of sharing middleware/helpers.
+- **Request validation is handwritten everywhere.** Libraries like Zod or Valibot could greatly reduce duplicated validation code.
+- **No centralized API error handler.** Nearly every endpoint repeats similar `try/catch` blocks.
+- **No API versioning.** Everything currently lives under `/api`; `/api/v1` would make future breaking changes easier.
+- **No OpenAPI/Swagger documentation.** The backend has grown large enough that generated API documentation would become genuinely useful.
+- **Lazy-load routes.** `App.tsx` still imports every page eagerly. Switching to `React.lazy` + `Suspense` would reduce initial bundle size.
+- **No loading skeletons** for GSAP-heavy pages during first paint.
+- Allow users to edit or delete their own reviews.
+- Show "Last synced" status for course progress.
+- Add profile avatar customization.
+- Add account settings page.
+- Cache leaderboard responses using HTTP cache headers.
+- Cache course metadata to reduce repeated API requests.
+
+---
+
+## 🟡 UX polish
+
+- **Gitter AI doesn't stream.** Responses still arrive all at once instead of token-by-token.
+- **Certificates are still conceptual only.** Users complete the course but don't receive an actual downloadable certificate.
+- **Dashboard streak, badges, and rankings are still simplified placeholders.** Most values are calculated using basic heuristics rather than long-term activity.
+- **No user profile page.** Users can't view their achievements, certificates, completed modules, leaderboard history, or linked GitHub account in one place.
+- **No notification system.** Success messages disappear after actions instead of providing a persistent notification center.
+- **No optimistic UI updates.** Reviews, leaderboard submissions, and progress updates always wait for server confirmation before updating the interface.
+- **Review moderation feedback could be clearer.** Right now a rejected review just shows the AI's reply as an error message — a dedicated "revise and resubmit" state (keeping the draft text visible alongside the AI's specific note) would feel less like a dead-end.
+
+---
+
+## 🟢 Feature ideas worth considering
+
+- **Interactive Git Sandbox.** Let users practice real Git commands inside an isolated browser-based repository.
+- **Interactive merge conflict simulator.** Walk users through realistic merge conflict scenarios safely.
+- **Repository import.** Allow users to connect GitHub repositories and receive personalized learning recommendations.
+- **Persistent AI mentor.** Let Gitter remember learning progress and recommend lessons instead of acting like a stateless chatbot.
+- **Real achievement system.** Replace placeholder badges with milestone-based achievements.
+- **Learning streak calendar.** Visualize consistency over weeks and months.
+- **Public learner profiles.** Share completed courses, achievements, and certificates.
+- **Portfolio export.** Generate a shareable developer profile or PDF certificate portfolio.
+- **Bookmark lessons.** Save modules to revisit later.
+- **Search/filter on the Learn page.** Filter lessons by difficulty, technology, or role.
+- **More weekly challenges.** The current challenge pool is still fairly small.
+- **Community discussion board.** Encourage learners to ask questions and help one another.
+- **Admin dashboard.** View signups, completion rates, leaderboard stats, and review analytics — would also surface moderation-rejected reviews for spot-checking.
+- **Instructor dashboard.** Track learner engagement and course performance.
+- **Basic first-party analytics.** Continue respecting privacy while understanding platform usage.
+- **Offline support (PWA).** Allow parts of the curriculum to remain usable without internet.
+- **Mobile install support.** Let users install DevFlow Academy as an app.
+- **Push notifications.** Remind learners about weekly challenges and learning streaks.
+- **Git branching visualizer.** Visually demonstrate branching, merging, and rebasing.
+- **AI code review challenges.** Let Gitter review Git history and commits for learning exercises.
+- **Accessibility audit.** Improve keyboard navigation, screen reader support, and WCAG compliance.
+- **Localization.** Support additional languages.
+- **Tests.** Add Vitest for unit tests, Playwright for end-to-end testing, and CI quality gates to prevent regressions.
+- Interactive Git Sandbox
+- Interactive Merge Conflict Lab
+- Git Branch Visualizer
+- AI Mentor Mode with memory
+- Repository Import from GitHub
+- Portfolio Export (PDF/share page)
+- Learning Streak Calendar
+- Achievement system
+- Bookmark lessons
+- Search lessons
+- Public learner profiles
+- Community discussions
+- Admin dashboard
+- Instructor dashboard
+- Analytics dashboard
+- Offline (PWA) support
+- Mobile install support
+- Push notifications
+- AI code review challenges
+- Accessibility improvements
+- Localization
+- Vitest unit tests
+- Playwright end-to-end tests
+- CI quality gates
+
+## 🔵 Long-term goals
+
+- Multi-course support (beyond Git)
+- Team workspaces
+- Organizations/schools
+- Custom learning paths
+- Interactive terminal emulator
+- Certification exams
+- Course authoring tools
+- Plugin architecture for future modules
