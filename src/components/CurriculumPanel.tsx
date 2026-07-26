@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useApp, ROLE_PATHS, type LearningRole } from '../context/AppContext'
 import { useAuth } from '../context/AuthContext'
-import { X, Check, Play, Lock, Star, Award, ChevronRight, Route, List, Clock } from 'lucide-react'
+import { X, Check, Play, Lock, Star, Award, ChevronRight, Route, List, Clock, Sparkles } from 'lucide-react'
+import { hasGitterAiActivated } from '../lib/gitterKeys'
 
 const FREE_PREVIEW_MODULE = 'mod-01'
 const TOTAL_HOURS = '~7 hrs'
@@ -16,6 +17,9 @@ export default function CurriculumPanel() {
 
   const [mobileTab, setMobileTab] = useState<'watch' | 'modules'>('watch')
   const [rolePickerDismissed, setRolePickerDismissed] = useState(false)
+  // Shown when a learner tries to complete their very first module without
+  // having activated Gitter AI yet — see handleToggleComplete below.
+  const [showGitterRequiredNotice, setShowGitterRequiredNotice] = useState(false)
 
   const activeModule = modules.find(m => m.id === activeModuleId) || modules[0]
   const progressPercent = Math.round((completedModules.length / modules.length) * 100)
@@ -27,9 +31,22 @@ export default function CurriculumPanel() {
 
   const canWatchModule = (moduleId: string) => isLoggedIn || moduleId === FREE_PREVIEW_MODULE
 
+  /**
+   * Toggle a module's completion. Gated: completing your very first
+   * module (the free preview) requires Gitter AI to already be activated,
+   * so that by the time anyone finishes the whole course and reaches the
+   * review gate, they already have a BYOK key ready to check their
+   * review with (see ReviewModal.tsx).
+   */
   const handleToggleComplete = (id: string) => {
     if (!isLoggedIn) return
     const wasComplete = completedModules.includes(id)
+
+    if (!wasComplete && id === FREE_PREVIEW_MODULE && !hasGitterAiActivated()) {
+      setShowGitterRequiredNotice(true)
+      return
+    }
+
     toggleModuleComplete(id)
     if (!wasComplete) {
       const currentIndex = modules.findIndex(m => m.id === id)
@@ -42,6 +59,7 @@ export default function CurriculumPanel() {
 
   const handleModuleSelect = (id: string) => {
     setActiveModule(id)
+    setShowGitterRequiredNotice(false)
     setMobileTab('watch')
   }
 
@@ -116,6 +134,18 @@ export default function CurriculumPanel() {
               </span>
             ))}
           </div>
+
+          {/* Gitter AI activation notice — only relevant on the free preview module */}
+          {showGitterRequiredNotice && activeModule.id === FREE_PREVIEW_MODULE && (
+            <div className="mb-4 flex items-start gap-2 rounded-xl bg-[#F7B731]/15 border border-[#F7B731]/30 px-4 py-3">
+              <Sparkles className="w-4 h-4 text-[#F7B731] flex-shrink-0 mt-0.5" />
+              <p className="text-white/80 text-sm">
+                Activate Gitter AI first — open the Gitter chat in the bottom-right corner and add a free API key.
+                This is required before completing your first module, so every reviewer's feedback gets AI-checked.
+              </p>
+            </div>
+          )}
+
           {isLoggedIn ? (
             <button onClick={() => handleToggleComplete(activeModule.id)}
               className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-display font-semibold text-sm transition-all
