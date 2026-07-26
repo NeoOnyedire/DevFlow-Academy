@@ -21,30 +21,38 @@ const SECTIONS = [
     and is not sent to a DevFlow Academy database or shared with third parties.`,
   },
   {
-    title: 'Reviews are genuinely public',
-    body: `Unlike progress, course reviews you submit are sent to and stored on our server (a small shared
-    database), and are shown to every visitor on the homepage — that's the point of leaving one. A review
-    includes your star rating, your written comment, the display name on your account, and the submission
-    date. We don't ask for or store anything beyond that with a review.`,
+    title: 'Reviews are genuinely public, and AI-checked before publishing',
+    body: `Course reviews you submit are sent to and stored on our server (a small shared database), and are
+    shown to every visitor on the homepage — that's the point of leaving one. A review includes your star
+    rating, your written comment, the display name on your account, and the submission date.
+    Before a review is published, it's checked by Gitter AI using your own API key (see below) to screen out
+    spam, links to unrelated sites, and off-topic or inappropriate content — genuine, on-topic feedback,
+    including critical feedback, is always approved. Activating Gitter AI is required to complete your first
+    module and to submit a review, so that every published review has gone through this check.`,
   },
   {
     title: 'What leaves your browser',
     body: `By default, Gitter (the in-app assistant) runs in "Lite" mode — it answers from a small built-in
-    Git knowledge base, and nothing is sent anywhere. If you choose to unlock "Gitter AI," you provide your
-    own free API key from Google Gemini or Groq. In that case, your messages and that key are sent from your
-    browser through our own proxy server directly to whichever provider you picked, so Gitter can reply. We
-    don't store that key on our servers, and we don't use your chat messages for anything beyond generating
-    that reply. Separately, connecting your GitHub username fetches your public profile info directly from
-    the GitHub API, and submitting a course review sends that review to our server as described above.`,
+    Git knowledge base, and nothing is sent anywhere. Activating "Gitter AI" requires providing your own API
+    key from Google Gemini, Groq, or Anthropic. Once activated, your chat messages and that key are sent from
+    your browser through our own proxy server directly to whichever provider you picked, so Gitter can reply —
+    and that same key is used, with the rating and comment you write, to run the review check described above
+    before a review is submitted. We don't store that key on our servers, and we don't use your chat messages
+    or review text for anything beyond generating that reply or check. Separately, connecting your GitHub
+    username fetches your public profile info directly from the GitHub API.`,
   },
   {
     title: 'Who pays for what',
     body: `DevFlow Academy never holds or pays for any AI API key. Gitter Lite costs nothing to use, for
-    anyone. Gitter AI is entirely optional and uses your own free API key from your own account with Google
-    Gemini or Groq — any usage is governed by that provider's own free-tier terms and limits, not by us.
-    There is no "log in with your existing ChatGPT or Claude subscription" option, because AI providers don't
-    offer a way for third-party sites to use someone's existing consumer chat subscription — API access is
-    always a separate account and separate free tier.`,
+    anyone. Gitter AI is entirely optional in day-to-day chat, but activating it (with a key from Gemini,
+    Groq, or Anthropic) is required to complete your first module and to submit a review, since that's what
+    powers the review check described above. Gemini and Groq both offer free tiers with no card required.
+    Anthropic's API is not free forever — new accounts get a small trial credit, and ongoing use requires a
+    payment method on your own Anthropic account after that. Any usage under any provider is governed by that
+    provider's own terms and limits, not by us. There is no "log in with your existing ChatGPT or Claude
+    subscription" option, because AI providers don't offer a way for third-party sites to use someone's
+    existing consumer chat subscription — API access is always a separate account and, for Anthropic, a
+    separate paid arrangement.`,
   },
   {
     title: 'Cookies and tracking',
@@ -55,10 +63,10 @@ const SECTIONS = [
     title: 'Your control over your data',
     body: `Because your account, progress, and any Gitter AI key live in your browser's local storage,
     clearing your browser data or using a different device/browser will reset your progress and disconnect
-    Gitter AI mode (you'll drop back to Gitter Lite automatically). It will not remove any review you've
-    already submitted, since that lives on our server, not your browser — contact us via the Support page if
-    you'd like a review taken down. Logging out clears your session but keeps your account so you can log
-    back in on the same browser.`,
+    Gitter AI mode (you'll drop back to Gitter Lite automatically, and will need to reactivate it before
+    submitting a new review). It will not remove any review you've already submitted, since that lives on our
+    server, not your browser — contact us via the Support page if you'd like a review taken down. Logging out
+    clears your session but keeps your account so you can log back in on the same browser.`,
   },
   {
     title: 'Changes to this policy',
