@@ -12,6 +12,7 @@
  *   Practice      → /practice
  *   Progress      → /dashboard
  *   Challenge     → /challenge
+ *   Settings      → /settings  (account settings + appearance/theme)
  *
  * User avatar shows the real GitHub profile photo when the person signed
  * in via GitHub OAuth (user.avatarUrl), falling back to a colored-initials
@@ -26,7 +27,7 @@ import { NavLink } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useApp } from '../context/AppContext'
 import { nameToColor } from '../lib/avatarColor'
-import { GitBranch, LogIn, LogOut, Menu, X, GraduationCap, BookOpen, Wrench, Zap, LayoutDashboard } from 'lucide-react'
+import { GitBranch, LogIn, LogOut, Menu, X, GraduationCap, BookOpen, Wrench, Zap, LayoutDashboard, Settings } from 'lucide-react'
 
 export default function Navigation() {
   const { user, isLoggedIn, logout, openAuthModal } = useAuth()
@@ -106,6 +107,12 @@ export default function Navigation() {
             <LayoutDashboard className="w-3.5 h-3.5" /> Progress
           </NavLink>
 
+          <NavLink to="/settings" className={({ isActive }) =>
+            `flex items-center gap-1.5 font-accent text-xs uppercase tracking-[0.14em] transition-colors ${isActive ? 'text-[#F7B731]' : 'text-white/70 hover:text-white'}`
+          }>
+            <Settings className="w-3.5 h-3.5" /> Settings
+          </NavLink>
+
           {/* Auth */}
           {isLoggedIn && user ? (
             <div className="flex items-center gap-3 pl-4 border-l border-white/10">
@@ -173,6 +180,7 @@ export default function Navigation() {
               { to: '/practice',     icon: BookOpen,         label: 'Practice',    hint: 'Scenarios & simulator' },
               { to: '/challenge',    icon: Zap,              label: 'Challenge',   hint: 'Weekly Repo Royale'    },
               { to: '/dashboard',    icon: LayoutDashboard,  label: 'Progress',    hint: 'Skills & career mode'  },
+              { to: '/settings',     icon: Settings,         label: 'Settings',    hint: 'Theme & account'       },
             ].map(({ to, icon: Icon, label, hint }) => (
               <NavLink key={to} to={to} onClick={closeMobileMenu}
                 className={({ isActive }) =>
