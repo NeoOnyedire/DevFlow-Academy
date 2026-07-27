@@ -194,3 +194,106 @@
     background: rgba(255,255,255,0.3);
   }
 }
+
+/* ============================================================================
+   THEME SYSTEM — Original / Light / Dark
+   Toggled via [data-theme] on <html> (see ThemeContext.tsx). Most surfaces
+   already reference --espresso / --card-dark / --card-light through the
+   bg-espresso / bg-card-dark / bg-card-light utility classes, so redefining
+   those variables per theme reskins the whole app. --rose-punch is left
+   untouched in every block on purpose — Gitter stays pink everywhere.
+   ============================================================================ */
+
+[data-theme="light"] {
+  --espresso: #F8F9FA;
+  --card-dark: #FFFFFF;
+  --card-light: #F1F3F5;
+  --sun-yellow: #F7B731;
+  --lime: #2FAE3C;
+  --text-primary: #212529;
+  --text-secondary: #6C757D;
+  --border-soft: rgba(33, 37, 41, 0.1);
+}
+
+[data-theme="dark"] {
+  --espresso: #0A0B10;
+  --card-dark: #14161F;
+  --card-light: #1B1E29;
+  --sun-yellow: #FFC94D;
+  --lime: #46E85B;
+  --text-primary: #F3F4F8;
+  --text-secondary: rgba(243, 244, 248, 0.62);
+  --border-soft: rgba(255, 255, 255, 0.08);
+}
+
+body {
+  background-color: var(--espresso);
+  color: var(--text-primary, #FFFFFF);
+  transition: background-color 0.35s ease, color 0.35s ease;
+}
+
+/* Modals & the Gitter panel use a literal bg-[#4A2F2F] rather than the
+   bg-card-dark class — bring them along too. */
+[data-theme="light"] .bg-\[\#4A2F2F\],
+[data-theme="dark"]  .bg-\[\#4A2F2F\] { background-color: var(--card-dark) !important; }
+
+/* ---- Light theme: darken text that was authored for a dark background ---- */
+[data-theme="light"] .text-white       { color: var(--text-primary) !important; }
+[data-theme="light"] .text-white\/30   { color: rgba(33,37,41,0.35) !important; }
+[data-theme="light"] .text-white\/35   { color: rgba(33,37,41,0.4)  !important; }
+[data-theme="light"] .text-white\/40   { color: rgba(33,37,41,0.45) !important; }
+[data-theme="light"] .text-white\/45   { color: rgba(33,37,41,0.5)  !important; }
+[data-theme="light"] .text-white\/50   { color: rgba(33,37,41,0.55) !important; }
+[data-theme="light"] .text-white\/55   { color: rgba(33,37,41,0.58) !important; }
+[data-theme="light"] .text-white\/60   { color: rgba(33,37,41,0.62) !important; }
+[data-theme="light"] .text-white\/62   { color: rgba(33,37,41,0.64) !important; }
+[data-theme="light"] .text-white\/65   { color: rgba(33,37,41,0.66) !important; }
+[data-theme="light"] .text-white\/70   { color: rgba(33,37,41,0.7)  !important; }
+[data-theme="light"] .text-white\/75   { color: rgba(33,37,41,0.75) !important; }
+[data-theme="light"] .text-white\/78   { color: rgba(33,37,41,0.78) !important; }
+[data-theme="light"] .text-white\/80   { color: rgba(33,37,41,0.8)  !important; }
+[data-theme="light"] .text-white\/85   { color: rgba(33,37,41,0.85) !important; }
+[data-theme="light"] .text-white\/90   { color: rgba(33,37,41,0.9)  !important; }
+[data-theme="light"] .border-white\/10 { border-color: var(--border-soft) !important; }
+[data-theme="light"] .bg-white\/5,
+[data-theme="light"] .bg-white\/10,
+[data-theme="light"] .bg-white\/15     { background-color: rgba(33,37,41,0.045) !important; }
+[data-theme="light"] .grain-overlay    { opacity: 0.035; }
+
+/* ---- Dark theme: the "impress me" treatment ---- */
+[data-theme="dark"] body::before {
+  content: '';
+  position: fixed;
+  inset: -20%;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 15% 20%, rgba(255,77,109,0.14), transparent 45%),
+    radial-gradient(circle at 85% 15%, rgba(255,201,77,0.12), transparent 50%),
+    radial-gradient(circle at 50% 85%, rgba(70,232,91,0.08), transparent 55%);
+  animation: auroraDrift 18s ease-in-out infinite alternate;
+  filter: blur(60px);
+}
+
+@keyframes auroraDrift {
+  0%   { transform: translate3d(0, 0, 0) scale(1); }
+  100% { transform: translate3d(3%, -2%, 0) scale(1.08); }
+}
+
+[data-theme="dark"] .card-outline {
+  border-color: rgba(255,255,255,0.09);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+}
+
+[data-theme="dark"] .bg-card-dark,
+[data-theme="dark"] .bg-\[\#4A2F2F\] {
+  backdrop-filter: blur(6px);
+}
+
+[data-theme="dark"] .bg-rose-punch {
+  box-shadow: 0 0 0 1px rgba(255,77,109,0.3), 0 8px 30px rgba(255,77,109,0.28);
+}
+
+[data-theme="dark"] .bg-sun-yellow {
+  text-shadow: 0 0 18px rgba(255,201,77,0.25);
+}
