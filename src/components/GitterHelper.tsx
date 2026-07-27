@@ -438,7 +438,7 @@ export default function GitterHelper() {
                         {i === 0 ? (
                           <>
                             Go to{' '}
-                            
+                            <a
                               href={PROVIDER_INFO[setupProvider].url}
                               target="_blank"
                               rel="noreferrer"
