@@ -16,6 +16,7 @@
  *   /troubleshoot           Git error search tool
  *   /challenge              Repo Royale weekly challenge
  *   /dashboard              Progress, skills, GitHub, career mode
+ *   /settings                Account settings — profile + appearance/theme
  *   /about                  About DevFlow Academy
  *   /privacy                Privacy policy
  *   /terms                  Terms of use
@@ -31,6 +32,7 @@ import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 
 // Context providers
+import { ThemeProvider } from './context/ThemeContext'
 import { AuthProvider } from './context/AuthContext'
 import { AppProvider } from './context/AppContext'
 
@@ -48,6 +50,7 @@ import PracticePage       from './pages/PracticePage'
 import TroubleshootPage   from './pages/TroubleshootPage'
 import ChallengePage      from './pages/ChallengePage'
 import DashboardPage      from './pages/DashboardPage'
+import SettingsPage       from './pages/SettingsPage'
 import AboutPage          from './pages/AboutPage'
 import PrivacyPage        from './pages/PrivacyPage'
 import TermsPage          from './pages/TermsPage'
@@ -79,6 +82,7 @@ function AppInner() {
           <Route path="/troubleshoot"         element={<TroubleshootPage />} />
           <Route path="/challenge"            element={<ChallengePage />} />
           <Route path="/dashboard"            element={<DashboardPage />} />
+          <Route path="/settings"             element={<SettingsPage />} />
           <Route path="/about"                element={<AboutPage />} />
           <Route path="/privacy"              element={<PrivacyPage />} />
           <Route path="/terms"                element={<TermsPage />} />
@@ -96,10 +100,12 @@ function AppInner() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <AppProvider>
-        <AppInner />
-      </AppProvider>
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <AppProvider>
+          <AppInner />
+        </AppProvider>
+      </AuthProvider>
+    </ThemeProvider>
   )
 }
