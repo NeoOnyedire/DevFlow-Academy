@@ -156,6 +156,19 @@
     letter-spacing: 0.14em;
     text-transform: uppercase;
   }
+
+  /* Secondary "outline" button used on full-page yellow canvases
+     (FooterSection's "Browse all lessons"). Theme-aware via CSS vars
+     instead of hardcoded hex, so it survives the dark-mode swap below. */
+  .btn-outline-on-accent {
+    border: 2px solid var(--border-on-accent);
+    color: var(--text-on-accent);
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+  }
+  .btn-outline-on-accent:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+    border-color: var(--text-on-accent-soft);
+  }
 }
 
 /**
@@ -200,9 +213,29 @@
    Toggled via [data-theme] on <html> (see ThemeContext.tsx). Most surfaces
    already reference --espresso / --card-dark / --card-light through the
    bg-espresso / bg-card-dark / bg-card-light utility classes, so redefining
-   those variables per theme reskins the whole app. --rose-punch is left
-   untouched in every block on purpose — Gitter stays pink everywhere.
+   those variables per theme reskins the whole app. --rose-punch (Gitter) is
+   left untouched in every block on purpose, same for Gitto's teal.
+
+   --text-on-accent / --text-on-accent-soft / --border-on-accent exist for
+   the handful of full-page sections that sit directly on a bg-sun-yellow
+   canvas (FooterSection, the guest DashboardSection preview, and
+   ScenarioPlaySection's intro copy). Those components now read these
+   variables instead of a hardcoded #2A2A2A, which is what lets dark mode
+   flip them to light text once bg-sun-yellow itself becomes a real dark
+   surface below — previously this text stayed dark-on-dark and made the
+   whole page look like nothing had changed.
+
+   --card-light intentionally does NOT change in dark mode: the small "light
+   card" components (lesson cards, scenario cards, badges) keep their cream
+   background and dark #2A2A2A text as designed island-cards in every theme
+   — flipping that background dark would've broken their hardcoded text.
    ============================================================================ */
+
+:root {
+  --text-on-accent: #2A2A2A;
+  --text-on-accent-soft: rgba(42, 42, 42, 0.65);
+  --border-on-accent: rgba(42, 42, 42, 0.18);
+}
 
 [data-theme="light"] {
   --espresso: #F8F9FA;
@@ -218,12 +251,14 @@
 [data-theme="dark"] {
   --espresso: #0A0B10;
   --card-dark: #14161F;
-  --card-light: #1B1E29;
   --sun-yellow: #FFC94D;
   --lime: #46E85B;
   --text-primary: #F3F4F8;
   --text-secondary: rgba(243, 244, 248, 0.62);
   --border-soft: rgba(255, 255, 255, 0.08);
+  --text-on-accent: #F3F4F8;
+  --text-on-accent-soft: rgba(243, 244, 248, 0.68);
+  --border-on-accent: rgba(243, 244, 248, 0.18);
 }
 
 body {
@@ -232,13 +267,30 @@ body {
   transition: background-color 0.35s ease, color 0.35s ease;
 }
 
-/* Modals & the Gitter panel use a literal bg-[#4A2F2F] rather than the
-   bg-card-dark class — bring them along too. */
+/* Modals & the Gitter/Gitto panels use a literal bg-[#4A2F2F] rather than
+   the bg-card-dark class — bring them along too. */
 [data-theme="light"] .bg-\[\#4A2F2F\],
 [data-theme="dark"]  .bg-\[\#4A2F2F\] { background-color: var(--card-dark) !important; }
+[data-theme="light"] .bg-\[\#4A2F2F\]\/60,
+[data-theme="dark"]  .bg-\[\#4A2F2F\]\/60 { background-color: var(--card-dark) !important; }
+
+/* Full-page yellow canvases (Learn, Practice, the guest Dashboard preview,
+   the closing footer CTA) become a real dark surface in dark mode instead
+   of just tinting the yellow — this is the actual fix for dark mode barely
+   looking different from Original. Small accent usages of yellow (badges,
+   buttons that reference var(--sun-yellow) inline) are untouched, since
+   those still read fine against dark text in every theme. */
+[data-theme="dark"] .bg-sun-yellow {
+  background-color: var(--espresso) !important;
+}
 
 /* ---- Light theme: darken text that was authored for a dark background ---- */
 [data-theme="light"] .text-white       { color: var(--text-primary) !important; }
+[data-theme="light"] .text-white\/5    { color: rgba(33,37,41,0.08) !important; }
+[data-theme="light"] .text-white\/10   { color: rgba(33,37,41,0.12) !important; }
+[data-theme="light"] .text-white\/15   { color: rgba(33,37,41,0.18) !important; }
+[data-theme="light"] .text-white\/20   { color: rgba(33,37,41,0.22) !important; }
+[data-theme="light"] .text-white\/25   { color: rgba(33,37,41,0.28) !important; }
 [data-theme="light"] .text-white\/30   { color: rgba(33,37,41,0.35) !important; }
 [data-theme="light"] .text-white\/35   { color: rgba(33,37,41,0.4)  !important; }
 [data-theme="light"] .text-white\/40   { color: rgba(33,37,41,0.45) !important; }
@@ -294,6 +346,6 @@ body {
   box-shadow: 0 0 0 1px rgba(255,77,109,0.3), 0 8px 30px rgba(255,77,109,0.28);
 }
 
-[data-theme="dark"] .bg-sun-yellow {
-  text-shadow: 0 0 18px rgba(255,201,77,0.25);
+[data-theme="dark"] .btn-outline-on-accent:hover {
+  background-color: rgba(255, 255, 255, 0.06);
 }
