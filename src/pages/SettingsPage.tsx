@@ -146,8 +146,8 @@ export default function SettingsPage() {
         </div>
 
         <p className="text-white/35 text-xs leading-relaxed">
-          Your theme choice is saved to this browser. Gitter's chat bubble stays rose-pink in every theme,
-          so it's always easy to spot.
+          Your theme choice is saved to this browser. Gitter's chat bubble stays rose-pink and Gitto's stays teal
+          in every theme, so they're always easy to spot.
         </p>
 
         {!isLoggedIn && (
