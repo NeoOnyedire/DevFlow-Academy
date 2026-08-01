@@ -3,9 +3,14 @@
  * ScenarioPlaySection.tsx
  * ============================================================================
  *
- * Interactive Git scenario practice.
+ * Interactive Git scenario practice. Sits on a bg-sun-yellow canvas that
+ * flips to a real dark surface in Dark Mode — the left column's eyebrow,
+ * heading, and intro paragraph read var(--text-on-accent) / soft instead
+ * of a hardcoded #2A2A2A, so they stay legible once that happens. The
+ * three stat cards below stay untouched (they sit on bg-white/60, which
+ * doesn't change with theme, so their dark text is fine in every theme).
  *
- * Improvements:
+ * Other features:
  * - After answering, a large prominent "Next Scenario →" banner replaces
  *   the tucked-away button so it's impossible to miss
  * - Scenario tabs (01–04) show a coloured dot when that scenario has been
@@ -190,16 +195,16 @@ export default function ScenarioPlaySection({ className = '' }: Props) {
 
         {/* Left — stats */}
         <div className="max-w-xl">
-          <p className="font-accent text-xs uppercase tracking-[0.14em] text-[#2A2A2A]/60 mb-4">
+          <p className="font-accent text-xs uppercase tracking-[0.14em] mb-4" style={{ color: 'var(--text-on-accent-soft)' }}>
             Interactive practice
           </p>
           <h2
-            className="font-display font-bold heading-responsive tracking-[0.02em] text-[#2A2A2A] mb-5"
-            style={{ fontSize: 'clamp(38px, 6vw, 88px)' }}
+            className="font-display font-bold heading-responsive tracking-[0.02em] mb-5"
+            style={{ fontSize: 'clamp(38px, 6vw, 88px)', color: 'var(--text-on-accent)' }}
           >
             Play the Git Floor
           </h2>
-          <p className="text-[#2A2A2A]/75 leading-relaxed mb-6" style={{ fontSize: 'clamp(15px, 1.2vw, 18px)' }}>
+          <p className="leading-relaxed mb-6" style={{ fontSize: 'clamp(15px, 1.2vw, 18px)', color: 'var(--text-on-accent-soft)' }}>
             Pick the move you would make in a real team situation. Smart decisions earn points, streaks, and a rank you can keep building.
           </p>
 
