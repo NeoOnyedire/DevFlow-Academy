@@ -3,12 +3,15 @@
  *
  * Explains what DevFlow Academy is, the problem it solves, and how
  * the curriculum + practice tools + Gitter assistant fit together.
+ * Also links out to /git-history for the behind-the-scenes engineering
+ * story, which is deliberately kept separate from the curriculum here.
  */
 import { useEffect } from 'react'
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
+import { Link } from 'react-router-dom'
 import PageWrapper from '../components/PageWrapper'
-import { GitBranch, Heart, Compass, Sparkles } from 'lucide-react'
+import { GitBranch, Heart, Compass, Sparkles, GitCommit } from 'lucide-react'
 
 gsap.registerPlugin(ScrollTrigger)
 
@@ -60,11 +63,11 @@ export default function AboutPage() {
         <p className="text-white/75 leading-relaxed mb-14 max-w-2xl" style={{ fontSize: 'clamp(15px, 1.15vw, 19px)' }}>
           DevFlow Academy exists to close that gap. It's a free, structured course that takes you from your
           first commit to confidently handling the situations that actually come up on real teams — branching,
-          merge conflicts, rebasing, pull requests, and CI/CD — with practice scenarios and a friendly in-app
-          assistant (hi, Gitter) along the way.
+          merge conflicts, rebasing, pull requests, and CI/CD — with practice scenarios and friendly in-app
+          assistants (hi, Gitter and Gitto) along the way.
         </p>
 
-        <div className="space-y-6">
+        <div className="space-y-6 mb-14">
           {PILLARS.map(({ icon: Icon, title, body }) => (
             <div key={title} className="flex gap-4 bg-[#4A2F2F] card-radius card-outline p-5 md:p-6">
               <div className="w-11 h-11 rounded-full bg-[#F7B731]/20 flex items-center justify-center flex-shrink-0">
@@ -78,7 +81,23 @@ export default function AboutPage() {
           ))}
         </div>
 
-        <p className="text-white/40 text-sm mt-14">
+        {/* Git History pointer — the "nerdy stuff" that isn't curriculum */}
+        <div className="bg-[#4A2F2F] card-radius card-outline p-5 md:p-6 flex flex-wrap items-center justify-between gap-4">
+          <div className="min-w-0">
+            <h2 className="font-display font-bold text-white text-lg mb-1.5">Curious how this site is actually built?</h2>
+            <p className="text-white/60 text-sm leading-relaxed max-w-md">
+              Git History covers the behind-the-scenes engineering decisions — auth, databases, AI providers —
+              that have nothing to do with the curriculum itself.
+            </p>
+          </div>
+          <Link to="/git-history"
+            className="flex-shrink-0 flex items-center gap-2 bg-rose-punch text-white font-display font-semibold px-5 py-3 rounded-xl
+              hover:bg-[#ff3d5d] hover:scale-105 transition-all duration-300">
+            <GitCommit className="w-4 h-4" /> View Git History
+          </Link>
+        </div>
+
+        <p className="text-white/40 text-sm mt-10">
           Have a question or feedback? Visit the <a href="/support" className="text-[#F7B731] hover:underline">Support page</a>.
         </p>
       </section>
