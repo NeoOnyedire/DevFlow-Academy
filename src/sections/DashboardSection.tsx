@@ -19,7 +19,12 @@
  *
  * AUTH INTEGRATION:
  * - If logged in: shows real progress data from AppContext
- * - If not logged in: shows a login prompt
+ * - If not logged in: shows a login prompt on a bg-sun-yellow canvas —
+ *   the heading/subtitle there read var(--text-on-accent) / soft instead
+ *   of a hardcoded #2A2A2A, so they stay readable once that canvas flips
+ *   to a dark surface in Dark Mode (see index.css). Everything below,
+ *   the greyed-out stat cards, skill map, uses bg-[#4A2F2F]/60 and
+ *   text-white/NN, which are already theme-aware.
  * ============================================================================
  */
 
@@ -156,10 +161,10 @@ export default function DashboardSection({ className = '' }: Props) {
         <div className="px-[6vw]">
           <div ref={headingRef} className="mb-8">
             <h2 className="font-display font-bold tracking-[0.02em] mb-2"
-              style={{ fontSize: 'clamp(36px, 6vw, 72px)', color: '#2A2A2A' }}>
+              style={{ fontSize: 'clamp(36px, 6vw, 72px)', color: 'var(--text-on-accent)' }}>
               Your Progress
             </h2>
-            <p style={{ color: '#2A2A2A99', fontSize: 'clamp(14px, 1.2vw, 17px)' }}>
+            <p style={{ color: 'var(--text-on-accent-soft)', fontSize: 'clamp(14px, 1.2vw, 17px)' }}>
               Start learning to fill these in. Free account, no credit card.
             </p>
           </div>
