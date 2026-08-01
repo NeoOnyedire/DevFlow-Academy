@@ -2,8 +2,8 @@
  * App.tsx
  *
  * Root component — sets up context providers and routes.
- * Global overlays (CurriculumPanel, AuthModal, ReviewModal, GitterHelper)
- * live here so they persist and work on every page.
+ * Global overlays (CurriculumPanel, AuthModal, ReviewModal, GitterHelper,
+ * GittoHelper) live here so they persist and work on every page.
  *
  * Both the overlay group and the routed pages are wrapped in their own
  * <ErrorBoundary> — a throw in one no longer takes down the other. See
@@ -18,6 +18,7 @@
  *   /dashboard              Progress, skills, GitHub, career mode
  *   /settings                Account settings — profile + appearance/theme
  *   /about                  About DevFlow Academy
+ *   /git-history             Behind-the-scenes engineering changelog
  *   /privacy                Privacy policy
  *   /terms                  Terms of use
  *   /support                Support / contact / socials
@@ -41,6 +42,7 @@ import AuthModal      from './components/AuthModal'
 import CurriculumPanel from './components/CurriculumPanel'
 import ReviewModal    from './components/ReviewModal'
 import GitterHelper   from './components/GitterHelper'
+import GittoHelper    from './components/GittoHelper'
 import ErrorBoundary  from './components/ErrorBoundary'
 
 // Pages
@@ -52,6 +54,7 @@ import ChallengePage      from './pages/ChallengePage'
 import DashboardPage      from './pages/DashboardPage'
 import SettingsPage       from './pages/SettingsPage'
 import AboutPage          from './pages/AboutPage'
+import GitHistoryPage     from './pages/GitHistoryPage'
 import PrivacyPage        from './pages/PrivacyPage'
 import TermsPage          from './pages/TermsPage'
 import SupportPage        from './pages/SupportPage'
@@ -71,6 +74,7 @@ function AppInner() {
         <CurriculumPanel />
         <ReviewModal />
         <GitterHelper />
+        <GittoHelper />
       </ErrorBoundary>
 
       {/* Page routes — isolated so a crash here doesn't take the overlays with it */}
@@ -84,6 +88,7 @@ function AppInner() {
           <Route path="/dashboard"            element={<DashboardPage />} />
           <Route path="/settings"             element={<SettingsPage />} />
           <Route path="/about"                element={<AboutPage />} />
+          <Route path="/git-history"          element={<GitHistoryPage />} />
           <Route path="/privacy"              element={<PrivacyPage />} />
           <Route path="/terms"                element={<TermsPage />} />
           <Route path="/support"              element={<SupportPage />} />
