@@ -14,6 +14,12 @@
  *   Challenge     → /challenge
  *   Settings      → /settings  (account settings + appearance/theme)
  *
+ * NAV OVERFLOW FIX: with 6 nav items + auth, labels were clipping off the
+ * right edge on desktop widths below ~1280px. Labels now hide below the
+ * `xl` breakpoint (icon-only + tooltip via native title attribute), and
+ * gap/padding shrink a step at `md` before widening again at `xl`, so the
+ * whole row always fits without wrapping or clipping.
+ *
  * User avatar shows the real GitHub profile photo when the person signed
  * in via GitHub OAuth (user.avatarUrl), falling back to a colored-initials
  * circle otherwise. That fallback color is now computed on the fly via
@@ -49,73 +55,73 @@ export default function Navigation() {
 
   const lessonLabel = isLoggedIn && completedModules.length > 0 ? 'Continue' : 'Lessons'
 
-  // NavLink active class helper
-  const linkClass = ({ isActive }: { isActive: boolean }) =>
-    `font-accent text-xs uppercase tracking-[0.14em] transition-colors ${
-      isActive ? 'text-[#F7B731]' : 'text-white/70 hover:text-white'
-    }`
-
   return (
     <>
       <nav
-        className="w-full px-4 md:px-[6vw] py-3 md:py-4 flex items-center justify-between relative"
+        className="w-full px-4 md:px-[4vw] xl:px-[6vw] py-3 md:py-4 flex items-center justify-between relative"
         style={{ backgroundColor: 'rgba(107,76,76,0.97)', backdropFilter: 'blur(12px)' }}
       >
         {/* Logo */}
-        <NavLink to="/" className="flex items-center gap-2 group">
+        <NavLink to="/" className="flex items-center gap-2 group flex-shrink-0">
           <GitBranch className="w-5 h-5 md:w-6 md:h-6 text-[#F7B731] transition-transform group-hover:rotate-12" />
-          <span className="font-display text-lg md:text-xl font-semibold text-white tracking-wide">
+          <span className="hidden sm:inline font-display text-lg md:text-xl font-semibold text-white tracking-wide whitespace-nowrap">
             DevFlow Academy
           </span>
         </NavLink>
 
         {/* Desktop links */}
-        <div className="hidden md:flex items-center gap-6">
+        <div className="hidden md:flex items-center gap-3 xl:gap-6 flex-shrink-0">
           {/* Curriculum — opens panel in browse mode */}
           <button
             onClick={handleOpenCurriculum}
-            className="flex items-center gap-1.5 font-accent text-xs uppercase tracking-[0.14em] text-white/70 hover:text-[#F7B731] transition-colors"
+            title="Curriculum"
+            className="flex items-center gap-1.5 font-accent text-xs uppercase tracking-[0.14em] text-white/70 hover:text-[#F7B731] transition-colors whitespace-nowrap"
           >
-            <GraduationCap className="w-3.5 h-3.5" /> Curriculum
+            <GraduationCap className="w-3.5 h-3.5 flex-shrink-0" /> <span className="hidden xl:inline">Curriculum</span>
           </button>
 
           {/* Lessons — jumps to next unwatched module */}
           <button
             onClick={handleOpenNextLesson}
-            className="flex items-center gap-1.5 font-accent text-xs uppercase tracking-[0.14em] text-white/70 hover:text-white transition-colors"
+            title={lessonLabel}
+            className="flex items-center gap-1.5 font-accent text-xs uppercase tracking-[0.14em] text-white/70 hover:text-white transition-colors whitespace-nowrap"
           >
-            <BookOpen className="w-3.5 h-3.5" /> {lessonLabel}
+            <BookOpen className="w-3.5 h-3.5 flex-shrink-0" /> <span className="hidden xl:inline">{lessonLabel}</span>
           </button>
 
-          <NavLink to="/troubleshoot" className={({ isActive }) =>
-            `flex items-center gap-1.5 font-accent text-xs uppercase tracking-[0.14em] transition-colors ${isActive ? 'text-[#F7B731]' : 'text-white/70 hover:text-[#F7B731]'}`
+          <NavLink to="/troubleshoot" title="Fix an Error" className={({ isActive }) =>
+            `flex items-center gap-1.5 font-accent text-xs uppercase tracking-[0.14em] transition-colors whitespace-nowrap ${isActive ? 'text-[#F7B731]' : 'text-white/70 hover:text-[#F7B731]'}`
           }>
-            <Wrench className="w-3.5 h-3.5" /> Fix an Error
+            <Wrench className="w-3.5 h-3.5 flex-shrink-0" /> <span className="hidden xl:inline">Fix an Error</span>
           </NavLink>
 
-          <NavLink to="/practice" className={linkClass}>Practice</NavLink>
-
-          <NavLink to="/challenge" className={({ isActive }) =>
-            `flex items-center gap-1.5 font-accent text-xs uppercase tracking-[0.14em] transition-colors ${isActive ? 'text-[#F7B731]' : 'text-white/70 hover:text-white'}`
+          <NavLink to="/practice" title="Practice" className={({ isActive }) =>
+            `font-accent text-xs uppercase tracking-[0.14em] transition-colors whitespace-nowrap ${isActive ? 'text-[#F7B731]' : 'text-white/70 hover:text-white'}`
           }>
-            <Zap className="w-3.5 h-3.5" /> Challenge
+            Practice
           </NavLink>
 
-          <NavLink to="/dashboard" className={({ isActive }) =>
-            `flex items-center gap-1.5 font-accent text-xs uppercase tracking-[0.14em] transition-colors ${isActive ? 'text-[#F7B731]' : 'text-white/70 hover:text-white'}`
+          <NavLink to="/challenge" title="Challenge" className={({ isActive }) =>
+            `flex items-center gap-1.5 font-accent text-xs uppercase tracking-[0.14em] transition-colors whitespace-nowrap ${isActive ? 'text-[#F7B731]' : 'text-white/70 hover:text-white'}`
           }>
-            <LayoutDashboard className="w-3.5 h-3.5" /> Progress
+            <Zap className="w-3.5 h-3.5 flex-shrink-0" /> <span className="hidden xl:inline">Challenge</span>
           </NavLink>
 
-          <NavLink to="/settings" className={({ isActive }) =>
-            `flex items-center gap-1.5 font-accent text-xs uppercase tracking-[0.14em] transition-colors ${isActive ? 'text-[#F7B731]' : 'text-white/70 hover:text-white'}`
+          <NavLink to="/dashboard" title="Progress" className={({ isActive }) =>
+            `flex items-center gap-1.5 font-accent text-xs uppercase tracking-[0.14em] transition-colors whitespace-nowrap ${isActive ? 'text-[#F7B731]' : 'text-white/70 hover:text-white'}`
           }>
-            <Settings className="w-3.5 h-3.5" /> Settings
+            <LayoutDashboard className="w-3.5 h-3.5 flex-shrink-0" /> <span className="hidden xl:inline">Progress</span>
+          </NavLink>
+
+          <NavLink to="/settings" title="Settings" className={({ isActive }) =>
+            `flex items-center gap-1.5 font-accent text-xs uppercase tracking-[0.14em] transition-colors whitespace-nowrap ${isActive ? 'text-[#F7B731]' : 'text-white/70 hover:text-white'}`
+          }>
+            <Settings className="w-3.5 h-3.5 flex-shrink-0" /> <span className="hidden xl:inline">Settings</span>
           </NavLink>
 
           {/* Auth */}
           {isLoggedIn && user ? (
-            <div className="flex items-center gap-3 pl-4 border-l border-white/10">
+            <div className="flex items-center gap-3 pl-3 xl:pl-4 border-l border-white/10 flex-shrink-0">
               <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden"
                 style={{ backgroundColor: nameToColor(user.name) }}
                 title={user.githubUsername ? `@${user.githubUsername}` : user.name}>
@@ -127,17 +133,18 @@ export default function Navigation() {
                   </span>
                 )}
               </div>
-              <button onClick={logout} className="text-white/40 hover:text-white transition-colors" title="Log out">
+              <button onClick={logout} className="text-white/40 hover:text-white transition-colors flex-shrink-0" title="Log out">
                 <LogOut className="w-4 h-4" />
               </button>
             </div>
           ) : (
             <button
               onClick={() => openAuthModal('login')}
+              title="Login"
               className="flex items-center gap-1.5 font-accent text-xs uppercase tracking-[0.14em]
-                bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg transition-colors"
+                bg-white/10 hover:bg-white/20 text-white px-3 xl:px-4 py-2 rounded-lg transition-colors whitespace-nowrap flex-shrink-0"
             >
-              <LogIn className="w-3.5 h-3.5" /> Login
+              <LogIn className="w-3.5 h-3.5" /> <span className="hidden xl:inline">Login</span>
             </button>
           )}
         </div>
@@ -145,7 +152,7 @@ export default function Navigation() {
         {/* Mobile hamburger */}
         <button
           onClick={() => setMobileMenuOpen(v => !v)}
-          className="md:hidden text-white/70 hover:text-white transition-colors p-2"
+          className="md:hidden text-white/70 hover:text-white transition-colors p-2 flex-shrink-0"
           aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
         >
           {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
