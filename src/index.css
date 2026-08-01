@@ -32,30 +32,40 @@
     --lime: #3CCF4A;
     --card-dark: #4A2F2F;
     --card-light: #FFF6E7;
+
+    /* Nav bar background — theme-aware (see THEME SYSTEM block below) */
+    --nav-bg: rgba(107, 76, 76, 0.97);
   }
 
   * {
     @apply border-border;
   }
 
+  /*
+   * SCROLLBAR FIX:
+   * Previously both html and body forced their own overflow-y values
+   * (html: auto, body: visible) plus min-height: 100% on both. That made
+   * html behave as its own internal scroll container *in addition to*
+   * the normal document/viewport scroll, producing two visible
+   * scrollbars and a "double scroll" feel. Letting the document scroll
+   * natively (no overflow-y forced on html or body) fixes it — only
+   * overflow-x stays hidden to prevent horizontal scroll from
+   * off-canvas/rotated elements elsewhere in the app.
+   */
   html {
     scroll-behavior: smooth;
     touch-action: pan-y;
     overflow-x: hidden;
-    overflow-y: auto;
     width: 100%;
-    min-height: 100%;
   }
 
   body {
-    min-height: 100%;
     margin: 0;
     width: 100%;
     font-family: 'Inter', sans-serif;
     background-color: var(--espresso);
     color: #FFFFFF;
     overflow-x: hidden;
-    overflow-y: visible;
     overscroll-behavior-y: contain;
     text-rendering: optimizeLegibility;
     -webkit-overflow-scrolling: touch;
@@ -216,6 +226,11 @@
    those variables per theme reskins the whole app. --rose-punch (Gitter) is
    left untouched in every block on purpose, same for Gitto's teal.
 
+   --nav-bg follows the same pattern — it used to be hardcoded on
+   Navigation.tsx as a literal rgba() matching the Original --espresso
+   value, so the nav bar never changed color in Light/Dark mode. It now
+   reads from this variable, redefined per theme below.
+
    --text-on-accent / --text-on-accent-soft / --border-on-accent exist for
    the handful of full-page sections that sit directly on a bg-sun-yellow
    canvas (FooterSection, the guest DashboardSection preview, and
@@ -246,6 +261,7 @@
   --text-primary: #212529;
   --text-secondary: #6C757D;
   --border-soft: rgba(33, 37, 41, 0.1);
+  --nav-bg: rgba(255, 255, 255, 0.92);
 }
 
 [data-theme="dark"] {
@@ -259,6 +275,7 @@
   --text-on-accent: #F3F4F8;
   --text-on-accent-soft: rgba(243, 244, 248, 0.68);
   --border-on-accent: rgba(243, 244, 248, 0.18);
+  --nav-bg: rgba(10, 11, 16, 0.92);
 }
 
 body {

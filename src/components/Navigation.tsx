@@ -20,6 +20,13 @@
  * gap/padding shrink a step at `md` before widening again at `xl`, so the
  * whole row always fits without wrapping or clipping.
  *
+ * THEME FIX: the nav background used to be a hardcoded literal
+ * (rgba(107,76,76,0.97), which is just #6B4C4C — the Original theme's
+ * --espresso — baked in as a constant), so the bar never changed color
+ * in Light or Dark mode. It now reads from --nav-bg, which is redefined
+ * per [data-theme] in index.css, so the header follows the rest of the
+ * site's theme.
+ *
  * User avatar shows the real GitHub profile photo when the person signed
  * in via GitHub OAuth (user.avatarUrl), falling back to a colored-initials
  * circle otherwise. That fallback color is now computed on the fly via
@@ -59,7 +66,7 @@ export default function Navigation() {
     <>
       <nav
         className="w-full px-4 md:px-[4vw] xl:px-[6vw] py-3 md:py-4 flex items-center justify-between relative"
-        style={{ backgroundColor: 'rgba(107,76,76,0.97)', backdropFilter: 'blur(12px)' }}
+        style={{ backgroundColor: 'var(--nav-bg)', backdropFilter: 'blur(12px)' }}
       >
         {/* Logo */}
         <NavLink to="/" className="flex items-center gap-2 group flex-shrink-0">
@@ -163,8 +170,11 @@ export default function Navigation() {
       {mobileMenuOpen && (
         <>
           <div className="fixed inset-0 z-[145] md:hidden" onClick={closeMobileMenu} aria-hidden="true" />
-          <div className="fixed top-[52px] left-0 right-0 z-[150] md:hidden
-            bg-[#4A2F2F] border-t border-white/10 p-4 flex flex-col gap-1 shadow-2xl animate-[fadeIn_0.15s_ease-out]">
+          <div
+            className="fixed top-[52px] left-0 right-0 z-[150] md:hidden
+            border-t border-white/10 p-4 flex flex-col gap-1 shadow-2xl animate-[fadeIn_0.15s_ease-out]"
+            style={{ backgroundColor: 'var(--nav-bg)' }}
+          >
 
             <button onClick={handleOpenCurriculum}
               className="flex items-center gap-3 py-3 px-2 rounded-lg text-white/70 hover:text-[#F7B731] hover:bg-white/5 transition-colors text-left w-full font-accent text-xs uppercase tracking-[0.14em]">

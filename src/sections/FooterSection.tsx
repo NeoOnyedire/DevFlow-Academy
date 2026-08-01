@@ -23,6 +23,14 @@
  *
  * Footer links now route to real pages: /about, /privacy, /terms, /support.
  *
+ * OVERLAP FIX: the footer links row previously sat at `md:bottom-8` (32px
+ * from the section bottom). Gitto (bottom-left) and Gitter (bottom-right)
+ * are both fixed at `bottom-4` (16px) plus their own ~50px button height,
+ * so they occupy roughly the 16–70px band above the viewport bottom. Once
+ * the page was scrolled all the way down, that band collided with the
+ * footer links. Moved to `md:bottom-24` (96px) so the links clear both
+ * widgets with room to spare.
+ *
  * MOBILE: Cat illustration is hidden (too cramped), text and CTAs are
  * centered and full-width. Footer links stack vertically.
  * ============================================================================
@@ -196,8 +204,8 @@ export default function FooterSection({ className = '' }: Props) {
         />
       </div>
 
-      {/* Footer links */}
-      <div ref={footerLinksRef} className="px-[6vw] mt-12 md:mt-0 md:absolute md:bottom-8 md:left-0 md:right-0">
+      {/* Footer links — bumped to bottom-24 so it clears the fixed Gitto/Gitter widgets */}
+      <div ref={footerLinksRef} className="px-[6vw] mt-12 md:mt-0 md:absolute md:bottom-24 md:left-0 md:right-0">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pt-6"
           style={{ borderTop: '1px solid var(--border-on-accent)' }}>
           <div className="flex flex-wrap items-center gap-4 md:gap-6">
