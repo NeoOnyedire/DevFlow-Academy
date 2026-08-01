@@ -6,6 +6,12 @@
  * Final CTA section — "Start Your Streak" with dual call-to-action buttons,
  * the celebratory Gitter cat illustration, and footer links.
  *
+ * This section sits on a bg-sun-yellow canvas, which flips to a real dark
+ * surface in Dark Mode (see index.css). Because of that, every text color
+ * here reads from --text-on-accent / --text-on-accent-soft / --border-on-accent
+ * instead of a hardcoded #2A2A2A, so it flips to light text automatically
+ * when the canvas goes dark — no ternaries or theme-checking needed here.
+ *
  * CTA behaviour (intentionally distinct):
  * - Primary "Start Free" / "Continue Learning":
  *     Opens the curriculum panel at the user's next incomplete module,
@@ -151,10 +157,11 @@ export default function FooterSection({ className = '' }: Props) {
       <div className="px-[6vw] md:absolute md:left-[6vw] md:top-[10vh] md:w-[44vw]">
         <div ref={leftRef}>
           <h2 className="font-display font-bold heading-responsive tracking-[0.02em] mb-4 md:mb-6"
-            style={{ fontSize: 'clamp(36px, 6vw, 72px)', color: '#2A2A2A' }}>
+            style={{ fontSize: 'clamp(36px, 6vw, 72px)', color: 'var(--text-on-accent)' }}>
             Start Your<br />Streak
           </h2>
-          <p className="leading-relaxed mb-6 md:mb-8 max-w-md" style={{ fontSize: 'clamp(14px, 1.2vw, 18px)', color: '#2A2A2Acc' }}>
+          <p className="leading-relaxed mb-6 md:mb-8 max-w-md"
+            style={{ fontSize: 'clamp(14px, 1.2vw, 18px)', color: 'var(--text-on-accent-soft)' }}>
             Free to start. Fun to finish. Built for real teams. Join thousands of developers who learned Git the friendly way.
           </p>
         </div>
@@ -169,11 +176,10 @@ export default function FooterSection({ className = '' }: Props) {
             {isLoggedIn ? 'Continue Learning' : 'Start Free'}
           </button>
 
-          {/* Secondary — low-commitment browse action */}
+          {/* Secondary — low-commitment browse action, theme-aware via .btn-outline-on-accent */}
           <button
             onClick={handleBrowseAll}
-            className="border-2 border-[#2A2A2A]/30 text-[#2A2A2A] font-display font-semibold px-6 md:px-8 py-3 md:py-4 card-radius
-              hover:bg-[#2A2A2A]/5 hover:border-[#2A2A2A]/50 transition-all duration-300 w-fit"
+            className="btn-outline-on-accent font-display font-semibold px-6 md:px-8 py-3 md:py-4 card-radius w-fit"
             style={{ fontSize: 'clamp(13px, 1.2vw, 17px)' }}>
             Browse all 8 lessons
           </button>
@@ -193,23 +199,23 @@ export default function FooterSection({ className = '' }: Props) {
       {/* Footer links */}
       <div ref={footerLinksRef} className="px-[6vw] mt-12 md:mt-0 md:absolute md:bottom-8 md:left-0 md:right-0">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pt-6"
-          style={{ borderTop: '1px solid rgba(42,42,42,0.15)' }}>
+          style={{ borderTop: '1px solid var(--border-on-accent)' }}>
           <div className="flex flex-wrap items-center gap-4 md:gap-6">
             {FOOTER_LINKS.map(link => (
               <Link key={link.to} to={link.to}
                 className="font-accent text-xs uppercase tracking-[0.14em] hover:opacity-70 transition-opacity"
-                style={{ color: '#2A2A2Acc' }}>
+                style={{ color: 'var(--text-on-accent-soft)' }}>
                 {link.label}
               </Link>
             ))}
           </div>
           <div className="flex items-center gap-2">
-            <GitBranch className="w-4 h-4" style={{ color: '#2A2A2A80' }} />
-            <span className="font-accent text-xs uppercase tracking-[0.14em]" style={{ color: '#2A2A2A80' }}>
+            <GitBranch className="w-4 h-4" style={{ color: 'var(--text-on-accent-soft)' }} />
+            <span className="font-accent text-xs uppercase tracking-[0.14em]" style={{ color: 'var(--text-on-accent-soft)' }}>
               Made with
             </span>
             <Heart className="w-3 h-3 text-rose-punch fill-rose-punch" />
-            <span className="font-accent text-xs uppercase tracking-[0.14em]" style={{ color: '#2A2A2A80' }}>
+            <span className="font-accent text-xs uppercase tracking-[0.14em]" style={{ color: 'var(--text-on-accent-soft)' }}>
               by DevFlow Academy
             </span>
           </div>
