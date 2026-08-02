@@ -23,13 +23,22 @@
  *
  * Footer links now route to real pages: /about, /privacy, /terms, /support.
  *
- * OVERLAP FIX: the footer links row previously sat at `md:bottom-8` (32px
- * from the section bottom). Gitto (bottom-left) and Gitter (bottom-right)
- * are both fixed at `bottom-4` (16px) plus their own ~50px button height,
- * so they occupy roughly the 16–70px band above the viewport bottom. Once
- * the page was scrolled all the way down, that band collided with the
- * footer links. Moved to `md:bottom-24` (96px) so the links clear both
- * widgets with room to spare.
+ * OVERLAP FIX (v2): the text block and footer links used to each be their
+ * own `position: absolute` element (top-[10vh] and bottom-24/bottom-8),
+ * sized independently of one another. On shorter viewports — or once more
+ * CTA copy/buttons got added — the two boxes simply overlapped, because
+ * neither one knew how tall the other was. Pinning the links to a fixed
+ * "bottom" offset can never fully fix that; it only moves where the
+ * collision happens.
+ *
+ * Fixed properly by taking both blocks out of absolute positioning and
+ * letting them sit in normal document flow, stacked top-to-bottom, so the
+ * links block is pushed down by however tall the CTA block actually is —
+ * they can no longer occupy the same space. The section's bottom padding
+ * (`pb-28 md:pb-36`) guarantees the links land well clear of the fixed
+ * Gitto (bottom-left) / Gitter (bottom-right) widgets regardless of
+ * content height. Only the decorative cat illustration stays absolutely
+ * positioned, since it's purely decorative and never needs to push layout.
  *
  * MOBILE: Cat illustration is hidden (too cramped), text and CTAs are
  * centered and full-width. Footer links stack vertically.
@@ -159,53 +168,65 @@ export default function FooterSection({ className = '' }: Props) {
       ref={sectionRef}
       id="footer"
       className={`${className} relative`}
-      style={{ padding: '8vh 0 4vh', minHeight: '80vh' }}
+      style={{ padding: '8vh 0 0' }}
     >
-      {/* Left heading and CTAs */}
-      <div className="px-[6vw] md:absolute md:left-[6vw] md:top-[10vh] md:w-[44vw]">
-        <div ref={leftRef}>
-          <h2 className="font-display font-bold heading-responsive tracking-[0.02em] mb-4 md:mb-6"
-            style={{ fontSize: 'clamp(36px, 6vw, 72px)', color: 'var(--text-on-accent)' }}>
-            Start Your<br />Streak
-          </h2>
-          <p className="leading-relaxed mb-6 md:mb-8 max-w-md"
-            style={{ fontSize: 'clamp(14px, 1.2vw, 18px)', color: 'var(--text-on-accent-soft)' }}>
-            Free to start. Fun to finish. Built for real teams. Join thousands of developers who learned Git the friendly way.
-          </p>
+      {/* Content row: text/CTA column + cat column, side by side on desktop.
+          Neither column is absolutely positioned, so the row's height is
+          simply "however tall its tallest column is" — no manual vh guessing,
+          no risk of the CTA block growing into anything below it. */}
+      <div className="px-[6vw] grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-6 items-center">
+
+        {/* Left: heading + copy + CTAs */}
+        <div className="md:max-w-[44vw]">
+          <div ref={leftRef}>
+            <h2 className="font-display font-bold heading-responsive tracking-[0.02em] mb-4 md:mb-6"
+              style={{ fontSize: 'clamp(36px, 6vw, 72px)', color: 'var(--text-on-accent)' }}>
+              Start Your<br />Streak
+            </h2>
+            <p className="leading-relaxed mb-6 md:mb-8 max-w-md"
+              style={{ fontSize: 'clamp(14px, 1.2vw, 18px)', color: 'var(--text-on-accent-soft)' }}>
+              Free to start. Fun to finish. Built for real teams. Join thousands of developers who learned Git the friendly way.
+            </p>
+          </div>
+
+          <div ref={ctasRef} className="flex flex-col gap-3 md:gap-4">
+            {/* Primary — conversion action */}
+            <button
+              onClick={handleStartFree}
+              className="bg-rose-punch text-white font-display font-semibold px-6 md:px-8 py-3 md:py-4 card-radius card-shadow
+                hover:scale-105 hover:shadow-[0_25px_55px_rgba(255,77,109,0.35)] transition-all duration-300 w-fit"
+              style={{ fontSize: 'clamp(15px, 1.4vw, 20px)' }}>
+              {isLoggedIn ? 'Continue Learning' : 'Start Free'}
+            </button>
+
+            {/* Secondary — low-commitment browse action, theme-aware via .btn-outline-on-accent */}
+            <button
+              onClick={handleBrowseAll}
+              className="btn-outline-on-accent font-display font-semibold px-6 md:px-8 py-3 md:py-4 card-radius w-fit"
+              style={{ fontSize: 'clamp(13px, 1.2vw, 17px)' }}>
+              Browse all 8 lessons
+            </button>
+          </div>
         </div>
 
-        <div ref={ctasRef} className="flex flex-col gap-3 md:gap-4">
-          {/* Primary — conversion action */}
-          <button
-            onClick={handleStartFree}
-            className="bg-rose-punch text-white font-display font-semibold px-6 md:px-8 py-3 md:py-4 card-radius card-shadow
-              hover:scale-105 hover:shadow-[0_25px_55px_rgba(255,77,109,0.35)] transition-all duration-300 w-fit"
-            style={{ fontSize: 'clamp(15px, 1.4vw, 20px)' }}>
-            {isLoggedIn ? 'Continue Learning' : 'Start Free'}
-          </button>
-
-          {/* Secondary — low-commitment browse action, theme-aware via .btn-outline-on-accent */}
-          <button
-            onClick={handleBrowseAll}
-            className="btn-outline-on-accent font-display font-semibold px-6 md:px-8 py-3 md:py-4 card-radius w-fit"
-            style={{ fontSize: 'clamp(13px, 1.2vw, 17px)' }}>
-            Browse all 8 lessons
-          </button>
+        {/* Right: cat illustration — desktop only, purely decorative so it's
+            fine for this column to just center it; no absolute positioning
+            needed since it now lives in the same grid row as the text. */}
+        <div ref={catRef} className="hidden md:flex justify-end">
+          <img
+            src="/footer_cat.png"
+            alt="Gitter celebrating"
+            className="w-full h-auto"
+            style={{ maxWidth: '480px', filter: 'drop-shadow(0 20px 40px rgba(0,0,0,0.15))' }}
+          />
         </div>
       </div>
 
-      {/* Cat illustration — desktop only */}
-      <div ref={catRef} className="hidden md:block absolute" style={{ right: '6vw', top: '10vh', width: '42vw', maxWidth: '560px' }}>
-        <img
-          src="/footer_cat.png"
-          alt="Gitter celebrating"
-          className="w-full h-auto"
-          style={{ filter: 'drop-shadow(0 20px 40px rgba(0,0,0,0.15))' }}
-        />
-      </div>
-
-      {/* Footer links — bumped to bottom-24 so it clears the fixed Gitto/Gitter widgets */}
-      <div ref={footerLinksRef} className="px-[6vw] mt-12 md:mt-0 md:absolute md:bottom-24 md:left-0 md:right-0">
+      {/* Footer links — in normal flow below the content row, so it's
+          physically impossible for it to overlap the CTAs above it no
+          matter how tall that block gets. pb-28/md:pb-36 keeps it clear
+          of the fixed Gitto (bottom-left) / Gitter (bottom-right) widgets. */}
+      <div ref={footerLinksRef} className="px-[6vw] mt-12 md:mt-16 pb-28 md:pb-36">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pt-6"
           style={{ borderTop: '1px solid var(--border-on-accent)' }}>
           <div className="flex flex-wrap items-center gap-4 md:gap-6">

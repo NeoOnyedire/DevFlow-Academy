@@ -47,15 +47,20 @@
    * (html: auto, body: visible) plus min-height: 100% on both. That made
    * html behave as its own internal scroll container *in addition to*
    * the normal document/viewport scroll, producing two visible
-   * scrollbars and a "double scroll" feel. Letting the document scroll
-   * natively (no overflow-y forced on html or body) fixes it — only
-   * overflow-x stays hidden to prevent horizontal scroll from
-   * off-canvas/rotated elements elsewhere in the app.
+   * scrollbars and a "double scroll" feel.
+   *
+   * !important is used here on purpose: Tailwind's preflight layer and
+   * this file's own @layer ordering can otherwise cause a later rule
+   * (or a class like a stray `overflow-y-auto` on a wrapping div) to
+   * win and silently reintroduce the second scroll container. Pinning
+   * these two rules removes that ambiguity for good — html is the one
+   * and only scrolling element for the whole document.
    */
   html {
     scroll-behavior: smooth;
-    touch-action: pan-y;
-    overflow-x: hidden;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    height: auto !important;
     width: 100%;
   }
 
@@ -65,12 +70,20 @@
     font-family: 'Inter', sans-serif;
     background-color: var(--espresso);
     color: #FFFFFF;
-    overflow-x: hidden;
-    overscroll-behavior-y: contain;
+    overflow: visible !important;
+    height: auto !important;
     text-rendering: optimizeLegibility;
     -webkit-overflow-scrolling: touch;
     -moz-osx-font-smoothing: grayscale;
     -webkit-font-smoothing: antialiased;
+  }
+
+  /* Belt-and-suspenders: if any other wrapper (e.g. #root, or a page's
+     top-level div) ever picks up min-h-screen + its own overflow, this
+     stops it from becoming a second independently-scrolling region. */
+  #root {
+    overflow: visible !important;
+    height: auto !important;
   }
 }
 
