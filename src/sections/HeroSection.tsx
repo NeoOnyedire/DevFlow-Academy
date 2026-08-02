@@ -7,17 +7,34 @@
  *
  * GSAP still animates elements in on load and out on scroll — it uses
  * refs to the grid children, not the section itself for positioning.
+ *
+ * "SEE WHAT'S INSIDE" FIX: this used to call gsap's ScrollToPlugin to
+ * scroll down to `#learn-grid` on the same page. That id only exists in
+ * LearnGridSection, which lives on the separate /learn route — it was
+ * never rendered on the landing page, so `document.getElementById`
+ * always returned null and the button silently did nothing. It now
+ * navigates to /learn instead, same pattern as FooterSection's "Browse
+ * all lessons" button. ScrollToPlugin is no longer needed anywhere in
+ * this file, so its import/registration was removed.
+ *
+ * BOTTOM CLEARANCE FIX: the left column is vertically centered inside a
+ * `min-h-screen` section with no reserved space at the bottom, so on
+ * shorter viewports the last item (this button) could land in the same
+ * strip the fixed Gitto widget occupies at `bottom-4`, visually
+ * overlapping it. Added `pb-24 md:pb-20` to the grid so the centered
+ * content's available height shrinks by that much, keeping every Hero
+ * element clear of the widget regardless of viewport height.
  */
 
 import { useRef, useLayoutEffect } from 'react'
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
-import { ScrollToPlugin } from 'gsap/ScrollToPlugin'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useApp } from '../context/AppContext'
 import { ChevronDown, GitBranch, GitMerge, Zap, Award } from 'lucide-react'
 
-gsap.registerPlugin(ScrollTrigger, ScrollToPlugin)
+gsap.registerPlugin(ScrollTrigger)
 
 interface Props { className?: string }
 
@@ -31,6 +48,7 @@ const LEARN_PILLS = [
 export default function HeroSection({ className = '' }: Props) {
   const { isLoggedIn, openAuthModal } = useAuth()
   const { openCurriculum, completedModules, modules } = useApp()
+  const navigate = useNavigate()
 
   const sectionRef = useRef<HTMLDivElement>(null)
   const leftRef    = useRef<HTMLDivElement>(null)   // entire left column
@@ -41,9 +59,9 @@ export default function HeroSection({ className = '' }: Props) {
     else openAuthModal('register')
   }
 
+  /** Takes the person to the full curriculum browser on /learn. */
   const handleSeeInside = () => {
-    const el = document.getElementById('learn-grid')
-    if (el) gsap.to(window, { scrollTo: { y: el, offsetY: 0 }, duration: 0.8, ease: 'power2.inOut' })
+    navigate('/learn')
   }
 
   const ctaLabel = isLoggedIn && completedModules.length > 0
@@ -99,8 +117,10 @@ export default function HeroSection({ className = '' }: Props) {
       <div className="absolute pointer-events-none right-0 top-0 w-1/2 h-full hidden md:block"
         style={{ background: 'radial-gradient(ellipse at 70% 40%, rgba(247,183,49,0.12) 0%, transparent 65%)' }} />
 
-      {/* Two-column grid — single column on mobile */}
-      <div className="relative z-10 grid grid-cols-1 md:grid-cols-2 min-h-screen px-[6vw] md:px-0">
+      {/* Two-column grid — single column on mobile. pb-24/md:pb-20 reserves
+          clearance at the bottom so vertically-centered content never lands
+          under the fixed Gitto widget (bottom-left) on shorter viewports. */}
+      <div className="relative z-10 grid grid-cols-1 md:grid-cols-2 min-h-screen px-[6vw] md:px-0 pb-24 md:pb-20">
 
         {/* ── Left column ── */}
         <div

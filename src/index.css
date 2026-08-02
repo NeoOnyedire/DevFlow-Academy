@@ -231,6 +231,55 @@
   }
 }
 
+/*
+ * SINGLE-SCROLLBAR GUARANTEE
+ * ---------------------------------------------------------------------
+ * We've chased a couple of different "second scrollbar" causes now (the
+ * html/body overflow conflict, a stray inner wrapper). Rather than keep
+ * patching whichever element turns out to be the culprit this time, this
+ * removes the problem at the root: every element's native scrollbar
+ * chrome is hidden by default, and only <html> — the one true, working
+ * page scroll — has it explicitly restored. So even if some nested div
+ * still technically has its own overflow/scroll region (now or in the
+ * future), it will scroll invisibly at worst, and can never again show a
+ * second, visible scrollbar track next to the real one.
+ *
+ * .scrollbar-thin (used for the horizontal review/scenario card strips)
+ * is a class selector, which is more specific than the universal `*`
+ * below, so it still wins and keeps its own thin horizontal bar.
+ */
+* {
+  scrollbar-width: none;         /* Firefox */
+  -ms-overflow-style: none;      /* old Edge/IE */
+}
+*::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+html {
+  scrollbar-width: thin;
+}
+html::-webkit-scrollbar {
+  width: 10px;
+}
+html::-webkit-scrollbar-track {
+  background: transparent;
+}
+html::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.22);
+  border-radius: 999px;
+}
+html::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.35);
+}
+[data-theme="light"] html::-webkit-scrollbar-thumb {
+  background: rgba(33, 37, 41, 0.18);
+}
+[data-theme="light"] html::-webkit-scrollbar-thumb:hover {
+  background: rgba(33, 37, 41, 0.3);
+}
+
 /* ============================================================================
    THEME SYSTEM — Original / Light / Dark
    Toggled via [data-theme] on <html> (see ThemeContext.tsx). Most surfaces
