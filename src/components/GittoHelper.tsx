@@ -34,6 +34,7 @@ const QUICK_PROMPTS = [
 const CHAT_STORAGE = 'devflow_gitto_messages'
 const GITTO_TEAL = '#2FB8C6'
 const GITTO_AVATAR = '/gittoprofilepicture.jpg'
+const GITTO_AVATAR1 = '/gittowave.png'
 
 interface Message {
   role: 'gitto' | 'user'
@@ -116,7 +117,7 @@ export default function GittoHelper() {
           {/* Header */}
           <div className="flex items-center justify-between border-b border-white/10 p-3 flex-shrink-0">
             <div className="flex items-center gap-2.5">
-              <img src={GITTO_AVATAR} alt="Gitto"
+              <img src={GITTO_AVATAR1} alt="Gitto"
                 className="h-9 w-9 rounded-full object-cover flex-shrink-0"
                 style={{ backgroundColor: `${GITTO_TEAL}30` }} />
               <div>
