@@ -53,15 +53,20 @@ export default function SettingsPage() {
   return (
     <PageWrapper bg="bg-espresso">
       <section className="px-[6vw] py-16 md:py-24 max-w-3xl mx-auto">
-        <div className="flex items-center gap-2 mb-6">
-          <Settings className="w-5 h-5 text-[#F7B731]" />
-          <span className="font-accent text-xs uppercase tracking-[0.14em] text-white/50">Account Settings</span>
+        <div className="flex flex-wrap items-center justify-between gap-6 mb-10">
+          <div>
+            <div className="flex items-center gap-2 mb-6">
+              <Settings className="w-5 h-5 text-[#F7B731]" />
+              <span className="font-accent text-xs uppercase tracking-[0.14em] text-white/50">Account Settings</span>
+            </div>
+            <h1 className="font-display font-bold text-white tracking-[0.02em] leading-none"
+              style={{ fontSize: 'clamp(34px, 5.5vw, 60px)' }}>
+              Settings
+            </h1>
+          </div>
+          <img src="/gittosettings.png" alt="Gitto ready to help with your settings"
+            className="hidden sm:block w-28 md:w-36 h-auto flex-shrink-0" />
         </div>
-
-        <h1 className="font-display font-bold text-white tracking-[0.02em] leading-none mb-10"
-          style={{ fontSize: 'clamp(34px, 5.5vw, 60px)' }}>
-          Settings
-        </h1>
 
         {/* Profile summary */}
         <div className="bg-card-dark card-radius card-outline p-5 md:p-6 mb-10">
