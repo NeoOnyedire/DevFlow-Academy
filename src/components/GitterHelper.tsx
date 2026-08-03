@@ -504,8 +504,9 @@ export default function GitterHelper() {
           <div className="flex-1 overflow-y-auto p-3 space-y-3 min-h-0">
             {messages.map((msg, i) => (
               <div key={i} className={`flex gap-2 items-end ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
+                // Message bubble avatar
                 {msg.role === 'gitter' && (
-                  <img src="/footer_cat.png" alt="Gitter"
+                  <img src="/gitterprofilepic.png" alt="Gitter"
                     className="h-6 w-6 rounded-full object-cover flex-shrink-0 bg-[#F7B731]/20" />
                 )}
                 <div className={`max-w-[80%] px-3 py-2 text-sm leading-relaxed ${
@@ -520,7 +521,8 @@ export default function GitterHelper() {
 
             {isTyping && (
               <div className="flex gap-2 items-end">
-                <img src="/footer_cat.png" alt="Gitter is typing"
+                // Typing indicator avatar
+                <img src="/gitterprofilepic.png" alt="Gitter is typing"
                   className="h-6 w-6 rounded-full object-cover flex-shrink-0 bg-[#F7B731]/20" />
                 <div className="bg-black/30 rounded-2xl rounded-bl-sm px-4 py-3 flex items-center gap-1.5">
                   {[0, 180, 360].map(delay => (
