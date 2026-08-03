@@ -3,7 +3,7 @@
  * GittoHelper.tsx
  * ============================================================================
  *
- * Gitto 🐙 — a second, admin-focused helper alongside Gitter. Where Gitter
+ * Gitto — a second, admin-focused helper alongside Gitter. Where Gitter
  * teaches Git/GitHub and requires login, Gitto answers account/settings
  * questions (theme, GitHub linking, verification, privacy) and is
  * available to guests too, since most of that applies before you even
@@ -15,6 +15,9 @@
  *
  * Positioned bottom-left (teal accent) so it never collides with Gitter,
  * which stays bottom-right (rose-punch).
+ *
+ * Avatar: /gittoprofilepicture.png everywhere Gitto previously showed a
+ * 🐙 emoji — header, message bubbles, typing indicator, toggle button.
  * ============================================================================
  */
 
@@ -30,6 +33,7 @@ const QUICK_PROMPTS = [
 
 const CHAT_STORAGE = 'devflow_gitto_messages'
 const GITTO_TEAL = '#2FB8C6'
+const GITTO_AVATAR = '/gittoprofilepicture.png'
 
 interface Message {
   role: 'gitto' | 'user'
@@ -73,7 +77,7 @@ export default function GittoHelper() {
         setIsTyping(false)
         setMessages([{
           role: 'gitto',
-          text: "Hey! I'm Gitto 🐙 — ask me about account settings, themes, GitHub linking, or privacy. For Git questions, Gitter's your friend over on the right.",
+          text: "Hey! I'm Gitto — ask me about account settings, themes, GitHub linking, or privacy. For Git questions, Gitter's your friend over on the right.",
         }])
       }, 700)
     }
@@ -112,10 +116,9 @@ export default function GittoHelper() {
           {/* Header */}
           <div className="flex items-center justify-between border-b border-white/10 p-3 flex-shrink-0">
             <div className="flex items-center gap-2.5">
-              <div className="h-9 w-9 rounded-full flex items-center justify-center flex-shrink-0 text-lg"
-                style={{ backgroundColor: `${GITTO_TEAL}30` }}>
-                🐙
-              </div>
+              <img src={GITTO_AVATAR} alt="Gitto"
+                className="h-9 w-9 rounded-full object-cover flex-shrink-0"
+                style={{ backgroundColor: `${GITTO_TEAL}30` }} />
               <div>
                 <p className="font-display text-base font-bold text-white leading-tight">Gitto</p>
                 <p className="text-[10px] text-white/45 font-accent uppercase tracking-wider">Admin &amp; settings help</p>
@@ -145,10 +148,9 @@ export default function GittoHelper() {
             {messages.map((msg, i) => (
               <div key={i} className={`flex gap-2 items-end ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
                 {msg.role === 'gitto' && (
-                  <div className="h-6 w-6 rounded-full flex items-center justify-center flex-shrink-0 text-xs"
-                    style={{ backgroundColor: `${GITTO_TEAL}30` }}>
-                    🐙
-                  </div>
+                  <img src={GITTO_AVATAR} alt="Gitto"
+                    className="h-6 w-6 rounded-full object-cover flex-shrink-0"
+                    style={{ backgroundColor: `${GITTO_TEAL}30` }} />
                 )}
                 <div className={`max-w-[80%] px-3 py-2 text-sm leading-relaxed ${
                   msg.role === 'user'
@@ -162,10 +164,9 @@ export default function GittoHelper() {
 
             {isTyping && (
               <div className="flex gap-2 items-end">
-                <div className="h-6 w-6 rounded-full flex items-center justify-center flex-shrink-0 text-xs"
-                  style={{ backgroundColor: `${GITTO_TEAL}30` }}>
-                  🐙
-                </div>
+                <img src={GITTO_AVATAR} alt="Gitto is typing"
+                  className="h-6 w-6 rounded-full object-cover flex-shrink-0"
+                  style={{ backgroundColor: `${GITTO_TEAL}30` }} />
                 <div className="bg-black/30 rounded-2xl rounded-bl-sm px-4 py-3 flex items-center gap-1.5">
                   {[0, 180, 360].map(delay => (
                     <span key={delay} className="w-2 h-2 rounded-full bg-white/50 animate-bounce"
@@ -220,7 +221,11 @@ export default function GittoHelper() {
         className="flex items-center gap-2 px-4 py-3 font-display font-semibold text-white card-shadow
           transition-transform hover:scale-105 active:scale-95"
         style={{ borderRadius: 8, backgroundColor: GITTO_TEAL }}>
-        {isOpen ? <MessageCircleQuestion className="h-5 w-5" /> : <span className="text-lg leading-none">🐙</span>}
+        {isOpen ? (
+          <MessageCircleQuestion className="h-5 w-5" />
+        ) : (
+          <img src={GITTO_AVATAR} alt="Gitto" className="h-5 w-5 rounded-full object-cover" />
+        )}
         Gitto
       </button>
     </div>
