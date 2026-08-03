@@ -22,7 +22,7 @@
  */
 
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { ChevronDown, MessageCircleQuestion, Send, Trash2 } from 'lucide-react'
+import { ChevronDown, CircleHelp, Send, Trash2 } from 'lucide-react'
 import { answerWithGittoLite } from '../lib/gittoLite'
 
 const QUICK_PROMPTS = [
@@ -215,17 +215,13 @@ export default function GittoHelper() {
         </div>
       )}
 
-      {/* Toggle button */}
+      {/* Toggle button — one consistent FAQ icon, same pattern as Wrench/Settings in the nav */}
       <button
         onClick={() => setIsOpen(v => !v)}
         className="flex items-center gap-2 px-4 py-3 font-display font-semibold text-white card-shadow
           transition-transform hover:scale-105 active:scale-95"
         style={{ borderRadius: 8, backgroundColor: GITTO_TEAL }}>
-        {isOpen ? (
-          <MessageCircleQuestion className="h-5 w-5" />
-        ) : (
-          <img src={GITTO_AVATAR} alt="Gitto" className="h-5 w-5 rounded-full object-cover" />
-        )}
+          {isOpen ? <ChevronDown className="h-5 w-5" /> : <CircleHelp className="h-5 w-5" />}
         Gitto
       </button>
     </div>
