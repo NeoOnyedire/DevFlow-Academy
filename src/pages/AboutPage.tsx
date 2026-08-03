@@ -60,12 +60,15 @@ export default function AboutPage() {
           easier.
         </p>
 
-        <p className="text-white/75 leading-relaxed mb-14 max-w-2xl" style={{ fontSize: 'clamp(15px, 1.15vw, 19px)' }}>
+        <p className="text-white/75 leading-relaxed mb-10 max-w-2xl" style={{ fontSize: 'clamp(15px, 1.15vw, 19px)' }}>
           DevFlow Academy exists to close that gap. It's a free, structured course that takes you from your
           first commit to confidently handling the situations that actually come up on real teams — branching,
           merge conflicts, rebasing, pull requests, and CI/CD — with practice scenarios and friendly in-app
           assistants (hi, Gitter and Gitto) along the way.
         </p>
+
+        <img src="/thegittsplayin.png" alt="Gitter and Gitto playing together"
+          className="w-full max-w-lg mx-auto h-auto mb-14" />
 
         <div className="space-y-6 mb-14">
           {PILLARS.map(({ icon: Icon, title, body }) => (
