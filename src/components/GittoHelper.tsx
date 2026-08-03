@@ -33,7 +33,7 @@ const QUICK_PROMPTS = [
 
 const CHAT_STORAGE = 'devflow_gitto_messages'
 const GITTO_TEAL = '#2FB8C6'
-const GITTO_AVATAR = '/gittoprofilepicture.png'
+const GITTO_AVATAR = '/gittoprofilepicture.jpg'
 
 interface Message {
   role: 'gitto' | 'user'
