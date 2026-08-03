@@ -16,6 +16,7 @@
  *   /troubleshoot           Git error search tool
  *   /challenge              Repo Royale weekly challenge
  *   /dashboard              Progress, skills, GitHub, career mode
+ *   /reviews                Full learner review list (landing page only teases 3)
  *   /settings                Account settings — profile + appearance/theme
  *   /about                  About DevFlow Academy
  *   /git-history             Behind-the-scenes engineering changelog
@@ -52,6 +53,7 @@ import PracticePage       from './pages/PracticePage'
 import TroubleshootPage   from './pages/TroubleshootPage'
 import ChallengePage      from './pages/ChallengePage'
 import DashboardPage      from './pages/DashboardPage'
+import ReviewsPage        from './pages/ReviewsPage'
 import SettingsPage       from './pages/SettingsPage'
 import AboutPage          from './pages/AboutPage'
 import GitHistoryPage     from './pages/GitHistoryPage'
@@ -86,6 +88,7 @@ function AppInner() {
           <Route path="/troubleshoot"         element={<TroubleshootPage />} />
           <Route path="/challenge"            element={<ChallengePage />} />
           <Route path="/dashboard"            element={<DashboardPage />} />
+          <Route path="/reviews"              element={<ReviewsPage />} />
           <Route path="/settings"             element={<SettingsPage />} />
           <Route path="/about"                element={<AboutPage />} />
           <Route path="/git-history"          element={<GitHistoryPage />} />
