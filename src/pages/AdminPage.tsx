@@ -257,18 +257,27 @@ export default function AdminPage() {
                         </button>
                       </td>
                       <td className="p-3 text-right">
-                        <button
-                          onClick={() => handleDeleteProgress(u.id, u.name)}
-                          className="flex items-center gap-1 text-xs text-[#FF4D6D] hover:underline ml-auto"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" /> Wipe progress
-                        </button>
-                      </td>
+                        <div className="flex justify-end items-center">
+                            <button
+                            onClick={() => handleDeleteProgress(u.id, u.name)}
+                            className="flex items-center gap-1 text-xs text-[#FF4D6D] hover:underline"
+                            >
+                            <Trash2 className="w-3.5 h-3.5" /> Wipe progress
+                            </button>
+
+                            <button
+                            onClick={() => handleDeleteAccount(u)}
+                            className="flex items-center gap-1 text-xs text-[#FF4D6D] hover:underline ml-3"
+                            >
+                            <Trash2 className="w-3.5 h-3.5" /> Delete account
+                            </button>
+                        </div>
+                        </td>
                     </tr>
                   ))}
-                  {users.length === 0 && (
-                    <tr><td colSpan={4} className="p-3 text-white/40 text-sm">No users yet.</td></tr>
-                  )}
+                  {filteredUsers.length === 0 && (
+                    <tr><td colSpan={4} className="p-3 text-white/40 text-sm">No users found.</td></tr>
+                    )}
                 </tbody>
               </table>
             </div>
