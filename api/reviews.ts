@@ -14,6 +14,12 @@
 // name attached to a review is taken from the account, not from
 // whatever the client sends, so it can't be spoofed either.
 //
+// Each review carries a stable `id` (randomUUID) so it can be targeted
+// individually — e.g. by the admin panel's delete-review action in
+// api/admin/[action].ts. Reviews written before this field existed
+// won't have one; the admin panel falls back to a raw-index delete for
+// those.
+//
 // ---- One-time setup ----
 //   1. Create a free database at https://console.upstash.com (Redis).
 //   2. Copy its "REST URL" and "REST TOKEN" from the database dashboard.
@@ -25,11 +31,13 @@
 //      file). You'll also need SESSION_SECRET set — see api/_lib/session.ts.
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
+import { randomUUID } from 'crypto'
 import { getUpstashConfig } from './_lib/upstash.js'
 import { getUserIdFromRequest } from './_lib/session.js'
 import { getUserById, saveUser } from './_lib/users.js'
 
 interface StoredReview {
+  id: string
   rating: number
   comment: string
   date: string
@@ -98,7 +106,7 @@ async function pushReview(review: StoredReview): Promise<boolean> {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${config.token}`,
-      'Content-Type': 'text/plain',
+      'Content-Type': 'application/json',
     },
     body: JSON.stringify(review),
   })
@@ -175,6 +183,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // Display name comes from the account, not the request body — can't be spoofed.
   const review: StoredReview = {
+    id: randomUUID(),
     rating,
     comment: comment.trim(),
     date: new Date().toISOString(),
