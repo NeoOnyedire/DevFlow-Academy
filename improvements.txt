@@ -1,9 +1,10 @@
 ## Disclaimer: I made this public to document the journey of this project, so no you are not seeing this by mistake lol
 
 ## ✅ Resolved since last pass
-- **Double scrollbar fixed.** `html` and `body` previously fought over `overflow-y` (html: auto, body: visible) plus both carried `min-height: 100%`, which made `html` behave as its own internal scroll container *in addition to* the normal document/viewport scroll — two visible scrollbars, and a "double scroll" feel on every page. Reworked `index.css` so `html` is the sole scrolling element (`overflow-y: auto`, `height: auto`, all pinned with `!important` so a stray utility class or load-order quirk can't quietly reintroduce a second scroll region), `body` and `#root` are explicitly non-scrolling (`overflow: visible`, `height: auto`).
-- **Header/nav now follows the theme, not just the page.** `Navigation.tsx` had the nav bar's background hardcoded as a literal `rgba(107,76,76,0.97)` — which is just Original theme's `--espresso` baked in as a constant — so Light and Dark mode never touched it; the header stayed brown no matter what. Introduced a `--nav-bg` CSS variable (redefined per `[data-theme]` in `index.css`, same pattern as `--espresso`/`--card-dark`) and pointed both the desktop and mobile nav bars at it.
-- **Gitto/Gitter no longer overlap the footer links.** `FooterSection.tsx`'s CTA block and its footer links (About/Privacy/Terms/Support) were each independently `position: absolute` — one pinned near the top of the section, the other pinned near the bottom — with no awareness of each other's actual height. On shorter viewports the two boxes collided, and separately the links sat close enough to the bottom of the viewport to visually clash with the fixed Gitto (bottom-left) and Gitter (bottom-right) chat widgets. Rebuilt the section to use normal document flow instead: the CTA block and cat illustration sit in a grid row, and the footer links sit below that row in the flow (not pinned), so the links get pushed down by however tall the content above actually is — they can't overlap it — and generous bottom padding (`pb-28 md:pb-36`) keeps them clear of both chat widgets regardless of content height.
+- **Admin dashboard is live.** A single-account-gated `/admin` page (server-enforced via `api/_lib/admin.ts` — only the account signed in via GitHub as the configured admin username can call any `/api/admin/*` route, regardless of what the client shows). Lets the admin see every registered user, wipe a user's entire course progress (`user_progress` + `lesson_progress`), toggle a user's "has reviewed" flag, delete individual reviews (including legacy ones written before reviews had a stable id), and delete or bulk-reset leaderboard entries by week.
+- **Admin actions are now logged.** Every destructive admin call (wipe progress, delete a review, reset a leaderboard week, etc.) writes a row to a new `admin_actions` Postgres table — who did what, to what, and when. Best-effort: a logging failure never blocks the actual action.
+- **Users became enumerable.** Upstash Redis has no native "list all keys" over its REST API, so a `devflow:all-users` Redis set now tracks every account id as it's created (or re-touched via GitHub login), which is what powers the admin user list.
+- **Reviews got stable ids.** Each review now carries a `randomUUID()` so it can be targeted individually for moderation/deletion instead of only being addressable by list position. Reviews written before this change fall back to an index-based delete in the admin UI, flagged as "legacy."
 - **Real backend is live.** Auth, sessions, reviews, progress, and leaderboard data now run server-side through Vercel Functions, Upstash Redis, and Postgres.
 - **Error boundaries added.** `ErrorBoundary.tsx` wraps both the overlay group and the routed pages in `App.tsx`.
 - **Real 404 page.** Unknown routes hit `NotFoundPage`, not a silent `LandingPage` fallback.
@@ -30,24 +31,26 @@
 
 ## 🔴 Fix first: remaining data issues
 
+- **Admin user list only backfills on login.** The `devflow:all-users` Redis set that powers the admin panel's user list only gets an entry when an account is created or re-authenticates (GitHub login re-runs `upsertGithubUser`, which adds to the set). Any password account that hasn't logged in since this shipped won't show up in `/admin` until it does. Not a bug exactly, but worth a one-time backfill script if the user list ever looks incomplete.
+- **No full account deletion yet.** The admin panel can wipe a user's *progress* and toggle their review flag, but there's no "delete this account entirely" action (Redis record + Postgres rows in one shot). Worth adding if a hard-delete request ever comes in (e.g. GDPR-style ask via the Support page).
 - **Email login is paused, not removed — needs a real decision.** Right now `EMAIL_LOGIN_ENABLED = false` is a stopgap because a stable custom domain isn't secured yet. Worth deciding: is the plan to re-enable email login once a domain is secured, or move to GitHub-only permanently? The GitHub OAuth callback URL is currently pinned to the `dev-flow-academy.vercel.app` production domain, which works but should be revisited if a custom domain gets added later (the OAuth App's callback URL will need updating to match).
 - **Gitter AI is now a hard requirement, not just an upgrade.** Since it gates both course completion and reviews, learners without a Gemini/Groq/Anthropic account (or without a card, if they only try Anthropic) hit a wall at Module 1. Worth watching drop-off here — the gate in `CurriculumPanel.tsx`'s `handleToggleComplete` is a single `if` block and easy to relax (e.g. gate only the review, not the first module) if this proves to be too much friction.
-- **Review moderation has no audit trail.** Rejected reviews and their AI replies aren't logged anywhere — if the AI moderation is ever wrong (rejecting a genuine review, or letting a bad one through), there's currently no way to review what happened after the fact.
+- **AI-moderation rejections still aren't in the audit trail.** The new `admin_actions` table logs manual admin overrides (deleting a review, wiping progress), but it doesn't log the AI moderation step itself — a review the AI silently rejected before submission leaves no record anywhere. Worth writing those to `admin_actions` too (action: `ai-review-rejected`) so a wrongly-rejected genuine review can be traced after the fact.
 - **GitHub profile connection is still browser-specific.** GitHub OAuth accounts work correctly, but linking an existing password account to GitHub isn't persisted separately yet.
-- **No audit/event logging.** Important actions like registrations, password resets, review submissions, leaderboard entries, and logins aren't logged anywhere for debugging or analytics.
-- **Rate limiters are still fragmented.** `api/_lib/rateLimit.ts`, `api/gitter.ts`, `api/reviews.ts`, and now `api/moderate-review.ts` each implement or share slightly different in-memory rate limiting. A shared Redis-backed implementation would survive serverless cold starts and simplify maintenance.
+- **No audit/event logging for non-admin actions.** Registrations, password resets, and logins still aren't logged anywhere for debugging or analytics — only *admin-initiated* destructive actions are, via `admin_actions`.
+- **Rate limiters are still fragmented.** `api/_lib/rateLimit.ts`, `api/gitter.ts`, `api/reviews.ts`, and `api/moderate-review.ts` each implement or share slightly different in-memory rate limiting. A shared Redis-backed implementation would survive serverless cold starts and simplify maintenance. (`api/admin/[action].ts` intentionally has no rate limit of its own — it's a single trusted account, not public-facing.)
 
 ---
 
 ## 🟠 Architecture/robustness
 
 - **Redis and Postgres are tightly coupled throughout the API layer.** Introducing repository/service abstractions would make future storage migrations much easier.
-- **Authentication logic is repeated.** Multiple endpoints manually call `getUserIdFromRequest()` and `getUserById()` instead of sharing middleware/helpers.
+- **Authentication logic is repeated.** Multiple endpoints manually call `getUserIdFromRequest()` and `getUserById()` instead of sharing middleware/helpers. `requireAdmin()` in `api/_lib/admin.ts` is a step toward this pattern but only covers the admin case so far.
 - **Request validation is handwritten everywhere.** Libraries like Zod or Valibot could greatly reduce duplicated validation code.
 - **No centralized API error handler.** Nearly every endpoint repeats similar `try/catch` blocks.
 - **No API versioning.** Everything currently lives under `/api`; `/api/v1` would make future breaking changes easier.
 - **No OpenAPI/Swagger documentation.** The backend has grown large enough that generated API documentation would become genuinely useful.
-- **Lazy-load routes.** `App.tsx` still imports every page eagerly. Switching to `React.lazy` + `Suspense` would reduce initial bundle size.
+- **Lazy-load routes.** `App.tsx` still imports every page eagerly, including `AdminPage` — which every visitor's bundle now includes even though only one account can ever use it. Switching to `React.lazy` + `Suspense` would reduce initial bundle size, and `/admin` specifically is a good first candidate.
 - **No loading skeletons** for GSAP-heavy pages during first paint.
 - Allow users to edit or delete their own reviews.
 - Show "Last synced" status for course progress.
@@ -65,8 +68,9 @@
 - **Dashboard streak, badges, and rankings are still simplified placeholders.** Most values are calculated using basic heuristics rather than long-term activity.
 - **No user profile page.** Users can't view their achievements, certificates, completed modules, leaderboard history, or linked GitHub account in one place.
 - **No notification system.** Success messages disappear after actions instead of providing a persistent notification center.
-- **No optimistic UI updates.** Reviews, leaderboard submissions, and progress updates always wait for server confirmation before updating the interface.
+- **No optimistic UI updates.** Reviews, leaderboard submissions, progress updates, and admin actions (delete review, wipe progress) all wait for a server round-trip before the UI reflects the change.
 - **Review moderation feedback could be clearer.** Right now a rejected review just shows the AI's reply as an error message — a dedicated "revise and resubmit" state (keeping the draft text visible alongside the AI's specific note) would feel less like a dead-end.
+- **Admin panel is functional, not pretty.** Plain tables, no pagination, no search/filter on the user or review list — fine at current scale, will need work if the user base grows.
 
 ---
 
@@ -84,7 +88,7 @@
 - **Search/filter on the Learn page.** Filter lessons by difficulty, technology, or role.
 - **More weekly challenges.** The current challenge pool is still fairly small.
 - **Community discussion board.** Encourage learners to ask questions and help one another.
-- **Admin dashboard.** View signups, completion rates, leaderboard stats, and review analytics — would also surface moderation-rejected reviews for spot-checking.
+- **Full analytics on the admin dashboard.** Signups over time, completion-rate trends, and a dedicated moderation queue for AI-flagged reviews — the current `/admin` covers direct data management (users/progress/reviews/leaderboard), not yet trend analytics.
 - **Instructor dashboard.** Track learner engagement and course performance.
 - **Basic first-party analytics.** Continue respecting privacy while understanding platform usage.
 - **Offline support (PWA).** Allow parts of the curriculum to remain usable without internet.
@@ -107,7 +111,6 @@
 - Search lessons
 - Public learner profiles
 - Community discussions
-- Admin dashboard
 - Instructor dashboard
 - Analytics dashboard
 - Offline (PWA) support
