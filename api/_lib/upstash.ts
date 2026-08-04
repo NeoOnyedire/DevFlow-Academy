@@ -74,3 +74,50 @@ export async function upstashDel(key: string): Promise<boolean> {
   })
   return res.ok
 }
+
+/** Adds a member to a Redis set — used for the enumerable "all users" index. */
+export async function upstashSAdd(key: string, member: string): Promise<boolean> {
+  const config = getUpstashConfig()
+  if (!config) return false
+  const res = await fetch(`${config.url}/sadd/${encodeURIComponent(key)}/${encodeURIComponent(member)}`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${config.token}` },
+  })
+  return res.ok
+}
+
+/** Returns every member of a Redis set. */
+export async function upstashSMembers(key: string): Promise<string[]> {
+  const config = getUpstashConfig()
+  if (!config) return []
+  const res = await fetch(`${config.url}/smembers/${encodeURIComponent(key)}`, {
+    headers: { Authorization: `Bearer ${config.token}` },
+  })
+  if (!res.ok) return []
+  const data = (await res.json()) as { result?: string[] }
+  return data.result || []
+}
+
+/** Removes every exact-match occurrence of a value from a Redis list. */
+export async function upstashLRem(key: string, value: string): Promise<boolean> {
+  const config = getUpstashConfig()
+  if (!config) return false
+  const res = await fetch(`${config.url}/lrem/${encodeURIComponent(key)}/0`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${config.token}`, 'Content-Type': 'text/plain' },
+    body: value,
+  })
+  return res.ok
+}
+
+/** Length of a Redis list. */
+export async function upstashLLen(key: string): Promise<number> {
+  const config = getUpstashConfig()
+  if (!config) return 0
+  const res = await fetch(`${config.url}/llen/${encodeURIComponent(key)}`, {
+    headers: { Authorization: `Bearer ${config.token}` },
+  })
+  if (!res.ok) return 0
+  const data = (await res.json()) as { result?: number }
+  return data.result || 0
+}
