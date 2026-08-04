@@ -297,9 +297,26 @@ export default function AdminPage() {
             </div>
 
             {/* Leaderboard */}
-            <div className="flex items-center gap-2 mb-3">
-              <Trophy className="w-4 h-4 text-white/50" />
-              <h2 className="font-display font-bold text-white text-lg">Leaderboard (recent)</h2>
+            <div className="flex items-center justify-between gap-3 mb-3">
+                <div className="flex items-center gap-2">
+                    <Users className="w-4 h-4 text-white/50" />
+                    <h2 className="font-display font-bold text-white text-lg">Users</h2>
+                </div>
+                <div className="flex items-center gap-2">
+                    <input
+                    value={userSearch}
+                    onChange={e => setUserSearch(e.target.value)}
+                    placeholder="Search name, email, GitHub…"
+                    className="rounded-lg border border-white/10 bg-white/10 px-3 py-1.5 text-xs text-white placeholder-white/30 outline-none focus:border-[#F7B731]/60"
+                    />
+                    <button
+                    onClick={handleBackfill}
+                    disabled={isBackfilling}
+                    className="text-xs text-white/50 hover:text-white underline disabled:opacity-50"
+                    >
+                    {isBackfilling ? 'Backfilling…' : 'Backfill user list'}
+                    </button>
+                </div>
             </div>
             <div className="space-y-2">
               {leaderboard.map(row => (
