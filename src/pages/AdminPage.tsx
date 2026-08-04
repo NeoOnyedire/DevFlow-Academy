@@ -112,7 +112,7 @@ export default function AdminPage() {
   loadAll()
  }
 
-const handleBackfill = async () => {
+ const handleBackfill = async () => {
   setIsBackfilling(true)
   try {
     const result = await adminFetch('backfill-users', { method: 'POST' })
@@ -161,6 +161,13 @@ const handleBackfill = async () => {
     })
     loadAll()
   }
+
+  const filteredUsers = users.filter(u =>
+  !userSearch.trim() ||
+  u.name.toLowerCase().includes(userSearch.toLowerCase()) ||
+  u.email.toLowerCase().includes(userSearch.toLowerCase()) ||
+  u.githubUsername?.toLowerCase().includes(userSearch.toLowerCase())
+ )
 
   if (!isLoggedIn) {
     return (
