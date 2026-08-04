@@ -17,6 +17,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { getUserIdFromRequest } from './_lib/session.js'
 import { callProvider, type AiProvider } from './_lib/aiProviders.js'
 import { isRateLimited } from './_lib/rateLimit.js'
+import { sql } from './_lib/db.js'
 
 const MODERATION_SYSTEM_PROMPT = `You are a content moderator for DevFlow Academy's course reviews. You will be given a star rating (1-5) and a written review comment from a real course participant.
 
@@ -34,6 +35,17 @@ Respond with ONLY valid JSON, nothing else, in exactly this shape:
 interface ModerationResult {
   valid: boolean
   reply: string
+}
+
+async function logRejection(userId: string, rating: number, comment: string, reply: string) {
+  try {
+    await sql`
+      INSERT INTO admin_actions (admin_user_id, action, target, details)
+      VALUES ('system', 'ai-review-rejected', ${userId}, ${JSON.stringify({ rating, comment, reply })})
+    `
+  } catch {
+    // Best-effort — never block the moderation response on this.
+  }
 }
 
 function parseModerationResponse(raw: string): ModerationResult {
@@ -115,7 +127,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return
     }
 
-    res.status(200).json(parseModerationResponse(result.text || ''))
+const moderation = parseModerationResponse(result.text || '')
+
+if (!moderation.valid) {
+  await logRejection(userId, rating, comment.trim(), moderation.reply)
+}
+
+res.status(200).json(moderation)
+
   } catch {
     // Network hiccup reaching the provider — fail open.
     res.status(200).json({ valid: true, reply: 'Thanks for your feedback!' })
