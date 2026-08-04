@@ -12,9 +12,12 @@
 //   devflow:user:<id>                 -> JSON StoredUser
 //   devflow:email-index:<lowercased>  -> id           (password accounts)
 //   devflow:github-index:<githubId>   -> id           (GitHub accounts)
+//   devflow:all-users                 -> SET of every user id (admin listing)
 
 import { randomUUID, randomBytes, scryptSync, timingSafeEqual } from 'crypto'
-import { upstashGet, upstashSet, upstashSetNX } from './upstash.js'
+import { upstashGet, upstashSet, upstashSetNX, upstashSAdd, upstashSMembers } from './upstash.js'
+
+const ALL_USERS_SET = 'devflow:all-users'
 
 export interface StoredUser {
   id: string
@@ -111,6 +114,7 @@ export async function createPasswordUser(name: string, email: string, password: 
     createdAt: new Date().toISOString(),
   }
   await saveUser(user)
+  await upstashSAdd(ALL_USERS_SET, id)
   return user
 }
 
@@ -133,6 +137,8 @@ export async function upsertGithubUser(profile: {
       avatarUrl: profile.avatarUrl,
     }
     await saveUser(updated)
+    // Idempotent — safe to call even if this id is already a set member.
+    await upstashSAdd(ALL_USERS_SET, existing.id)
     return updated
   }
 
@@ -151,5 +157,13 @@ export async function upsertGithubUser(profile: {
   }
   await saveUser(user)
   await upstashSet(githubIndexKey(profile.githubId), id)
+  await upstashSAdd(ALL_USERS_SET, id)
   return user
+}
+
+/** Admin-only: every user account that exists, safe-shaped (no password hashes). */
+export async function getAllUsers(): Promise<SafeUser[]> {
+  const ids = await upstashSMembers(ALL_USERS_SET)
+  const users = await Promise.all(ids.map(id => getUserById(id)))
+  return users.filter((u): u is StoredUser => !!u).map(toSafeUser)
 }
