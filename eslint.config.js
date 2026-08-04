@@ -19,5 +19,15 @@ export default defineConfig([
       ecmaVersion: 2020,
       globals: globals.browser,
     },
+    rules: {
+      // Allows the common "destructure to omit a field" pattern (e.g.
+      // `const { passwordHash: _passwordHash, ...safe } = user`) without
+      // flagging the discarded binding as unused, as long as it's
+      // underscore-prefixed to signal that intent.
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { varsIgnorePattern: '^_', argsIgnorePattern: '^_' },
+      ],
+    },
   },
 ])
