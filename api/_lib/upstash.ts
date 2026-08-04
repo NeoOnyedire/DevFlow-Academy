@@ -121,3 +121,23 @@ export async function upstashLLen(key: string): Promise<number> {
   const data = (await res.json()) as { result?: number }
   return data.result || 0
 }
+
+/** Runs an arbitrary Redis command via Upstash's generic REST endpoint. */
+export async function upstashCommand(args: (string | number)[]): Promise<unknown> {
+  const config = getUpstashConfig()
+  if (!config) return null
+  const res = await fetch(config.url, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${config.token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(args),
+  })
+  if (!res.ok) return null
+  const data = (await res.json()) as { result?: unknown }
+  return data.result ?? null
+}
+
+/** Removes a member from a Redis set — the inverse of upstashSAdd. */
+export async function upstashSRem(key: string, member: string): Promise<boolean> {
+  const result = await upstashCommand(['SREM', key, member])
+  return typeof result === 'number' && result > 0
+}
