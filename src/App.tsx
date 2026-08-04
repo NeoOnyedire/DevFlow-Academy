@@ -23,6 +23,7 @@
  *   /privacy                Privacy policy
  *   /terms                  Terms of use
  *   /support                Support / contact / socials
+ *   /admin                  Admin dashboard — server-gated to one GitHub account (see api/_lib/admin.ts)
  *   /auth/github/callback   GitHub OAuth redirect target (no nav, brief only)
  *   /verify-email           Email verification link target (no nav, brief only)
  *   /reset-password         Password reset link target (no nav, brief only)
@@ -60,6 +61,7 @@ import GitHistoryPage     from './pages/GitHistoryPage'
 import PrivacyPage        from './pages/PrivacyPage'
 import TermsPage          from './pages/TermsPage'
 import SupportPage        from './pages/SupportPage'
+import AdminPage          from './pages/AdminPage'
 import GitHubCallbackPage from './pages/GitHubCallbackPage'
 import VerifyEmailPage    from './pages/VerifyEmailPage'
 import ResetPasswordPage  from './pages/ResetPasswordPage'
@@ -95,6 +97,7 @@ function AppInner() {
           <Route path="/privacy"              element={<PrivacyPage />} />
           <Route path="/terms"                element={<TermsPage />} />
           <Route path="/support"              element={<SupportPage />} />
+          <Route path="/admin"                element={<AdminPage />} />
           <Route path="/auth/github/callback" element={<GitHubCallbackPage />} />
           <Route path="/verify-email"         element={<VerifyEmailPage />} />
           <Route path="/reset-password"       element={<ResetPasswordPage />} />
