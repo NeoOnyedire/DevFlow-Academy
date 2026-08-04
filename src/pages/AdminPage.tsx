@@ -5,11 +5,25 @@
  * Navigation.tsx). The real gate is server-side: every fetch here hits
  * /api/admin/*, which 403s unless the session belongs to the GitHub
  * account configured in api/_lib/admin.ts.
+ *
+ * Adds three admin-workflow gaps that used to require direct database
+ * access:
+ * - Full account deletion (`delete-account`) — distinct from the existing
+ *   progress wipe, this removes the Redis user record and every
+ *   dependent Postgres row in one action, for GDPR-style hard-delete
+ *   requests.
+ * - A one-time "Backfill user list" button, wired to `backfill-users` —
+ *   scans Redis for any `devflow:user:*` record that never made it into
+ *   the enumerable all-users set (e.g. a password account that hasn't
+ *   logged in since that set was introduced) and adds it.
+ * - A simple client-side search box over the users table (name, email,
+ *   GitHub username) — the table has no pagination yet, so this is the
+ *   quickest way to find one account among many.
  */
 import { useEffect, useState, useCallback } from 'react'
 import PageWrapper from '../components/PageWrapper'
 import { useAuth } from '../context/AuthContext'
-import { ShieldAlert, Users, MessageCircle, Trophy, Trash2, RotateCcw } from 'lucide-react'
+import { ShieldAlert, Users, MessageCircle, Trophy, Trash2, RotateCcw, UserX } from 'lucide-react'
 
 interface AdminUser {
   id: string
@@ -64,6 +78,7 @@ export default function AdminPage() {
   const [reviews, setReviews] = useState<AdminReview[]>([])
   const [leaderboard, setLeaderboard] = useState<LeaderboardRow[]>([])
   const [message, setMessage] = useState('')
+  const [isLoading, setIsLoading] = useState(true)
   const [userSearch, setUserSearch] = useState('')
   const [isBackfilling, setIsBackfilling] = useState(false)
 
@@ -100,28 +115,6 @@ export default function AdminPage() {
     setMessage(`Progress wiped for ${name}.`)
     loadAll()
   }
-
-  const handleDeleteAccount = async (u: AdminUser) => {
-  if (!window.confirm(`Permanently delete ${u.name}'s account? This cannot be undone and removes everything — progress, leaderboard history, and the account itself.`)) return
-  await adminFetch('delete-account', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ userId: u.id }),
-    })
-  setMessage(`Account deleted for ${u.name}.`)
-  loadAll()
- }
-
- const handleBackfill = async () => {
-  setIsBackfilling(true)
-  try {
-    const result = await adminFetch('backfill-users', { method: 'POST' })
-    setMessage(`Backfill complete — scanned ${result.scanned}, added ${result.added} new user(s).`)
-    loadAll()
-    } finally {
-    setIsBackfilling(false)
-  }
- }
 
   const handleToggleReviewFlag = async (u: AdminUser) => {
     await adminFetch('toggle-review-flag', {
@@ -162,12 +155,44 @@ export default function AdminPage() {
     loadAll()
   }
 
-  const filteredUsers = users.filter(u =>
-  !userSearch.trim() ||
-  u.name.toLowerCase().includes(userSearch.toLowerCase()) ||
-  u.email.toLowerCase().includes(userSearch.toLowerCase()) ||
-  u.githubUsername?.toLowerCase().includes(userSearch.toLowerCase())
- )
+  /** Full, irreversible account deletion — Redis record + every dependent Postgres row. */
+  const handleDeleteAccount = async (u: AdminUser) => {
+    const confirmed = window.confirm(
+      `Permanently delete ${u.name}'s account? This cannot be undone — it removes the account itself, all course progress, and all leaderboard history. Their published reviews are NOT removed automatically; delete those separately below if needed.`
+    )
+    if (!confirmed) return
+    await adminFetch('delete-account', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: u.id }),
+    })
+    setMessage(`Account permanently deleted for ${u.name}.`)
+    loadAll()
+  }
+
+  /** One-time SCAN backfill of the all-users index — safe to run repeatedly. */
+  const handleBackfill = async () => {
+    setIsBackfilling(true)
+    try {
+      const result = await adminFetch('backfill-users', { method: 'POST' })
+      setMessage(`Backfill complete — scanned ${result.scanned} record(s), added ${result.added} new user(s) to the list.`)
+      loadAll()
+    } catch {
+      setMessage('Backfill failed — check server logs.')
+    } finally {
+      setIsBackfilling(false)
+    }
+  }
+
+  const filteredUsers = users.filter(u => {
+    const q = userSearch.trim().toLowerCase()
+    if (!q) return true
+    return (
+      u.name.toLowerCase().includes(q) ||
+      u.email.toLowerCase().includes(q) ||
+      (u.githubUsername || '').toLowerCase().includes(q)
+    )
+  })
 
   if (!isLoggedIn) {
     return (
@@ -226,10 +251,30 @@ export default function AdminPage() {
             )}
 
             {/* Users */}
-            <div className="flex items-center gap-2 mb-3">
-              <Users className="w-4 h-4 text-white/50" />
-              <h2 className="font-display font-bold text-white text-lg">Users</h2>
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+              <div className="flex items-center gap-2">
+                <Users className="w-4 h-4 text-white/50" />
+                <h2 className="font-display font-bold text-white text-lg">Users</h2>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  value={userSearch}
+                  onChange={e => setUserSearch(e.target.value)}
+                  placeholder="Search name, email, GitHub…"
+                  className="rounded-lg border border-white/10 bg-white/10 px-3 py-1.5 text-xs text-white
+                    placeholder-white/30 outline-none focus:border-[#F7B731]/60 transition-colors"
+                />
+                <button
+                  onClick={handleBackfill}
+                  disabled={isBackfilling}
+                  className="text-xs text-white/50 hover:text-white underline disabled:opacity-50 whitespace-nowrap"
+                  title="Scans Redis for any account missing from this list and adds it"
+                >
+                  {isBackfilling ? 'Backfilling…' : 'Backfill user list'}
+                </button>
+              </div>
             </div>
+
             <div className="bg-[#4A2F2F] card-radius overflow-hidden mb-10 overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="text-white/40 text-xs uppercase tracking-wider">
@@ -256,28 +301,31 @@ export default function AdminPage() {
                           {u.hasReviewedCourse ? 'Yes' : 'No'}
                         </button>
                       </td>
-                      <td className="p-3 text-right">
-                        <div className="flex justify-end items-center">
-                            <button
+                      <td className="p-3">
+                        <div className="flex items-center justify-end gap-3">
+                          <button
                             onClick={() => handleDeleteProgress(u.id, u.name)}
-                            className="flex items-center gap-1 text-xs text-[#FF4D6D] hover:underline"
-                            >
-                            <Trash2 className="w-3.5 h-3.5" /> Wipe progress
-                            </button>
-
-                            <button
+                            className="flex items-center gap-1 text-xs text-[#F7B731] hover:underline whitespace-nowrap"
+                          >
+                            <RotateCcw className="w-3.5 h-3.5" /> Wipe progress
+                          </button>
+                          <button
                             onClick={() => handleDeleteAccount(u)}
-                            className="flex items-center gap-1 text-xs text-[#FF4D6D] hover:underline ml-3"
-                            >
-                            <Trash2 className="w-3.5 h-3.5" /> Delete account
-                            </button>
+                            className="flex items-center gap-1 text-xs text-[#FF4D6D] hover:underline whitespace-nowrap"
+                          >
+                            <UserX className="w-3.5 h-3.5" /> Delete account
+                          </button>
                         </div>
-                        </td>
+                      </td>
                     </tr>
                   ))}
                   {filteredUsers.length === 0 && (
-                    <tr><td colSpan={4} className="p-3 text-white/40 text-sm">No users found.</td></tr>
-                    )}
+                    <tr>
+                      <td colSpan={4} className="p-3 text-white/40 text-sm">
+                        {users.length === 0 ? 'No users yet.' : 'No users match that search.'}
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
@@ -306,26 +354,9 @@ export default function AdminPage() {
             </div>
 
             {/* Leaderboard */}
-            <div className="flex items-center justify-between gap-3 mb-3">
-                <div className="flex items-center gap-2">
-                    <Users className="w-4 h-4 text-white/50" />
-                    <h2 className="font-display font-bold text-white text-lg">Users</h2>
-                </div>
-                <div className="flex items-center gap-2">
-                    <input
-                    value={userSearch}
-                    onChange={e => setUserSearch(e.target.value)}
-                    placeholder="Search name, email, GitHub…"
-                    className="rounded-lg border border-white/10 bg-white/10 px-3 py-1.5 text-xs text-white placeholder-white/30 outline-none focus:border-[#F7B731]/60"
-                    />
-                    <button
-                    onClick={handleBackfill}
-                    disabled={isBackfilling}
-                    className="text-xs text-white/50 hover:text-white underline disabled:opacity-50"
-                    >
-                    {isBackfilling ? 'Backfilling…' : 'Backfill user list'}
-                    </button>
-                </div>
+            <div className="flex items-center gap-2 mb-3">
+              <Trophy className="w-4 h-4 text-white/50" />
+              <h2 className="font-display font-bold text-white text-lg">Leaderboard (recent)</h2>
             </div>
             <div className="space-y-2">
               {leaderboard.map(row => (
