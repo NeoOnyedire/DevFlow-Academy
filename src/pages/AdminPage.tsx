@@ -241,7 +241,7 @@ export default function AdminPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {users.map(u => (
+                  {filteredUsers.map(u => (
                     <tr key={u.id} className="border-t border-white/10 text-white/80">
                       <td className="p-3">
                         {u.name}<br />
