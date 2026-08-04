@@ -33,6 +33,13 @@
  * nameToColor() rather than stored on the account — it's purely cosmetic
  * and always derivable from the name, so there's no reason to persist it
  * server-side.
+ *
+ * ADMIN LINK: a small shield icon appears next to the avatar (desktop)
+ * and in the mobile dropdown, but ONLY when the signed-in GitHub username
+ * matches the admin account. This is purely cosmetic — /admin itself and
+ * every /api/admin/* call independently re-verify the session server-side
+ * (see api/_lib/admin.ts), so hiding/showing this link changes nothing
+ * about who can actually use the page.
  */
 
 import { useState, useCallback } from 'react'
@@ -40,7 +47,14 @@ import { NavLink } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useApp } from '../context/AppContext'
 import { nameToColor } from '../lib/avatarColor'
-import { GitBranch, LogIn, LogOut, Menu, X, GraduationCap, BookOpen, Wrench, Zap, LayoutDashboard, Settings } from 'lucide-react'
+import {
+  GitBranch, LogIn, LogOut, Menu, X, GraduationCap, BookOpen, Wrench, Zap,
+  LayoutDashboard, Settings, ShieldAlert,
+} from 'lucide-react'
+
+// Cosmetic only — see file header. The real gate lives server-side in
+// api/_lib/admin.ts (override with ADMIN_GITHUB_USERNAME env var there).
+const ADMIN_GITHUB_USERNAME = 'NeoOnyedire'
 
 export default function Navigation() {
   const { user, isLoggedIn, logout, openAuthModal } = useAuth()
@@ -61,6 +75,7 @@ export default function Navigation() {
   }, [openCurriculum, closeMobileMenu])
 
   const lessonLabel = isLoggedIn && completedModules.length > 0 ? 'Continue' : 'Lessons'
+  const isAdmin = isLoggedIn && user?.githubUsername === ADMIN_GITHUB_USERNAME
 
   return (
     <>
@@ -125,6 +140,15 @@ export default function Navigation() {
           }>
             <Settings className="w-3.5 h-3.5 flex-shrink-0" /> <span className="hidden xl:inline">Settings</span>
           </NavLink>
+
+          {/* Admin — only rendered for the admin's own GitHub account (cosmetic; server re-checks) */}
+          {isAdmin && (
+            <NavLink to="/admin" title="Admin" className={({ isActive }) =>
+              `flex items-center gap-1.5 font-accent text-xs uppercase tracking-[0.14em] transition-colors whitespace-nowrap ${isActive ? 'text-[#FF4D6D]' : 'text-white/70 hover:text-[#FF4D6D]'}`
+            }>
+              <ShieldAlert className="w-3.5 h-3.5 flex-shrink-0" /> <span className="hidden xl:inline">Admin</span>
+            </NavLink>
+          )}
 
           {/* Auth */}
           {isLoggedIn && user ? (
@@ -209,6 +233,18 @@ export default function Navigation() {
                 <span className="ml-auto text-[10px] text-white/30 normal-case tracking-normal font-sans">{hint}</span>
               </NavLink>
             ))}
+
+            {isAdmin && (
+              <NavLink to="/admin" onClick={closeMobileMenu}
+                className={({ isActive }) =>
+                  `flex items-center gap-3 py-3 px-2 rounded-lg transition-colors text-left w-full font-accent text-xs uppercase tracking-[0.14em]
+                  ${isActive ? 'text-[#FF4D6D] bg-white/5' : 'text-white/70 hover:text-[#FF4D6D] hover:bg-white/5'}`
+                }>
+                <ShieldAlert className="w-4 h-4 flex-shrink-0" />
+                <span>Admin</span>
+                <span className="ml-auto text-[10px] text-white/30 normal-case tracking-normal font-sans">Dashboard</span>
+              </NavLink>
+            )}
 
             <div className="border-t border-white/10 pt-3 mt-2">
               {isLoggedIn && user ? (
