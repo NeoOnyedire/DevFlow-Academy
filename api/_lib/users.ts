@@ -16,6 +16,7 @@
 
 import { randomUUID, randomBytes, scryptSync, timingSafeEqual } from 'crypto'
 import { upstashGet, upstashSet, upstashSetNX, upstashSAdd, upstashSMembers } from './upstash.js'
+import { upstashCommand, upstashSRem } from './upstash.js'
 
 const ALL_USERS_SET = 'devflow:all-users'
 
@@ -166,4 +167,63 @@ export async function getAllUsers(): Promise<SafeUser[]> {
   const ids = await upstashSMembers(ALL_USERS_SET)
   const users = await Promise.all(ids.map(id => getUserById(id)))
   return users.filter((u): u is StoredUser => !!u).map(toSafeUser)
+}
+
+
+/**
+ * Full account deletion — removes the user record and every index that
+ * points at it. This is deliberately separate from delete-progress
+ * (which only clears Postgres rows): this is the "the account no longer
+ * exists" action for GDPR-style requests.
+ *
+ * Does NOT touch Postgres (user_progress, lesson_progress,
+ * leaderboard_entries) or the reviews list — those are cleaned up by the
+ * admin route calling this alongside its own SQL deletes, since this
+ * file has no Postgres dependency.
+ */
+export async function deleteUser(id: string): Promise<boolean> {
+  const user = await getUserById(id)
+  if (!user) return false
+
+  const ops: Promise<unknown>[] = [
+    upstashCommand(['DEL', userKey(id)]),
+    upstashSRem(ALL_USERS_SET, id),
+  ]
+  if (user.provider === 'password') {
+    ops.push(upstashCommand(['DEL', emailIndexKey(user.email)]))
+  }
+  if (user.provider === 'github' && user.githubId) {
+    ops.push(upstashCommand(['DEL', githubIndexKey(user.githubId)]))
+  }
+  await Promise.all(ops)
+  return true
+}
+
+/**
+ * One-time backfill: SCANs Redis for every devflow:user:<id> key and adds
+ * each id to devflow:all-users. Needed because password accounts that
+ * registered before ALL_USERS_SET existed (or before their next login)
+ * never got added to it. Safe to run repeatedly — SADD is idempotent.
+ */
+export async function backfillAllUsersSet(): Promise<{ scanned: number; added: number }> {
+  let cursor = '0'
+  let scanned = 0
+  let added = 0
+
+  do {
+    const result = await upstashCommand(['SCAN', cursor, 'MATCH', 'devflow:user:*', 'COUNT', '100'])
+    if (!Array.isArray(result) || result.length !== 2) break
+    const [nextCursor, keys] = result as [string, string[]]
+    cursor = nextCursor
+
+    for (const key of keys) {
+      const id = key.replace('devflow:user:', '')
+      if (!id) continue
+      scanned++
+      const wasAdded = await upstashSAdd(ALL_USERS_SET, id)
+      if (wasAdded) added++
+    }
+  } while (cursor !== '0')
+
+  return { scanned, added }
 }
