@@ -22,7 +22,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { requireAdmin } from '../_lib/admin.js'
 import { sql } from '../_lib/db.js'
-import { getAllUsers, getUserById, saveUser } from '../_lib/users.js'
+import { getAllUsers, getUserById, saveUser, deleteUser, backfillAllUsersSet } from '../_lib/users.js'
 import { getUpstashConfig, upstashLRem, upstashLLen } from '../_lib/upstash.js'
 
 const REVIEWS_KEY = 'devflow:reviews'
@@ -194,6 +194,34 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       await sql`DELETE FROM leaderboard_entries WHERE week_key = ${weekKey}`
       await logAction(admin.id, 'reset-week', weekKey, {})
       res.status(200).json({ ok: true })
+      return
+    }
+
+    // ---- full account deletion (Redis record + every dependent Postgres row) ----
+    if (action === 'delete-account') {
+      const { userId } = (req.body || {}) as { userId?: string }
+      if (!userId) { res.status(400).json({ error: 'Missing userId.' }); return }
+
+      const target = await getUserById(userId)
+      if (!target) { res.status(404).json({ error: 'User not found.' }); return }
+
+      await sql`DELETE FROM user_progress WHERE user_id = ${userId}`
+      await sql`DELETE FROM lesson_progress WHERE user_id = ${userId}`
+      await sql`DELETE FROM leaderboard_entries WHERE user_id = ${userId}`
+      const removed = await deleteUser(userId)
+
+      if (!removed) { res.status(502).json({ error: 'Could not delete the account.' }); return }
+
+      await logAction(admin.id, 'delete-account', userId, { name: target.name, email: target.email })
+      res.status(200).json({ ok: true })
+      return
+    }
+
+    // ---- one-time backfill of devflow:all-users for pre-existing accounts ----
+    if (action === 'backfill-users') {
+      const result = await backfillAllUsersSet()
+      await logAction(admin.id, 'backfill-users', null, result)
+      res.status(200).json({ ok: true, ...result })
       return
     }
 
