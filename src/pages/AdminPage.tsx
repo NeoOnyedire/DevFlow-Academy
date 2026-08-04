@@ -64,7 +64,8 @@ export default function AdminPage() {
   const [reviews, setReviews] = useState<AdminReview[]>([])
   const [leaderboard, setLeaderboard] = useState<LeaderboardRow[]>([])
   const [message, setMessage] = useState('')
-  const [isLoading, setIsLoading] = useState(true)
+  const [userSearch, setUserSearch] = useState('')
+  const [isBackfilling, setIsBackfilling] = useState(false)
 
   const loadAll = useCallback(async () => {
     setIsLoading(true)
@@ -99,6 +100,28 @@ export default function AdminPage() {
     setMessage(`Progress wiped for ${name}.`)
     loadAll()
   }
+
+  const handleDeleteAccount = async (u: AdminUser) => {
+  if (!window.confirm(`Permanently delete ${u.name}'s account? This cannot be undone and removes everything — progress, leaderboard history, and the account itself.`)) return
+  await adminFetch('delete-account', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ userId: u.id }),
+    })
+  setMessage(`Account deleted for ${u.name}.`)
+  loadAll()
+ }
+
+const handleBackfill = async () => {
+  setIsBackfilling(true)
+  try {
+    const result = await adminFetch('backfill-users', { method: 'POST' })
+    setMessage(`Backfill complete — scanned ${result.scanned}, added ${result.added} new user(s).`)
+    loadAll()
+    } finally {
+    setIsBackfilling(false)
+  }
+ }
 
   const handleToggleReviewFlag = async (u: AdminUser) => {
     await adminFetch('toggle-review-flag', {
