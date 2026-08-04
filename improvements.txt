@@ -1,61 +1,61 @@
 ## Disclaimer: I made this public to document the journey of this project, so no you are not seeing this by mistake lol
 
 ## ✅ Resolved since last pass
-- **Admin dashboard is live.** A single-account-gated `/admin` page (server-enforced via `api/_lib/admin.ts` — only the account signed in via GitHub as the configured admin username can call any `/api/admin/*` route, regardless of what the client shows). Lets the admin see every registered user, wipe a user's entire course progress (`user_progress` + `lesson_progress`), toggle a user's "has reviewed" flag, delete individual reviews (including legacy ones written before reviews had a stable id), and delete or bulk-reset leaderboard entries by week.
-- **Admin actions are now logged.** Every destructive admin call (wipe progress, delete a review, reset a leaderboard week, etc.) writes a row to a new `admin_actions` Postgres table — who did what, to what, and when. Best-effort: a logging failure never blocks the actual action.
-- **Users became enumerable.** Upstash Redis has no native "list all keys" over its REST API, so a `devflow:all-users` Redis set now tracks every account id as it's created (or re-touched via GitHub login), which is what powers the admin user list.
-- **Reviews got stable ids.** Each review now carries a `randomUUID()` so it can be targeted individually for moderation/deletion instead of only being addressable by list position. Reviews written before this change fall back to an index-based delete in the admin UI, flagged as "legacy."
-- **Real backend is live.** Auth, sessions, reviews, progress, and leaderboard data now run server-side through Vercel Functions, Upstash Redis, and Postgres.
-- **Error boundaries added.** `ErrorBoundary.tsx` wraps both the overlay group and the routed pages in `App.tsx`.
-- **Real 404 page.** Unknown routes hit `NotFoundPage`, not a silent `LandingPage` fallback.
-- **Email verification + password reset.** Complete verification/reset flows with rate limiting and generic responses.
-- **GitHub OAuth.** Full authorization-code flow with secure session creation.
-- **Gitter chat persistence.** Conversations persist in `sessionStorage` and clear on logout.
-- **`GitterHelper`'s index bug is fixed.** Newly completed modules are detected reliably.
-- **Real SQL leaderboard.** Weekly challenges now store and rank scores in Postgres instead of using hardcoded data.
-- **Server-side progress syncing.** Course progress now syncs across devices instead of living only in localStorage.
-- **Dynamic auth routing.** Auth endpoints were consolidated into a single dynamic route, reducing Vercel serverless function usage and leaving room for future APIs.
-- **Server-side progress.** User progress now lives in Postgres (`user_progress`) instead of browser localStorage, allowing progress to sync across devices.
-- **Weekly leaderboard persistence.** Challenge submissions are stored in SQL with proper indexes and duplicate protection.
-- **Single-use verification and reset tokens.** Tokens are invalidated immediately after use for improved security.
-- **Database schema introduced.** Postgres now stores leaderboard entries and course progress while Redis continues handling sessions, users, and tokens.
-- **Email/password login paused, GitHub-only for now.** A single `EMAIL_LOGIN_ENABLED` flag in `AuthModal.tsx` hides the email/password form and forgot-password flow while a custom domain isn't secured yet — GitHub becomes the only visible sign-in path. Backend auth endpoints (`api/auth/login.ts`, `register.ts`, etc.) are untouched, so flipping the flag back to `true` restores email login with no further changes.
-- **GitHub OAuth callback deep-link bug fixed.** `vite.config.ts`'s `base: './'` broke asset loading on any nested route loaded as a fresh page (like `/auth/github/callback` after GitHub's redirect), causing a blank white screen. Changed to `base: '/'` so assets resolve correctly regardless of the URL path.
-- **Added `vercel.json` SPA rewrite.** A missing rewrite rule meant fresh page loads on client-side routes (e.g. the GitHub callback) had nothing to serve. Added a rewrite that excludes `/api/*` so serverless functions keep working normally.
-- **Three AI providers for Gitter AI (BYOK).** Added Anthropic (Claude) alongside the existing Gemini and Groq options. Provider-calling logic was extracted into a shared `api/_lib/aiProviders.ts` so both the chat endpoint and the new review-moderation endpoint reuse the same code.
-- **AI-moderated reviews.** Reviews are now checked by Gitter AI (using the reviewer's own BYOK key) via a new `api/moderate-review.ts` endpoint before submission — it screens for spam, unrelated links/promotion, and off-topic or inappropriate content, and returns a tailored reply either thanking the reviewer or asking them to revise. Fails open (allows the review through) if the AI provider has a hiccup, so a formatting or network issue never blocks a genuine review.
-- **Gitter AI activation required for course completion.** Completing the first module now requires having activated Gitter AI at least once, so that by the time anyone reaches the review gate at course completion, they already have a working BYOK key to run the review check with.
-- **Privacy policy updated** to reflect AI-moderated reviews, the three BYOK providers, and that Anthropic isn't free forever (unlike Gemini/Groq) — new accounts get a small trial credit, then need a payment method on file.
+- **Full account deletion shipped.** `api/admin/[action].ts`'s `delete-account` action removes the Redis user record (via `deleteUser` in `api/_lib/users.ts`) plus every dependent Postgres row (`user_progress`, `lesson_progress`, `leaderboard_entries`) in one shot, logged to `admin_actions`. `AdminPage.tsx` has a "Delete account" button per user with a confirm dialog. This closes the GDPR-style hard-delete gap from the previous pass.
+- **AI-moderation rejections are now in the audit trail.** `api/moderate-review.ts`'s `logRejection()` writes every AI-rejected review to `admin_actions` (action: `ai-review-rejected`, with rating/comment/reply in `details`), so a wrongly-rejected genuine review can now be traced after the fact — previously only manual admin overrides were logged.
+- **One-time admin user-list backfill has a real trigger.** `backfillAllUsersSet()` (SCANs Redis for `devflow:user:*` and adds any missing id to `devflow:all-users`) is wired to a `backfill-users` admin action and a "Backfill user list" button on `AdminPage.tsx` — no longer just a "worth adding" note, it's live and safely re-runnable.
+- **Basic admin search added.** `AdminPage.tsx` now has a client-side search box over the users table (name, email, GitHub username), addressing part of "admin panel is functional, not pretty." Pagination is still absent — see below.
+- **Admin dashboard is live.** A single-account-gated `/admin` page (server-enforced via `api/_lib/admin.ts`) lets the admin see every registered user, wipe a user's entire course progress, toggle a user's "has reviewed" flag, delete individual reviews (including legacy ones), and delete or bulk-reset leaderboard entries by week.
+- **Admin actions are logged.** Every destructive admin call writes a row to `admin_actions` (best-effort — a logging failure never blocks the actual action).
+- **Users became enumerable** via the `devflow:all-users` Redis set, now backfillable on demand (see above) rather than only growing on login.
+- **Reviews got stable ids**, with legacy index-based delete fallback for pre-existing reviews.
+- **Real backend is live.** Auth, sessions, reviews, progress, and leaderboard data run server-side through Vercel Functions, Upstash Redis, and Postgres.
+- **Error boundaries added**, split by variant (`page` vs `overlay`).
+- **Real 404 page.**
+- **Email verification + password reset**, with rate limiting and generic responses.
+- **GitHub OAuth**, full authorization-code flow with CSRF state check and secure session creation.
+- **Gitter chat persistence** in `sessionStorage`, cleared on logout.
+- **`GitterHelper`'s index bug is fixed.**
+- **Real SQL leaderboard**, ranked via `RANK() OVER (...)`.
+- **Server-side progress syncing** across devices via Postgres `user_progress`.
+- **Dynamic auth routing**, consolidated into one function to stay under the Hobby-plan Serverless Function cap.
+- **Single-use verification and reset tokens.**
+- **Database schema introduced** — Postgres for leaderboard/progress, Redis for sessions/users/tokens.
+- **Email/password login paused, GitHub-only for now**, behind a single `EMAIL_LOGIN_ENABLED` flag.
+- **GitHub OAuth callback deep-link bug fixed** (`vite.config.ts` `base: '/'`).
+- **Added `vercel.json` SPA rewrite** excluding `/api/*`.
+- **Three AI providers for Gitter AI (BYOK)** — Gemini, Groq, Anthropic — via shared `api/_lib/aiProviders.ts`.
+- **AI-moderated reviews** via `api/moderate-review.ts`, fails open on provider hiccups.
+- **Gitter AI activation required for course completion**, gating Module 1 completion.
+- **Privacy policy updated** to reflect AI-moderated reviews, the three BYOK providers, and Anthropic's non-free-forever pricing.
 
 ---
 
 ## 🔴 Fix first: remaining data issues
 
-- **Admin user list only backfills on login.** The `devflow:all-users` Redis set that powers the admin panel's user list only gets an entry when an account is created or re-authenticates (GitHub login re-runs `upsertGithubUser`, which adds to the set). Any password account that hasn't logged in since this shipped won't show up in `/admin` until it does. Not a bug exactly, but worth a one-time backfill script if the user list ever looks incomplete.
-- **No full account deletion yet.** The admin panel can wipe a user's *progress* and toggle their review flag, but there's no "delete this account entirely" action (Redis record + Postgres rows in one shot). Worth adding if a hard-delete request ever comes in (e.g. GDPR-style ask via the Support page).
-- **Email login is paused, not removed — needs a real decision.** Right now `EMAIL_LOGIN_ENABLED = false` is a stopgap because a stable custom domain isn't secured yet. Worth deciding: is the plan to re-enable email login once a domain is secured, or move to GitHub-only permanently? The GitHub OAuth callback URL is currently pinned to the `dev-flow-academy.vercel.app` production domain, which works but should be revisited if a custom domain gets added later (the OAuth App's callback URL will need updating to match).
-- **Gitter AI is now a hard requirement, not just an upgrade.** Since it gates both course completion and reviews, learners without a Gemini/Groq/Anthropic account (or without a card, if they only try Anthropic) hit a wall at Module 1. Worth watching drop-off here — the gate in `CurriculumPanel.tsx`'s `handleToggleComplete` is a single `if` block and easy to relax (e.g. gate only the review, not the first module) if this proves to be too much friction.
-- **AI-moderation rejections still aren't in the audit trail.** The new `admin_actions` table logs manual admin overrides (deleting a review, wiping progress), but it doesn't log the AI moderation step itself — a review the AI silently rejected before submission leaves no record anywhere. Worth writing those to `admin_actions` too (action: `ai-review-rejected`) so a wrongly-rejected genuine review can be traced after the fact.
+- **Email login is paused, not removed — still needs a real decision.** `EMAIL_LOGIN_ENABLED = false` remains a stopgap pending a stable custom domain. The GitHub OAuth callback URL is still pinned to `dev-flow-academy.vercel.app` — revisit if a custom domain is added.
+- **Gitter AI is still a hard requirement, not just an upgrade.** It gates both course completion and reviews, so learners without a Gemini/Groq/Anthropic account (or a card, for Anthropic-only users) hit a wall at Module 1. The gate in `CurriculumPanel.tsx`'s `finishLesson` is still a single `if` block and easy to relax (e.g. gate only the review) if this proves too much friction. Worth instrumenting drop-off before deciding.
 - **GitHub profile connection is still browser-specific.** GitHub OAuth accounts work correctly, but linking an existing password account to GitHub isn't persisted separately yet.
-- **No audit/event logging for non-admin actions.** Registrations, password resets, and logins still aren't logged anywhere for debugging or analytics — only *admin-initiated* destructive actions are, via `admin_actions`.
-- **Rate limiters are still fragmented.** `api/_lib/rateLimit.ts`, `api/gitter.ts`, `api/reviews.ts`, and `api/moderate-review.ts` each implement or share slightly different in-memory rate limiting. A shared Redis-backed implementation would survive serverless cold starts and simplify maintenance. (`api/admin/[action].ts` intentionally has no rate limit of its own — it's a single trusted account, not public-facing.)
+- **No audit/event logging for non-admin actions.** Registrations, password resets, and logins still aren't logged anywhere for debugging or analytics — only admin-initiated destructive actions and AI-rejected reviews are, via `admin_actions`.
+- **Rate limiters are still fragmented.** `api/_lib/rateLimit.ts`, `api/gitter.ts`, and `api/reviews.ts` each implement their own in-memory rate limiting. A shared Redis-backed implementation would survive serverless cold starts and simplify maintenance. (`api/admin/[action].ts` intentionally has none — single trusted account.)
+- **Admin panel still has no pagination.** Search now exists (see Resolved), but the users/reviews/leaderboard tables will get unwieldy at real scale without it.
 
 ---
 
 ## 🟠 Architecture/robustness
 
-- **Redis and Postgres are tightly coupled throughout the API layer.** Introducing repository/service abstractions would make future storage migrations much easier.
-- **Authentication logic is repeated.** Multiple endpoints manually call `getUserIdFromRequest()` and `getUserById()` instead of sharing middleware/helpers. `requireAdmin()` in `api/_lib/admin.ts` is a step toward this pattern but only covers the admin case so far.
-- **Request validation is handwritten everywhere.** Libraries like Zod or Valibot could greatly reduce duplicated validation code.
+- **Redis and Postgres are tightly coupled throughout the API layer.** Repository/service abstractions would ease future storage migrations.
+- **Authentication logic is repeated.** Multiple endpoints manually call `getUserIdFromRequest()` and `getUserById()` instead of sharing middleware. `requireAdmin()` is a step toward this but only covers the admin case.
+- **Request validation is handwritten everywhere.** Zod or Valibot could reduce duplicated validation code.
 - **No centralized API error handler.** Nearly every endpoint repeats similar `try/catch` blocks.
-- **No API versioning.** Everything currently lives under `/api`; `/api/v1` would make future breaking changes easier.
-- **No OpenAPI/Swagger documentation.** The backend has grown large enough that generated API documentation would become genuinely useful.
-- **Lazy-load routes.** `App.tsx` still imports every page eagerly, including `AdminPage` — which every visitor's bundle now includes even though only one account can ever use it. Switching to `React.lazy` + `Suspense` would reduce initial bundle size, and `/admin` specifically is a good first candidate.
+- **No API versioning.** `/api/v1` would ease future breaking changes.
+- **No OpenAPI/Swagger documentation.**
+- **Lazy-load routes.** `App.tsx` still imports every page eagerly, including `AdminPage`, which every visitor's bundle includes even though only one account can use it. `React.lazy` + `Suspense` would help; `/admin` is the obvious first candidate.
 - **No loading skeletons** for GSAP-heavy pages during first paint.
 - Allow users to edit or delete their own reviews.
 - Show "Last synced" status for course progress.
 - Add profile avatar customization.
-- Add account settings page.
+- Add account settings page (beyond theme).
 - Cache leaderboard responses using HTTP cache headers.
 - Cache course metadata to reduce repeated API requests.
 
@@ -63,65 +63,41 @@
 
 ## 🟡 UX polish
 
-- **Gitter AI doesn't stream.** Responses still arrive all at once instead of token-by-token.
-- **Certificates are still conceptual only.** Users complete the course but don't receive an actual downloadable certificate.
-- **Dashboard streak, badges, and rankings are still simplified placeholders.** Most values are calculated using basic heuristics rather than long-term activity.
-- **No user profile page.** Users can't view their achievements, certificates, completed modules, leaderboard history, or linked GitHub account in one place.
-- **No notification system.** Success messages disappear after actions instead of providing a persistent notification center.
-- **No optimistic UI updates.** Reviews, leaderboard submissions, progress updates, and admin actions (delete review, wipe progress) all wait for a server round-trip before the UI reflects the change.
-- **Review moderation feedback could be clearer.** Right now a rejected review just shows the AI's reply as an error message — a dedicated "revise and resubmit" state (keeping the draft text visible alongside the AI's specific note) would feel less like a dead-end.
-- **Admin panel is functional, not pretty.** Plain tables, no pagination, no search/filter on the user or review list — fine at current scale, will need work if the user base grows.
+- **Gitter AI doesn't stream.** Responses arrive all at once instead of token-by-token.
+- **Certificates are still conceptual only.** No actual downloadable certificate on course completion.
+- **Dashboard streak, badges, and rankings are still simplified placeholders**, calculated with basic heuristics rather than real activity history.
+- **No user profile page** showing achievements, certificates, completed modules, leaderboard history, or linked GitHub account in one place.
+- **No notification system.** Success messages disappear instead of a persistent notification center.
+- **No optimistic UI updates.** Reviews, leaderboard submissions, progress updates, and admin actions all wait for a server round-trip.
+- **Review moderation feedback could be clearer.** A rejected review just shows the AI's reply as an error — a "revise and resubmit" state keeping the draft text visible would feel less like a dead end.
 
 ---
 
 ## 🟢 Feature ideas worth considering
 
-- **Interactive Git Sandbox.** Let users practice real Git commands inside an isolated browser-based repository.
-- **Interactive merge conflict simulator.** Walk users through realistic merge conflict scenarios safely.
-- **Repository import.** Allow users to connect GitHub repositories and receive personalized learning recommendations.
-- **Persistent AI mentor.** Let Gitter remember learning progress and recommend lessons instead of acting like a stateless chatbot.
-- **Real achievement system.** Replace placeholder badges with milestone-based achievements.
-- **Learning streak calendar.** Visualize consistency over weeks and months.
-- **Public learner profiles.** Share completed courses, achievements, and certificates.
-- **Portfolio export.** Generate a shareable developer profile or PDF certificate portfolio.
-- **Bookmark lessons.** Save modules to revisit later.
-- **Search/filter on the Learn page.** Filter lessons by difficulty, technology, or role.
-- **More weekly challenges.** The current challenge pool is still fairly small.
-- **Community discussion board.** Encourage learners to ask questions and help one another.
-- **Full analytics on the admin dashboard.** Signups over time, completion-rate trends, and a dedicated moderation queue for AI-flagged reviews — the current `/admin` covers direct data management (users/progress/reviews/leaderboard), not yet trend analytics.
-- **Instructor dashboard.** Track learner engagement and course performance.
-- **Basic first-party analytics.** Continue respecting privacy while understanding platform usage.
-- **Offline support (PWA).** Allow parts of the curriculum to remain usable without internet.
-- **Mobile install support.** Let users install DevFlow Academy as an app.
-- **Push notifications.** Remind learners about weekly challenges and learning streaks.
-- **Git branching visualizer.** Visually demonstrate branching, merging, and rebasing.
-- **AI code review challenges.** Let Gitter review Git history and commits for learning exercises.
-- **Accessibility audit.** Improve keyboard navigation, screen reader support, and WCAG compliance.
-- **Localization.** Support additional languages.
-- **Tests.** Add Vitest for unit tests, Playwright for end-to-end testing, and CI quality gates to prevent regressions.
-- Interactive Git Sandbox
-- Interactive Merge Conflict Lab
-- Git Branch Visualizer
-- AI Mentor Mode with memory
-- Repository Import from GitHub
-- Portfolio Export (PDF/share page)
-- Learning Streak Calendar
-- Achievement system
-- Bookmark lessons
-- Search lessons
-- Public learner profiles
-- Community discussions
-- Instructor dashboard
-- Analytics dashboard
-- Offline (PWA) support
-- Mobile install support
-- Push notifications
-- AI code review challenges
-- Accessibility improvements
-- Localization
-- Vitest unit tests
-- Playwright end-to-end tests
-- CI quality gates
+- Interactive Git Sandbox — **partially done**: `GitSandbox.tsx` already simulates a real subset of Git commands against in-memory repo state for lesson tasks. Worth considering: promote it to a standalone page (not just embedded in lessons) for free-form practice.
+- Interactive merge conflict simulator (beyond the current `ScenarioPlaySection` decision-card version).
+- Repository import — connect a real GitHub repo for personalized recommendations.
+- Persistent AI mentor — let Gitter remember progress across sessions instead of resetting on logout.
+- Real achievement system, replacing placeholder badges.
+- Learning streak calendar.
+- Public learner profiles.
+- Portfolio export (PDF/share page).
+- Bookmark lessons.
+- Search/filter on the Learn page.
+- More weekly challenges — the current pool (`CHALLENGE_TEMPLATES`) is still only 4 entries.
+- Community discussion board.
+- Full analytics on the admin dashboard — signups over time, completion-rate trends, a dedicated moderation queue for AI-flagged reviews (the audit log now exists — this would be the UI on top of it).
+- Instructor dashboard.
+- Basic first-party analytics.
+- Offline support (PWA).
+- Mobile install support.
+- Push notifications.
+- Git branching visualizer.
+- AI code review challenges.
+- Accessibility audit.
+- Localization.
+- Tests — still zero. Vitest for unit tests, Playwright for e2e, CI quality gates.
 
 ## 🔵 Long-term goals
 
