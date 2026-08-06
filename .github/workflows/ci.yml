@@ -7,8 +7,6 @@ on:
     branches: [main]
   workflow_dispatch: {}
 
-# Cancel superseded runs on the same branch/PR so pushing a fixup commit
-# doesn't leave stale runs queued behind it.
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -41,8 +39,6 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
-    # Only bother building if lint and tests already passed — saves CI
-    # minutes on a run that's going to be marked failing either way.
     needs: [lint, test]
     steps:
       - uses: actions/checkout@v4
@@ -51,6 +47,4 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      # tsc -b (part of `npm run build`) also acts as a full type-check
-      # pass across the whole project, catching errors ESLint won't.
       - run: npm run build
