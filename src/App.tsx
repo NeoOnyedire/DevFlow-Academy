@@ -86,6 +86,8 @@ function AppInner() {
         <Routes>
           <Route path="/"                     element={<LandingPage />} />
           <Route path="/learn"                element={<LearnPage />} />
+          <Route path="/learn/:moduleId"              element={<LearnPage />} />
+          <Route path="/learn/:moduleId/:lessonId"    element={<LearnPage />} />
           <Route path="/practice"             element={<PracticePage />} />
           <Route path="/troubleshoot"         element={<TroubleshootPage />} />
           <Route path="/challenge"            element={<ChallengePage />} />
