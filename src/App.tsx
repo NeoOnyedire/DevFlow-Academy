@@ -75,7 +75,6 @@ function AppInner() {
       {/* Global overlays — isolated so a crash here doesn't take the page with it */}
       <ErrorBoundary label="overlay panel" variant="overlay">
         <AuthModal />
-        <CurriculumPanel />
         <ReviewModal />
         <GitterHelper />
         <GittoHelper />
