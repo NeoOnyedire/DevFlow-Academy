@@ -29,10 +29,17 @@
  *   (GET /api/leaderboard?mine=1) rather than a separate local flag —
  *   a leaderboard_entries row for (user_id, challengeId) already is
  *   proof of completion.
+ *
+ * Curriculum navigation note:
+ * The old global CurriculumPanel overlay was removed in favour of the
+ * /learn route + CurriculumTree slide-over on LearnPage. openCurriculum
+ * therefore navigates to /learn/:moduleId instead of only flipping
+ * isCurriculumOpen (which nothing renders anymore).
  * ============================================================================
  */
 
 import { createContext, useContext, useState, useCallback, useMemo, useEffect, useRef, type ReactNode } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from './AuthContext'
 
 export type LearningRole = 'junior-dev' | 'devops' | 'career-switcher'
@@ -319,6 +326,7 @@ const CURRICULUM_MODULES: CurriculumModule[] = [
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const { user, refreshUser } = useAuth()
+  const navigate = useNavigate()
   const [role, setRoleState] = useState<LearningRole>(() => {
     return (localStorage.getItem('devflow_role') as LearningRole | null) || 'junior-dev'
   })
@@ -478,11 +486,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('devflow_role', nextRole)
   }, [])
 
-  /** Open the curriculum panel, optionally focusing a specific module */
+  /**
+   * Open the curriculum by navigating to /learn.
+   * Optional moduleId focuses that module; LearnPage then resolves the
+   * first incomplete lesson under it. Without a moduleId we use the
+   * role path's first recommended module.
+   */
   const openCurriculum = useCallback((moduleId?: string) => {
-    setActiveModuleId(moduleId || rolePath.recommendedModules[0] || CURRICULUM_MODULES[0].id)
+    const target = moduleId || rolePath.recommendedModules[0] || CURRICULUM_MODULES[0].id
+    setActiveModuleId(target)
     setIsCurriculumOpen(true)
-  }, [rolePath])
+    navigate(`/learn/${target}`)
+  }, [rolePath, navigate])
 
   const closeCurriculum = useCallback(() => {
     setIsCurriculumOpen(false)
