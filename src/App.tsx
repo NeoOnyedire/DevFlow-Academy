@@ -41,7 +41,7 @@ import { AppProvider } from './context/AppContext'
 
 // Global overlays — always mounted, shown/hidden via context
 import AuthModal      from './components/AuthModal'
-import CurriculumPanel from './components/CurriculumTree'
+//import CurriculumPanel from './components/CurriculumTree'
 import ReviewModal    from './components/ReviewModal'
 import GitterHelper   from './components/GitterHelper'
 import GittoHelper    from './components/GittoHelper'
