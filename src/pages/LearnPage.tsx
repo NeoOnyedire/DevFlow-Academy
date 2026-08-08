@@ -16,7 +16,7 @@ import { useApp, ROLE_PATHS, type LearningRole } from '../context/AppContext'
 import { useAuth } from '../context/AuthContext'
 import { getLessonsForModule } from '../content/lessons'
 import { fetchCompletedLessonIds } from '../lib/lessonProgress'
-import CurriculumTree from '../components/Curriculum/CurriculumTree'
+import CurriculumTree from '../components/CurriculumTree'
 import LessonContent from '../components/Curriculum/LessonContent'
 import { Route as RouteIcon, PanelRightOpen, Lock, ChevronRight } from 'lucide-react'
 
