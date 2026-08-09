@@ -70,17 +70,15 @@ export default function LessonContent({ module: mod, lessons, lessonId, onAdvanc
 
   const finishLesson = useCallback(async () => {
     if (!currentLesson) return
-
-    if (!isLoggedIn) {
-      const next = Array.from(new Set([...completedLessonIds, currentLesson.id]))
-      setCompletedLessonIds(next)
+    if (isLoggedIn) {
+      await saveLessonStep(mod.id, currentLesson.id)
+    } else {
+      const next = Array.from(new Set([...loadGuestTaskIds(), currentLesson.id]))
       localStorage.setItem(GUEST_TASK_STORAGE, JSON.stringify(next))
-      onAdvance(lessons[lessonIndex + 1]?.id, false)
-      return
     }
-
-    const allIds = lessons.map(l => l.id)
-    const { moduleCompleted } = await saveLessonStep(currentLesson.id, mod.id, 'complete', allIds)
+    const moduleCompleted = lessons.every(l =>
+      l.id === currentLesson.id || completedLessonIds.includes(l.id)
+    )
     const next = Array.from(new Set([...completedLessonIds, currentLesson.id]))
     setCompletedLessonIds(next)
 
@@ -93,8 +91,8 @@ export default function LessonContent({ module: mod, lessons, lessonId, onAdvanc
     onAdvance(lessons[lessonIndex + 1]?.id, moduleCompleted)
   }, [currentLesson, isLoggedIn, completedLessonIds, lessons, lessonIndex, mod.id, toggleModuleComplete, onAdvance])
 
-  if (isLoading) return <p className="text-white/50 text-sm">Loading lessons…</p>
-  if (!currentLesson) return <p className="text-white/50 text-sm">Lesson not found in this module.</p>
+  if (isLoading) return <p className="text-sm" style={{ color: 'var(--text-on-accent-soft)' }}>Loading lessons…</p>
+  if (!currentLesson) return <p className="text-sm" style={{ color: 'var(--text-on-accent-soft)' }}>Lesson not found in this module.</p>
 
   const isLessonDone = completedLessonIds.includes(currentLesson.id)
 
