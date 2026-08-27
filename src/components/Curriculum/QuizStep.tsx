@@ -1,11 +1,10 @@
 /**
  * QuizStep.tsx
  *
- * 1-2 question comprehension check between watching a snippet and doing
- * the sandbox task. Not punitive — wrong answers show the explanation
- * immediately and let the learner retry the same question, rather than
- * failing them out or forcing a full re-watch. The goal is a beat of
- * reflection, not a gate designed to be hard.
+ * Comprehension check between snippet and sandbox.
+ * THEME: same yellow curriculum canvas as LessonPlayer — use
+ * --text-on-accent* for body text so Light/Original stay dark-on-yellow
+ * and Dark stays light-on-espresso.
  */
 import { useState } from 'react'
 import { Check, X, ArrowRight } from 'lucide-react'
@@ -26,7 +25,7 @@ export default function QuizStep({ questions, onComplete }: Props) {
   const isCorrect = selected === question.correctIndex
 
   const handleSelect = (optionIndex: number) => {
-    if (selected !== null) return // locked once answered
+    if (selected !== null) return
     setSelected(optionIndex)
     if (optionIndex === question.correctIndex) setCorrectCount(c => c + 1)
   }
@@ -45,12 +44,23 @@ export default function QuizStep({ questions, onComplete }: Props) {
   return (
     <div>
       <div className="flex items-center gap-2 mb-4">
-        <span className="px-2 py-0.5 rounded-full text-[10px] font-accent font-semibold uppercase tracking-wider bg-white/10 text-white/60">
+        <span
+          className="px-2 py-0.5 rounded-full text-[10px] font-accent font-semibold uppercase tracking-wider"
+          style={{
+            backgroundColor: 'var(--border-on-accent)',
+            color: 'var(--text-on-accent-soft)',
+          }}
+        >
           Question {index + 1} of {questions.length}
         </span>
       </div>
 
-      <h4 className="font-display font-bold text-white text-xl mb-5">{question.question}</h4>
+      <h4
+        className="font-display font-bold text-xl mb-5"
+        style={{ color: 'var(--text-on-accent)' }}
+      >
+        {question.question}
+      </h4>
 
       <div className="space-y-2.5 mb-5">
         {question.options.map((option, i) => {
@@ -66,10 +76,20 @@ export default function QuizStep({ questions, onComplete }: Props) {
                   ? 'bg-[#3CCF4A]/15 border-[#3CCF4A]'
                   : isSelected
                     ? 'bg-[#FF4D6D]/15 border-[#FF4D6D]'
-                    : 'bg-white/[0.06] border-white/10 hover:bg-white/[0.1]'
+                    : 'hover:opacity-90'
               }`}
+              style={
+                !revealCorrect && !isSelected
+                  ? {
+                      backgroundColor: 'rgba(0,0,0,0.06)',
+                      borderColor: 'var(--border-on-accent)',
+                    }
+                  : undefined
+              }
             >
-              <span className="text-white text-sm">{option}</span>
+              <span className="text-sm" style={{ color: 'var(--text-on-accent)' }}>
+                {option}
+              </span>
               {revealCorrect && <Check className="w-4 h-4 text-[#3CCF4A] flex-shrink-0" />}
               {isSelected && !revealCorrect && <X className="w-4 h-4 text-[#FF4D6D] flex-shrink-0" />}
             </button>
@@ -78,13 +98,21 @@ export default function QuizStep({ questions, onComplete }: Props) {
       </div>
 
       {selected !== null && (
-        <div className="mb-5 p-4 rounded-xl bg-white/[0.06] border border-white/10">
-          <p className="text-white/75 text-sm leading-relaxed">{question.explanation}</p>
+        <div
+          className="mb-5 p-4 rounded-xl border"
+          style={{
+            backgroundColor: 'rgba(0,0,0,0.06)',
+            borderColor: 'var(--border-on-accent)',
+          }}
+        >
+          <p className="text-sm leading-relaxed" style={{ color: 'var(--text-on-accent-soft)' }}>
+            {question.explanation}
+          </p>
         </div>
       )}
 
-      {selected !== null && (
-        isCorrect ? (
+      {selected !== null &&
+        (isCorrect ? (
           <button
             onClick={handleNext}
             className="flex items-center gap-2 bg-rose-punch text-white font-display font-semibold px-5 py-2.5 rounded-xl hover:bg-[#ff3d5d] transition-all"
@@ -94,15 +122,20 @@ export default function QuizStep({ questions, onComplete }: Props) {
         ) : (
           <button
             onClick={handleRetry}
-            className="flex items-center gap-2 bg-white/10 text-white font-display font-semibold px-5 py-2.5 rounded-xl hover:bg-white/20 transition-all"
+            className="flex items-center gap-2 font-display font-semibold px-5 py-2.5 rounded-xl transition-all"
+            style={{
+              backgroundColor: 'rgba(0,0,0,0.08)',
+              color: 'var(--text-on-accent)',
+            }}
           >
             Try again
           </button>
-        )
-      )}
+        ))}
 
       {correctCount > 0 && (
-        <p className="text-white/30 text-xs mt-4">{correctCount} of {index + (selected !== null ? 1 : 0)} correct so far</p>
+        <p className="text-xs mt-4" style={{ color: 'var(--text-on-accent-soft)' }}>
+          {correctCount} of {index + (selected !== null ? 1 : 0)} correct so far
+        </p>
       )}
     </div>
   )
