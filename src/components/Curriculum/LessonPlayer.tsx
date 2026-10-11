@@ -9,6 +9,10 @@
  * `end` on the YouTube iframe API stops playback at that timestamp, but
  * doesn't disable seeking past it — good enough for a short, low-stakes
  * snippet. If someone scrubs ahead, the quiz still gates progress.
+ *
+ * THEME: text uses the curriculum classes (cur-text / cur-text-soft /
+ * cur-text-faint) so it reads correctly on the yellow (Original),
+ * off-white (Light) and near-black (Dark) canvases.
  */
 import { useState } from 'react'
 import { Clock, ArrowRight } from 'lucide-react'
@@ -30,15 +34,16 @@ export default function LessonPlayer({ lesson, onContinue }: Props) {
   return (
     <div>
       <div className="flex items-center gap-2 mb-3">
-        <span className="px-2 py-0.5 rounded-full text-[10px] font-accent font-semibold uppercase tracking-wider bg-[#F7B731] text-[#2A2A2A]">
+        <span className="cur-pill px-2 py-0.5 rounded-full text-[10px] font-accent font-semibold uppercase tracking-wider">
           Snippet
         </span>
-        <span className="flex items-center gap-1 text-white/40 text-xs">
+        <span className="flex items-center gap-1 text-xs cur-text-faint">
           <Clock className="w-3 h-3" /> ~{snippetLength} min
         </span>
       </div>
 
-      <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-black mb-4">
+      <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-black mb-4"
+        style={{ border: '1px solid var(--cur-border)' }}>
         <iframe
           src={embedUrl}
           title={lesson.title}
@@ -49,8 +54,8 @@ export default function LessonPlayer({ lesson, onContinue }: Props) {
         />
       </div>
 
-      <h4 className="font-display font-bold text-white text-xl mb-2">{lesson.title}</h4>
-      <p className="text-white/60 text-sm mb-5">
+      <h4 className="font-display font-bold text-xl mb-2 cur-text">{lesson.title}</h4>
+      <p className="text-sm mb-5 cur-text-soft">
         This is a short clip from a longer lesson — just the part covering this idea. Watch it, then answer a
         couple of quick questions.
       </p>
@@ -58,7 +63,7 @@ export default function LessonPlayer({ lesson, onContinue }: Props) {
       <button
         onClick={onContinue}
         disabled={!hasWatched}
-        className="flex items-center gap-2 bg-rose-punch text-white font-display font-semibold px-5 py-2.5 rounded-xl
+        className="flex items-center gap-2 bg-rose-punch text-[#ffffff] font-display font-semibold px-5 py-2.5 rounded-xl
           hover:bg-[#ff3d5d] disabled:opacity-50 transition-all"
       >
         Continue to quiz <ArrowRight className="w-4 h-4" />

@@ -32,6 +32,10 @@
  * This is the fully-scoped version of the roadmap's "Interactive Git
  * Sandbox" item — reusable outside the curriculum too (e.g. the standalone
  * Practice page), not just as a lesson step.
+ *
+ * THEME: the terminal is a dark surface in every theme (term-* classes use
+ * fixed light text); the surrounding panel, chips, headings and hint use
+ * the curriculum classes (cur-*) so they follow Original / Light / Dark.
  * ============================================================================
  */
 import { useState, useRef, useEffect, useCallback } from 'react'
@@ -136,43 +140,43 @@ export default function GitSandbox({ task, onSolved }: Props) {
           Sandbox
         </span>
         {solved && (
-          <span className="flex items-center gap-1 text-[#3CCF4A] text-xs font-accent uppercase tracking-wider">
+          <span className="flex items-center gap-1 text-xs font-accent uppercase tracking-wider cur-success-text">
             <CheckCircle2 className="w-3.5 h-3.5" /> Solved
           </span>
         )}
       </div>
 
-      <h4 className="font-display font-bold text-white text-xl mb-2">Your turn</h4>
-      <p className="text-white/70 text-sm mb-4">{task.prompt}</p>
+      <h4 className="font-display font-bold text-xl mb-2 cur-text">Your turn</h4>
+      <p className="text-sm mb-4 cur-text-soft">{task.prompt}</p>
 
       <div className="grid gap-4 lg:grid-cols-[1.3fr_1fr]">
-        {/* Terminal */}
-        <div className="bg-black/40 rounded-xl border border-white/10 overflow-hidden flex flex-col" style={{ height: 320 }}>
-          <div className="flex items-center gap-2 px-3 py-2 border-b border-white/10 bg-white/[0.03]">
-            <Terminal className="w-3.5 h-3.5 text-white/40" />
-            <span className="text-white/40 text-xs font-mono">sandbox — {repo.currentBranch}</span>
+        {/* Terminal — always dark */}
+        <div className="cur-terminal rounded-xl overflow-hidden flex flex-col" style={{ height: 320 }}>
+          <div className="term-bar flex items-center gap-2 px-3 py-2 border-b" style={{ backgroundColor: 'rgba(255,255,255,0.04)' }}>
+            <Terminal className="w-3.5 h-3.5 term-dim" />
+            <span className="text-xs font-mono term-dim">sandbox — {repo.currentBranch}</span>
           </div>
           <div ref={scrollRef} className="flex-1 overflow-y-auto px-3 py-2 font-mono text-xs space-y-2">
             {history.length === 0 && (
-              <p className="text-white/30">Type a git command below and press Enter.</p>
+              <p className="term-dim">Type a git command below and press Enter.</p>
             )}
             {history.map((entry, i) => (
               <div key={i}>
-                <p className="text-[#F7B731]">$ {entry.cmd}</p>
+                <p className="term-prompt">$ {entry.cmd}</p>
                 {entry.output.map((line, j) => (
-                  <p key={j} className="text-white/70 pl-2 whitespace-pre-wrap">{line}</p>
+                  <p key={j} className="term-out pl-2 whitespace-pre-wrap">{line}</p>
                 ))}
               </div>
             ))}
           </div>
-          <div className="flex items-center gap-2 border-t border-white/10 px-3 py-2">
-            <span className="text-[#F7B731] font-mono text-xs">$</span>
+          <div className="term-bar flex items-center gap-2 border-t px-3 py-2">
+            <span className="term-prompt font-mono text-xs">$</span>
             <input
               ref={inputRef}
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') runCommand(input) }}
-              className="flex-1 bg-transparent text-white font-mono text-xs outline-none placeholder-white/25"
+              className="term-input flex-1 bg-transparent font-mono text-xs outline-none placeholder:text-[rgba(255,255,255,0.28)]"
               placeholder="git status"
               spellCheck={false}
             />
@@ -180,52 +184,53 @@ export default function GitSandbox({ task, onSolved }: Props) {
         </div>
 
         {/* Repo state panel */}
-        <div className="bg-white/[0.05] rounded-xl border border-white/10 p-4 space-y-4">
+        <div className="cur-card rounded-xl p-4 space-y-4">
           <div>
-            <p className="text-white/40 text-[10px] font-accent uppercase tracking-wider mb-2">New file (working dir only)</p>
+            <p className="text-[10px] font-accent uppercase tracking-wider mb-2 cur-text-faint">New file (working dir only)</p>
             <div className="flex gap-2">
               <input
                 value={newFileName}
                 onChange={e => setNewFileName(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter') addNewFile() }}
                 placeholder="README.md"
-                className="min-w-0 flex-1 rounded-lg border border-white/10 bg-white/10 px-2.5 py-1.5 text-xs text-white placeholder-white/30 outline-none focus:border-[#F7B731]/60"
+                className="cur-card cur-text min-w-0 flex-1 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#F7B731]"
               />
-              <button onClick={addNewFile} className="rounded-lg bg-white/10 px-2.5 py-1.5 text-white/70 hover:bg-white/15">
+              <button onClick={addNewFile} aria-label="Create file"
+                className="cur-btn rounded-lg px-2.5 py-1.5 hover:opacity-90 transition-opacity">
                 <FilePlus className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>
 
           <div>
-            <p className="text-white/40 text-[10px] font-accent uppercase tracking-wider mb-1.5">Working directory</p>
-            {untracked.length === 0 ? <p className="text-white/25 text-xs">Nothing untracked.</p> : (
+            <p className="text-[10px] font-accent uppercase tracking-wider mb-1.5 cur-text-faint">Working directory</p>
+            {untracked.length === 0 ? <p className="text-xs cur-text-faint">Nothing untracked.</p> : (
               <div className="flex flex-wrap gap-1.5">
-                {untracked.map(f => <span key={f} className="px-2 py-0.5 rounded text-[11px] bg-white/10 text-white/60">{f}</span>)}
+                {untracked.map(f => <span key={f} className="cur-track cur-text-soft px-2 py-0.5 rounded text-[11px]">{f}</span>)}
               </div>
             )}
           </div>
 
           <div>
-            <p className="text-white/40 text-[10px] font-accent uppercase tracking-wider mb-1.5">Staged</p>
-            {staged.length === 0 ? <p className="text-white/25 text-xs">Nothing staged.</p> : (
+            <p className="text-[10px] font-accent uppercase tracking-wider mb-1.5 cur-text-faint">Staged</p>
+            {staged.length === 0 ? <p className="text-xs cur-text-faint">Nothing staged.</p> : (
               <div className="flex flex-wrap gap-1.5">
-                {staged.map(f => <span key={f} className="px-2 py-0.5 rounded text-[11px] bg-[#F7B731]/20 text-[#F7B731]">{f}</span>)}
+                {staged.map(f => <span key={f} className="cur-pill px-2 py-0.5 rounded text-[11px]">{f}</span>)}
               </div>
             )}
           </div>
 
           <div>
-            <p className="text-white/40 text-[10px] font-accent uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+            <p className="text-[10px] font-accent uppercase tracking-wider mb-1.5 flex items-center gap-1.5 cur-text-faint">
               <BranchIcon className="w-3 h-3" /> Commit graph
             </p>
-            {repo.commits.length === 0 ? <p className="text-white/25 text-xs">No commits yet.</p> : (
+            {repo.commits.length === 0 ? <p className="text-xs cur-text-faint">No commits yet.</p> : (
               <div className="space-y-1.5">
                 {repo.commits.map(c => (
                   <div key={c.hash} className="flex items-center gap-2 text-xs">
-                    <span className="font-mono text-[#F7B731]/70">{c.hash}</span>
-                    <span className="text-white/70 truncate">{c.message}</span>
-                    <span className="ml-auto text-white/30">{c.branch}</span>
+                    <span className="font-mono cur-link">{c.hash}</span>
+                    <span className="truncate cur-text-soft">{c.message}</span>
+                    <span className="ml-auto cur-text-faint">{c.branch}</span>
                   </div>
                 ))}
               </div>
@@ -233,7 +238,7 @@ export default function GitSandbox({ task, onSolved }: Props) {
           </div>
 
           {!solved && (
-            <p className="text-white/35 text-xs pt-2 border-t border-white/10">Hint: {task.hint}</p>
+            <p className="text-xs pt-2 cur-text-faint" style={{ borderTop: '1px solid var(--cur-border)' }}>Hint: {task.hint}</p>
           )}
         </div>
       </div>
