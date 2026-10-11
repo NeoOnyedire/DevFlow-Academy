@@ -5,6 +5,11 @@
  * checklist) and reports completion via onAdvance, which lets LearnPage
  * decide where to navigate next. Extracted from the old CurriculumPanel —
  * same step logic, now driven by route params instead of internal index state.
+ *
+ * THEME: all colors come from the curriculum classes in index.css
+ * (cur-text, cur-card, cur-pill, ...) so Original / Light / Dark all stay
+ * readable. Avoid text-white / bg-white/NN here — the Light-theme global
+ * overrides remap them.
  */
 import { useEffect, useState, useCallback } from 'react'
 import { CheckCircle2, ExternalLink, Sparkles } from 'lucide-react'
@@ -71,7 +76,10 @@ export default function LessonContent({ module: mod, lessons, lessonId, onAdvanc
   const finishLesson = useCallback(async () => {
     if (!currentLesson) return
     if (isLoggedIn) {
-      await saveLessonStep(mod.id, currentLesson.id)
+      // saveLessonStep signature is (lessonId, moduleId, step, allLessonIdsInModule).
+      // This call previously passed (moduleId, lessonId) with no step, which the
+      // API rejected with a 400 — so server-side lesson progress never saved.
+      await saveLessonStep(currentLesson.id, mod.id, 'complete', lessons.map(l => l.id))
     } else {
       const next = Array.from(new Set([...loadGuestTaskIds(), currentLesson.id]))
       localStorage.setItem(GUEST_TASK_STORAGE, JSON.stringify(next))
@@ -91,8 +99,8 @@ export default function LessonContent({ module: mod, lessons, lessonId, onAdvanc
     onAdvance(lessons[lessonIndex + 1]?.id, moduleCompleted)
   }, [currentLesson, isLoggedIn, completedLessonIds, lessons, lessonIndex, mod.id, toggleModuleComplete, onAdvance])
 
-  if (isLoading) return <p className="text-sm" style={{ color: 'var(--text-on-accent-soft)' }}>Loading lessons…</p>
-  if (!currentLesson) return <p className="text-sm" style={{ color: 'var(--text-on-accent-soft)' }}>Lesson not found in this module.</p>
+  if (isLoading) return <p className="text-sm cur-text-soft">Loading lessons…</p>
+  if (!currentLesson) return <p className="text-sm cur-text-soft">Lesson not found in this module.</p>
 
   const isLessonDone = completedLessonIds.includes(currentLesson.id)
 
@@ -102,34 +110,34 @@ export default function LessonContent({ module: mod, lessons, lessonId, onAdvanc
         <div className="flex items-center gap-1.5 mb-4">
           {lessons.map(l => (
             <span key={l.id} className={`h-1.5 flex-1 rounded-full ${
-              completedLessonIds.includes(l.id) ? 'bg-[#3CCF4A]' : l.id === lessonId ? 'bg-[#F7B731]' : 'bg-black/10'
+              completedLessonIds.includes(l.id) ? 'cur-success-bg' : l.id === lessonId ? 'cur-pill' : 'cur-track'
             }`} />
           ))}
         </div>
       )}
-      <p className="font-accent text-xs uppercase tracking-wider mb-4" style={{ color: 'var(--text-on-accent-soft)' }}>
+      <p className="font-accent text-xs uppercase tracking-wider mb-4 cur-text-soft">
         Lesson {lessonIndex + 1} of {lessons.length} · Module {mod.num}: {mod.title}
       </p>
 
       {currentLesson.type === 'task' ? (
         <div>
-          <h2 className="font-display font-bold text-2xl mb-2" style={{ color: 'var(--text-on-accent)' }}>{currentLesson.title}</h2>
+          <h2 className="font-display font-bold text-2xl mb-2 cur-text">{currentLesson.title}</h2>
           <ul className="space-y-2 mb-5">
             {currentLesson.checklist?.map((item, i) => (
-              <li key={i} className="flex gap-2 text-sm" style={{ color: 'var(--text-on-accent-soft)' }}>
-                <span className="text-[#F7B731] flex-shrink-0">{i + 1}.</span> {item}
+              <li key={i} className="flex gap-2 text-sm cur-text-soft">
+                <span className="flex-shrink-0 font-semibold cur-link">{i + 1}.</span> {item}
               </li>
             ))}
           </ul>
           {currentLesson.externalUrl && (
             <a href={currentLesson.externalUrl} target="_blank" rel="noreferrer"
-              className="inline-flex items-center gap-2 text-[#F7B731] text-sm mb-5 hover:underline">
+              className="inline-flex items-center gap-2 text-sm mb-5 underline underline-offset-2 hover:opacity-80 cur-link">
               Open GitHub signup <ExternalLink className="w-3.5 h-3.5" />
             </a>
           )}
           <button onClick={finishLesson} disabled={isLessonDone}
             className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-display font-semibold text-sm transition-all
-              ${isLessonDone ? 'bg-[#3CCF4A]/20 text-[#3CCF4A]' : 'bg-rose-punch text-white hover:bg-[#ff3d5d]'}`}>
+              ${isLessonDone ? 'cur-correct cur-success-text' : 'bg-rose-punch text-[#ffffff] hover:bg-[#ff3d5d]'}`}>
             <CheckCircle2 className="w-4 h-4" />
             {isLessonDone ? 'Completed' : isLoggedIn ? 'Mark lesson complete' : 'Mark as done (this browser only)'}
           </button>
@@ -144,13 +152,13 @@ export default function LessonContent({ module: mod, lessons, lessonId, onAdvanc
         <GitSandbox task={currentLesson.sandbox} onSolved={finishLesson} />
       ) : (
         <div>
-          <h2 className="font-display font-bold text-2xl mb-3" style={{ color: 'var(--text-on-accent)' }}>{currentLesson.title}</h2>
-          <p className="text-sm mb-5" style={{ color: 'var(--text-on-accent-soft)' }}>
+          <h2 className="font-display font-bold text-2xl mb-3 cur-text">{currentLesson.title}</h2>
+          <p className="text-sm mb-5 cur-text-soft">
             {isLessonDone ? "You've completed this lesson." : "No sandbox for this one — you're all set."}
           </p>
           {!isLessonDone && (
             <button onClick={finishLesson}
-              className="bg-rose-punch text-white font-display font-semibold px-5 py-2.5 rounded-xl hover:bg-[#ff3d5d] transition-all">
+              className="bg-rose-punch text-[#ffffff] font-display font-semibold px-5 py-2.5 rounded-xl hover:bg-[#ff3d5d] transition-all">
               Mark lesson complete
             </button>
           )}
@@ -158,9 +166,9 @@ export default function LessonContent({ module: mod, lessons, lessonId, onAdvanc
       )}
 
       {showGitterNotice && (
-        <div className="mt-4 flex items-start gap-2 rounded-xl bg-[#F7B731]/15 border border-[#F7B731]/30 px-4 py-3">
-          <Sparkles className="w-4 h-4 text-[#F7B731] flex-shrink-0 mt-0.5" />
-          <p className="text-sm" style={{ color: 'var(--text-on-accent-soft)' }}>
+        <div className="cur-card mt-4 flex items-start gap-2 rounded-xl px-4 py-3">
+          <Sparkles className="w-4 h-4 flex-shrink-0 mt-0.5 cur-link" />
+          <p className="text-sm cur-text-soft">
             Activate Gitter AI first — open the Gitter chat in the bottom-right corner and add a free API key.
             This is required before completing Module 1.
           </p>
