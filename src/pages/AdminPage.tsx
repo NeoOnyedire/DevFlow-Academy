@@ -19,8 +19,14 @@
  * - A simple client-side search box over the users table (name, email,
  *   GitHub username) — the table has no pagination yet, so this is the
  *   quickest way to find one account among many.
+ *
+ * LINT FIX (react-hooks/set-state-in-effect): the mount effect used to
+ * call loadAll(), which sets isLoading/forbidden synchronously. The
+ * initial load now goes through fetchAdminData() and sets state only from
+ * its promise callbacks (isLoading already starts as true). loadAll()
+ * remains for the action handlers, which may set state freely.
  */
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState } from 'react'
 import PageWrapper from '../components/PageWrapper'
 import { useAuth } from '../context/AuthContext'
 import { ShieldAlert, Users, MessageCircle, Trophy, Trash2, RotateCcw, UserX } from 'lucide-react'
@@ -70,6 +76,26 @@ async function adminFetch(path: string, options?: RequestInit) {
   return data
 }
 
+/** Loads everything the dashboard shows. Pure request — no React state in here. */
+async function fetchAdminData(): Promise<{
+  stats: Stats
+  users: AdminUser[]
+  reviews: AdminReview[]
+  leaderboard: LeaderboardRow[]
+}> {
+  const [s, u, r, l] = await Promise.all([
+    adminFetch('stats'),
+    adminFetch('users'),
+    adminFetch('reviews'),
+    adminFetch('leaderboard'),
+  ])
+  return { stats: s, users: u.users, reviews: r.reviews, leaderboard: l.entries }
+}
+
+function isForbiddenError(err: unknown) {
+  return err instanceof Error && err.message.toLowerCase().includes('authorized')
+}
+
 export default function AdminPage() {
   const { isLoggedIn, user } = useAuth()
   const [forbidden, setForbidden] = useState(false)
@@ -82,28 +108,42 @@ export default function AdminPage() {
   const [userSearch, setUserSearch] = useState('')
   const [isBackfilling, setIsBackfilling] = useState(false)
 
-  const loadAll = useCallback(async () => {
+  // Initial load — isLoading already starts as true, so nothing is set synchronously here.
+  useEffect(() => {
+    let cancelled = false
+    fetchAdminData()
+      .then(data => {
+        if (cancelled) return
+        setStats(data.stats)
+        setUsers(data.users)
+        setReviews(data.reviews)
+        setLeaderboard(data.leaderboard)
+      })
+      .catch(err => {
+        if (!cancelled && isForbiddenError(err)) setForbidden(true)
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false)
+      })
+    return () => { cancelled = true }
+  }, [])
+
+  /** Reload after an admin action (called from event handlers). */
+  const loadAll = async () => {
     setIsLoading(true)
     setForbidden(false)
     try {
-      const [s, u, r, l] = await Promise.all([
-        adminFetch('stats'),
-        adminFetch('users'),
-        adminFetch('reviews'),
-        adminFetch('leaderboard'),
-      ])
-      setStats(s)
-      setUsers(u.users)
-      setReviews(r.reviews)
-      setLeaderboard(l.entries)
+      const data = await fetchAdminData()
+      setStats(data.stats)
+      setUsers(data.users)
+      setReviews(data.reviews)
+      setLeaderboard(data.leaderboard)
     } catch (err) {
-      if (err instanceof Error && err.message.toLowerCase().includes('authorized')) setForbidden(true)
+      if (isForbiddenError(err)) setForbidden(true)
     } finally {
       setIsLoading(false)
     }
-  }, [])
-
-  useEffect(() => { loadAll() }, [loadAll])
+  }
 
   const handleDeleteProgress = async (userId: string, name: string) => {
     if (!window.confirm(`Wipe ALL course progress for ${name}? This cannot be undone.`)) return
