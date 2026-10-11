@@ -18,6 +18,10 @@
  *
  * Avatar: /gittoprofilepicture.png everywhere Gitto previously showed a
  * 🐙 emoji — header, message bubbles, typing indicator, toggle button.
+ *
+ * LINT FIX (react-hooks/set-state-in-effect): the greeting used to be an
+ * effect watching isOpen/messages. It's now started from the event
+ * handlers that open the panel (toggleOpen) or clear the chat (clearChat).
  * ============================================================================
  */
 
@@ -72,25 +76,32 @@ export default function GittoHelper() {
   }, [messages])
 
   useEffect(() => {
-    if (isOpen && messages.length === 0) {
-      setIsTyping(true)
-      setTimeout(() => {
-        setIsTyping(false)
-        setMessages([{
-          role: 'gitto',
-          text: "Hey! I'm Gitto — ask me about account settings, themes, GitHub linking, or privacy. For Git questions, Gitter's your friend over on the right.",
-        }])
-      }, 700)
-    }
-  }, [isOpen, messages.length])
-
-  useEffect(() => {
     if (isOpen) setTimeout(() => inputRef.current?.focus(), 150)
   }, [isOpen])
+
+  /** Shows the typing indicator, then Gitto's first message. Called from event handlers only. */
+  const startGreeting = () => {
+    setIsTyping(true)
+    setTimeout(() => {
+      setIsTyping(false)
+      setMessages([{
+        role: 'gitto',
+        text: "Hey! I'm Gitto — ask me about account settings, themes, GitHub linking, or privacy. For Git questions, Gitter's your friend over on the right.",
+      }])
+    }, 700)
+  }
+
+  /** Opens/closes the panel; greets when it opens with an empty conversation. */
+  const toggleOpen = () => {
+    const willOpen = !isOpen
+    setIsOpen(willOpen)
+    if (willOpen && messages.length === 0 && !isTyping) startGreeting()
+  }
 
   const clearChat = () => {
     setMessages([])
     try { sessionStorage.removeItem(CHAT_STORAGE) } catch { /* noop */ }
+    if (!isTyping) startGreeting()
   }
 
   const sendMessage = useCallback((prompt = question) => {
@@ -218,7 +229,7 @@ export default function GittoHelper() {
 
       {/* Toggle button — one consistent FAQ icon, same pattern as Wrench/Settings in the nav */}
       <button
-        onClick={() => setIsOpen(v => !v)}
+        onClick={toggleOpen}
         className="flex items-center gap-2 px-4 py-3 font-display font-semibold text-white card-shadow
           transition-transform hover:scale-105 active:scale-95"
         style={{ borderRadius: 8, backgroundColor: GITTO_TEAL }}>

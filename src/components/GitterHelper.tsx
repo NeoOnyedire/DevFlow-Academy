@@ -29,6 +29,11 @@
  * - Typing indicator, avatar messages, greeting by name
  * - Login gate, 340px width cap
  * - Chat history persists to sessionStorage, cleared on logout
+ *
+ * LINT FIX (react-hooks/set-state-in-effect): the first-open greeting used
+ * to be an effect watching isOpen/hasGreeted. It's now triggered directly
+ * from the event handlers that open the panel (toggleOpen) or clear the
+ * chat (clearChat) via startGreeting() — event handlers can set state freely.
  */
 
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
@@ -174,22 +179,6 @@ export default function GitterHelper() {
     prevIsLoggedInRef.current = isLoggedIn
   }, [isLoggedIn])
 
-  // Greeting on first open — skipped if a persisted conversation already exists
-  useEffect(() => {
-    if (isOpen && isLoggedIn && user && !hasGreeted) {
-      const firstName = user.name.split(' ')[0]
-      setHasGreeted(true)
-      setIsTyping(true)
-      setTimeout(() => {
-        setIsTyping(false)
-        setMessages([{
-          role: 'gitter',
-          text: `Hey ${firstName}! I am Gitter, your Git guide. ${rolePath.helperTone} Ask me anything about Git, GitHub, or your dev career.`,
-        }])
-      }, 900)
-    }
-  }, [isOpen, isLoggedIn, user, hasGreeted, rolePath.helperTone])
-
   // Proactive message when user completes a module
   useEffect(() => {
     const prevIds = prevCompletedIdsRef.current
@@ -218,6 +207,28 @@ export default function GitterHelper() {
       setTimeout(() => inputRef.current?.focus(), 150)
     }
   }, [isOpen, isLoggedIn])
+
+  /** Shows the typing indicator, then Gitter's first message. Called from event handlers only. */
+  const startGreeting = () => {
+    if (!user) return
+    const firstName = user.name.split(' ')[0]
+    setHasGreeted(true)
+    setIsTyping(true)
+    setTimeout(() => {
+      setIsTyping(false)
+      setMessages([{
+        role: 'gitter',
+        text: `Hey ${firstName}! I am Gitter, your Git guide. ${rolePath.helperTone} Ask me anything about Git, GitHub, or your dev career.`,
+      }])
+    }, 900)
+  }
+
+  /** Opens/closes the panel; greets on the first open (skipped if a conversation was restored). */
+  const toggleOpen = () => {
+    const willOpen = !isOpen
+    setIsOpen(willOpen)
+    if (willOpen && isLoggedIn && user && !hasGreeted) startGreeting()
+  }
 
   /** Save a newly entered API key and switch into AI mode. */
   const saveApiKey = () => {
@@ -250,11 +261,11 @@ export default function GitterHelper() {
     }])
   }
 
-  /** Clears the on-screen conversation and its persisted copy — a fresh start. */
+  /** Clears the on-screen conversation and its persisted copy — a fresh start, with a fresh greeting. */
   const clearChat = () => {
     setMessages([])
-    setHasGreeted(false)
     try { sessionStorage.removeItem(CHAT_STORAGE) } catch { /* noop */ }
+    startGreeting()
   }
 
   const sendMessage = useCallback(async (prompt = question) => {
@@ -574,7 +585,7 @@ export default function GitterHelper() {
           </div>
         )}
         <button
-          onClick={() => setIsOpen(v => !v)}
+          onClick={toggleOpen}
           className="flex items-center gap-2 bg-rose-punch px-4 py-3
             font-display font-semibold text-white card-shadow
             transition-transform hover:scale-105 active:scale-95"
