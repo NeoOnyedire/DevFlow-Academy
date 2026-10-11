@@ -13,6 +13,12 @@
  * (api/auth/login.ts, api/auth/register.ts, etc.) are untouched — this
  * only hides the UI path to them.
  *
+ * LINT FIX (react-hooks/set-state-in-effect): the form used to reset its
+ * fields from inside an effect whenever the modal opened or the mode
+ * changed. Now the exported AuthModal renders nothing while closed and
+ * mounts <AuthModalBody key={mode}> while open, so every open and every
+ * mode switch gets fresh form state for free — no effect, no reset code.
+ *
  * Props: none — reads from AuthContext
  * ============================================================================
  */
@@ -26,7 +32,13 @@ import { buildGitHubAuthorizeUrl, isGitHubOAuthConfigured } from '../lib/githubO
 const EMAIL_LOGIN_ENABLED = false
 
 export default function AuthModal() {
-  const { isAuthModalOpen, authModalMode, closeAuthModal, login, register, requestPasswordReset, openAuthModal } = useAuth()
+  const { isAuthModalOpen, authModalMode } = useAuth()
+  if (!isAuthModalOpen) return null
+  return <AuthModalBody key={authModalMode} />
+}
+
+function AuthModalBody() {
+  const { authModalMode, closeAuthModal, login, register, requestPasswordReset, openAuthModal } = useAuth()
 
   // Form fields
   const [name, setName] = useState('')
@@ -39,26 +51,21 @@ export default function AuthModal() {
 
   const githubEnabled = isGitHubOAuthConfigured()
 
-  // Auto-focus the first input when modal opens
+  // Auto-focus the first input when the modal mounts
   const firstInputRef = useRef<HTMLInputElement>(null)
   useEffect(() => {
-    if (isAuthModalOpen) {
-      setTimeout(() => firstInputRef.current?.focus(), 100)
-      // Reset form state on open / mode switch
-      setError('')
-      setInfoMessage('')
-      setIsSubmitting(false)
-    }
-  }, [isAuthModalOpen, authModalMode])
+    const t = setTimeout(() => firstInputRef.current?.focus(), 100)
+    return () => clearTimeout(t)
+  }, [])
 
-  // Close modal on Escape key
+  // Close modal on Escape key (this component only exists while open)
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') closeAuthModal()
     }
-    if (isAuthModalOpen) window.addEventListener('keydown', handleKey)
+    window.addEventListener('keydown', handleKey)
     return () => window.removeEventListener('keydown', handleKey)
-  }, [isAuthModalOpen, closeAuthModal])
+  }, [closeAuthModal])
 
   /** Kick off the GitHub OAuth redirect. */
   const handleGitHubLogin = () => {
@@ -95,10 +102,8 @@ export default function AuthModal() {
     setIsSubmitting(false)
 
     if (result.ok) {
+      // Closing unmounts this component, which discards the form state.
       closeAuthModal()
-      setName('')
-      setEmail('')
-      setPassword('')
     } else {
       setError(result.message)
     }
@@ -127,9 +132,6 @@ export default function AuthModal() {
       setError(result.message)
     }
   }
-
-  // Don't render if modal is closed
-  if (!isAuthModalOpen) return null
 
   const isLogin = authModalMode === 'login'
   // Forgot-password is only reachable from a link inside the email form,
@@ -209,7 +211,7 @@ export default function AuthModal() {
 
             <p className="text-center text-white/50 text-sm mt-5">
               <button
-                onClick={() => { openAuthModal('login'); setError(''); setInfoMessage('') }}
+                onClick={() => openAuthModal('login')}
                 className="text-[#F7B731] hover:underline font-medium"
               >
                 Back to Log In
@@ -319,7 +321,7 @@ export default function AuthModal() {
                       {isLogin && (
                         <button
                           type="button"
-                          onClick={() => { openAuthModal('forgot-password'); setError('') }}
+                          onClick={() => openAuthModal('forgot-password')}
                           className="font-accent text-[10px] uppercase tracking-[0.1em] text-[#F7B731]/80 hover:text-[#F7B731] transition-colors"
                         >
                           Forgot password?
@@ -361,10 +363,7 @@ export default function AuthModal() {
                 <p className="text-center text-white/50 text-sm mt-5">
                   {isLogin ? "Don't have an account? " : 'Already have an account? '}
                   <button
-                    onClick={() => {
-                      openAuthModal(isLogin ? 'register' : 'login')
-                      setError('')
-                    }}
+                    onClick={() => openAuthModal(isLogin ? 'register' : 'login')}
                     className="text-[#F7B731] hover:underline font-medium"
                   >
                     {isLogin ? 'Join Free' : 'Log In'}
