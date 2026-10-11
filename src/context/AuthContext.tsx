@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 /**
  * ============================================================================
  * AuthContext.tsx
@@ -26,6 +27,12 @@
  * On mount, this provider asks the server "who am I?" via
  * GET /api/auth/me (the cookie travels automatically) rather than
  * reading a cached user out of localStorage.
+ *
+ * LINT: the file-level disable above is for react-refresh — this file
+ * exports both the AuthProvider component and the useAuth hook, which is
+ * the standard context pattern (same as AppContext.tsx). The mount
+ * effect also no longer calls refreshUser() (which sets state); it does
+ * its own fetch and only sets state from the promise callbacks.
  * ============================================================================
  */
 
@@ -102,9 +109,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   // On mount: restore session from the cookie, not localStorage.
+  // State is only set from the promise callbacks, never synchronously.
   useEffect(() => {
-    refreshUser().finally(() => setIsLoadingUser(false))
-  }, [refreshUser])
+    let cancelled = false
+    fetch('/api/auth/me', { credentials: 'same-origin' })
+      .then(response => response.json())
+      .then(data => { if (!cancelled) setUser(data.user || null) })
+      .catch(() => { if (!cancelled) setUser(null) })
+      .finally(() => { if (!cancelled) setIsLoadingUser(false) })
+    return () => { cancelled = true }
+  }, [])
 
   const login = useCallback(async (email: string, password: string): Promise<AuthResult> => {
     try {
