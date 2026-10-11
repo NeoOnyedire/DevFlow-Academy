@@ -10,6 +10,11 @@
  * tree-* classes (Original = brown panel, Light = white panel, Dark = dark
  * panel). It deliberately avoids text-white / bg-white/NN and bg-[#4A2F2F],
  * which the global theme overrides remap in ways that broke this panel.
+ *
+ * LINT FIX (react-hooks/set-state-in-effect): the effect used to call
+ * setCompletedLessonIds([]) when no module was active. The completed ids
+ * are now stored with the key they were fetched for and derived at render
+ * time, so the effect only sets state from the promise callback.
  */
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -42,20 +47,24 @@ export default function CurriculumTree({ isOpen, onClose, activeModuleId, active
   const navigate = useNavigate()
   const { isLoggedIn } = useAuth()
   const { modules, completedModules } = useApp()
-  const [completedLessonIds, setCompletedLessonIds] = useState<string[]>([])
+
+  const loadKey = `${activeModuleId ?? ''}:${isLoggedIn ? 'user' : 'guest'}`
+  const [loaded, setLoaded] = useState<{ key: string; ids: string[] } | null>(null)
+  const completedLessonIds = activeModuleId && loaded?.key === loadKey ? loaded.ids : []
 
   const canWatchModule = (id: string) => isLoggedIn || id === GUEST_PREVIEW_MODULE
 
   useEffect(() => {
-    if (!activeModuleId) { setCompletedLessonIds([]); return }
+    if (!activeModuleId) return
     let cancelled = false
-    const load = async () => {
-      const ids = isLoggedIn ? await fetchCompletedLessonIds(activeModuleId) : loadGuestTaskIds()
-      if (!cancelled) setCompletedLessonIds(ids)
-    }
-    load()
+    const idsPromise = isLoggedIn
+      ? fetchCompletedLessonIds(activeModuleId)
+      : Promise.resolve(loadGuestTaskIds())
+    idsPromise.then(ids => {
+      if (!cancelled) setLoaded({ key: loadKey, ids })
+    })
     return () => { cancelled = true }
-  }, [activeModuleId, isLoggedIn])
+  }, [activeModuleId, isLoggedIn, loadKey])
 
   const go = (moduleId: string, lessonId?: string) => {
     navigate(lessonId ? `/learn/${moduleId}/${lessonId}` : `/learn/${moduleId}`)
