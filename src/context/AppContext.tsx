@@ -35,10 +35,22 @@
  * /learn route + CurriculumTree slide-over on LearnPage. openCurriculum
  * therefore navigates to /learn/:moduleId instead of only flipping
  * isCurriculumOpen (which nothing renders anymore).
+ *
+ * LINT FIX (react-hooks/set-state-in-effect): effects here no longer call
+ * setState synchronously.
+ *  - Reviews / leaderboard: the initial-load effects call plain async
+ *    request helpers and set state only from the promise callback.
+ *    refreshReviews / refreshLeaderboard (used by event handlers) still
+ *    toggle their loading flags.
+ *  - Progress: isLoadingProgress is derived from which user's progress has
+ *    finished loading, instead of being set to true inside the effect.
+ *  - Logout: instead of an effect + ref, the "user went from signed-in to
+ *    signed-out" reset happens during render using React's documented
+ *    "adjust state when a value changes" pattern.
  * ============================================================================
  */
 
-import { createContext, useContext, useState, useCallback, useMemo, useEffect, useRef, type ReactNode } from 'react'
+import { createContext, useContext, useState, useCallback, useMemo, useEffect, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from './AuthContext'
 
@@ -232,6 +244,33 @@ function buildWeeklyChallenge(role: LearningRole): WeeklyChallenge {
   }
 }
 
+/**
+ * Plain request helpers — no React state in here. The initial-load effects
+ * and the refresh* callbacks both use them, so the effects never have to
+ * call something that sets state synchronously.
+ */
+async function requestReviews(): Promise<{ reviews: PublicReview[] | null; error: string | null }> {
+  try {
+    const response = await fetch('/api/reviews')
+    const data = await response.json()
+    if (!response.ok) return { reviews: null, error: data.error || 'Could not load reviews.' }
+    return { reviews: Array.isArray(data.reviews) ? data.reviews : [], error: null }
+  } catch {
+    return { reviews: null, error: 'Could not reach the server to load reviews.' }
+  }
+}
+
+/** Resolves to the ranked rows, or null if the request failed (keep whatever was shown). */
+async function requestLeaderboard(): Promise<LeaderboardEntry[] | null> {
+  try {
+    const response = await fetch(`/api/leaderboard?week=${encodeURIComponent(getWeekKey())}`)
+    const data = await response.json()
+    return Array.isArray(data.entries) ? data.entries : []
+  } catch {
+    return null
+  }
+}
+
 /** Curriculum data — free YouTube videos from reputable channels */
 const CURRICULUM_MODULES: CurriculumModule[] = [
   {
@@ -326,6 +365,7 @@ const CURRICULUM_MODULES: CurriculumModule[] = [
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const { user, refreshUser } = useAuth()
+  const userId = user?.id ?? null
   const navigate = useNavigate()
   const [role, setRoleState] = useState<LearningRole>(() => {
     return (localStorage.getItem('devflow_role') as LearningRole | null) || 'junior-dev'
@@ -351,27 +391,27 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [isLoadingReviews, setIsLoadingReviews] = useState(true)
   const [reviewsError, setReviewsError] = useState<string | null>(null)
 
+  /** Manual refresh (event handlers) — shows the loading state while it runs. */
   const refreshReviews = useCallback(async () => {
     setIsLoadingReviews(true)
     setReviewsError(null)
-    try {
-      const response = await fetch('/api/reviews')
-      const data = await response.json()
-      if (!response.ok) {
-        setReviewsError(data.error || 'Could not load reviews.')
-        return
-      }
-      setReviews(Array.isArray(data.reviews) ? data.reviews : [])
-    } catch {
-      setReviewsError('Could not reach the server to load reviews.')
-    } finally {
-      setIsLoadingReviews(false)
-    }
+    const result = await requestReviews()
+    if (result.reviews) setReviews(result.reviews)
+    setReviewsError(result.error)
+    setIsLoadingReviews(false)
   }, [])
 
+  // Initial load — isLoadingReviews already starts as true, so no sync setState here.
   useEffect(() => {
-    refreshReviews()
-  }, [refreshReviews])
+    let cancelled = false
+    requestReviews().then(result => {
+      if (cancelled) return
+      if (result.reviews) setReviews(result.reviews)
+      setReviewsError(result.error)
+      setIsLoadingReviews(false)
+    })
+    return () => { cancelled = true }
+  }, [])
 
   // ---- Leaderboard — shared across everyone, via /api/leaderboard ----
   // Backed by a real Postgres table (db/schema.sql) rather than Redis —
@@ -380,23 +420,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([])
   const [isLoadingLeaderboard, setIsLoadingLeaderboard] = useState(true)
 
+  /** Manual refresh (event handlers). A failed request leaves the last good rows in place. */
   const refreshLeaderboard = useCallback(async () => {
     setIsLoadingLeaderboard(true)
-    try {
-      const response = await fetch(`/api/leaderboard?week=${encodeURIComponent(getWeekKey())}`)
-      const data = await response.json()
-      setLeaderboard(Array.isArray(data.entries) ? data.entries : [])
-    } catch {
-      // Leave whatever was last successfully loaded in place — the
-      // leaderboard just won't refresh this time.
-    } finally {
-      setIsLoadingLeaderboard(false)
-    }
+    const entries = await requestLeaderboard()
+    if (entries) setLeaderboard(entries)
+    setIsLoadingLeaderboard(false)
   }, [])
 
+  // Initial load — isLoadingLeaderboard already starts as true.
   useEffect(() => {
-    refreshLeaderboard()
-  }, [refreshLeaderboard])
+    let cancelled = false
+    requestLeaderboard().then(entries => {
+      if (cancelled) return
+      if (entries) setLeaderboard(entries)
+      setIsLoadingLeaderboard(false)
+    })
+    return () => { cancelled = true }
+  }, [])
 
   // ---- Progress State ----
   // Guests: localStorage is the only source of truth, per browser.
@@ -407,15 +448,36 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const saved = localStorage.getItem('devflow_progress_guest')
     return saved ? JSON.parse(saved) : []
   })
-  const [isLoadingProgress, setIsLoadingProgress] = useState(false)
-  const prevUserIdRef = useRef<string | null>(null)
+  // Which user's server progress has finished loading (null = none yet).
+  const [progressLoadedFor, setProgressLoadedFor] = useState<string | null>(null)
+  const isLoadingProgress = !!userId && progressLoadedFor !== userId
+
+  // ---- Weekly challenge completion ----
+  // "Have I completed this challenge?" is derived entirely from
+  // /api/leaderboard?mine=1 — a row for (user_id, challengeId) in
+  // leaderboard_entries already is proof of completion, so there's no
+  // separate flag to keep in sync or lose when a browser is cleared.
+  const [completedChallengeIds, setCompletedChallengeIds] = useState<string[]>([])
+
+  // On logout, fall back to the guest's local progress and forget the
+  // previous account's data. Done during render (not in an effect) using
+  // React's "adjust state when a value changes" pattern.
+  const [prevUserId, setPrevUserId] = useState<string | null>(null)
+  if (prevUserId !== userId) {
+    setPrevUserId(userId)
+    if (prevUserId && !userId) {
+      const saved = localStorage.getItem('devflow_progress_guest')
+      setCompletedModules(saved ? JSON.parse(saved) : [])
+      setProgressLoadedFor(null)
+      setCompletedChallengeIds([])
+    }
+  }
 
   // Fetch real progress whenever a real account becomes available
   // (fresh login, or page load with an existing session cookie).
   useEffect(() => {
-    if (!user) return
+    if (!userId) return
     let cancelled = false
-    setIsLoadingProgress(true)
     fetch('/api/progress', { credentials: 'same-origin' })
       .then(res => res.json())
       .then(data => {
@@ -427,20 +489,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
         // the guest list) rather than wiping progress out from under the user.
       })
       .finally(() => {
-        if (!cancelled) setIsLoadingProgress(false)
+        if (!cancelled) setProgressLoadedFor(userId)
       })
     return () => { cancelled = true }
-  }, [user])
-
-  // On logout, fall back to the guest's local progress rather than
-  // continuing to show the previous account's completed modules.
-  useEffect(() => {
-    if (prevUserIdRef.current && !user) {
-      const saved = localStorage.getItem('devflow_progress_guest')
-      setCompletedModules(saved ? JSON.parse(saved) : [])
-    }
-    prevUserIdRef.current = user?.id ?? null
-  }, [user])
+  }, [userId])
 
   const rolePath = useMemo(() => {
     return ROLE_PATHS.find(path => path.id === role) || ROLE_PATHS[0]
@@ -454,18 +506,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const weeklyChallenge = useMemo(() => buildWeeklyChallenge(role), [role])
 
-  // "Have I completed this challenge?" is now derived entirely from
-  // /api/leaderboard?mine=1 — a row for (user_id, challengeId) in
-  // leaderboard_entries already is proof of completion, so there's no
-  // separate flag to keep in sync or lose when a browser is cleared.
-  const [completedChallengeIds, setCompletedChallengeIds] = useState<string[]>([])
   const hasCompletedWeeklyChallenge = completedChallengeIds.includes(weeklyChallenge.id)
 
   useEffect(() => {
-    if (!user) {
-      setCompletedChallengeIds([])
-      return
-    }
+    if (!userId) return
     let cancelled = false
     fetch('/api/leaderboard?mine=1', { credentials: 'same-origin' })
       .then(res => res.json())
@@ -479,7 +523,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         // successful fetch.
       })
     return () => { cancelled = true }
-  }, [user])
+  }, [userId])
 
   const setRole = useCallback((nextRole: LearningRole) => {
     setRoleState(nextRole)
@@ -559,7 +603,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const willComplete = !prev.includes(id)
       const next = willComplete ? [...prev, id] : prev.filter(m => m !== id)
 
-      if (user) {
+      if (userId) {
         fetch('/api/progress', {
           method: 'POST',
           credentials: 'same-origin',
@@ -574,7 +618,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       return next
     })
-  }, [user])
+  }, [userId])
 
   const connectGitHub = useCallback(async (username: string) => {
     const cleaned = username.trim().replace(/^@/, '')
