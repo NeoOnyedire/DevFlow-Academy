@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 /**
  * ThemeContext.tsx
  *
@@ -10,6 +11,10 @@
  *
  * Available to guests and logged-in users alike; it's a device
  * preference, not an account setting, so it doesn't require auth.
+ *
+ * LINT: the file-level disable above is for react-refresh — this file
+ * exports both the ThemeProvider component and the useTheme hook, which
+ * is the standard context pattern (same as AppContext.tsx).
  */
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react'
 
