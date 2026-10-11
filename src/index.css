@@ -192,6 +192,68 @@
     background-color: rgba(0, 0, 0, 0.05);
     border-color: var(--text-on-accent-soft);
   }
+
+  /* ------------------------------------------------------------------
+     CURRICULUM THEME CLASSES
+     Everything on /learn (LearnPage, LessonContent, LessonPlayer,
+     QuizStep, GitSandbox, CurriculumTree) uses these instead of
+     text-white / bg-white/NN. Those utilities get globally remapped by
+     the Light-theme overrides at the bottom of this file, which is what
+     used to break contrast on the curriculum. The --cur-* / --tree-*
+     variables are defined per theme in the THEME SYSTEM block below.
+     ------------------------------------------------------------------ */
+  .bg-curriculum { background-color: var(--cur-bg); }
+
+  .cur-text       { color: var(--cur-text); }
+  .cur-text-soft  { color: var(--cur-text-soft); }
+  .cur-text-faint { color: var(--cur-text-faint); }
+  .cur-link       { color: var(--cur-link); }
+
+  .cur-success-text { color: var(--cur-success); }
+  .cur-danger-text  { color: var(--cur-danger); }
+  .cur-success-bg   { background-color: var(--cur-success); }
+  .cur-track        { background-color: var(--cur-track); }
+
+  .cur-card {
+    background-color: var(--cur-surface);
+    border: 1px solid var(--cur-border);
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+  }
+  .cur-card-hover:hover { background-color: var(--cur-surface-hover); }
+
+  .cur-pill { background-color: var(--cur-accent-bg); color: var(--cur-accent-fg); }
+  .cur-btn  { background-color: var(--cur-btn-bg);    color: var(--cur-btn-fg); }
+
+  .cur-correct {
+    background-color: color-mix(in srgb, var(--cur-success) 16%, transparent);
+    border: 1px solid var(--cur-success);
+  }
+  .cur-wrong {
+    background-color: color-mix(in srgb, var(--cur-danger) 14%, transparent);
+    border: 1px solid var(--cur-danger);
+  }
+
+  /* Sandbox terminal — a dark surface in every theme, so its text is
+     fixed light rather than theme-driven. */
+  .cur-terminal {
+    background-color: var(--cur-terminal-bg);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+  }
+  .term-bar    { border-color: rgba(255, 255, 255, 0.12); }
+  .term-prompt { color: #F7B731; }
+  .term-out    { color: rgba(255, 255, 255, 0.78); }
+  .term-dim    { color: rgba(255, 255, 255, 0.4); }
+  .term-input  { color: #F3F4F8; }
+
+  /* Work Tree slide-over */
+  .tree-panel  { background-color: var(--tree-bg); color: var(--tree-text); }
+  .tree-text   { color: var(--tree-text); }
+  .tree-soft   { color: var(--tree-text-soft); }
+  .tree-faint  { color: var(--tree-text-faint); }
+  .tree-border { border-color: var(--tree-border); }
+  .tree-hover:hover { background-color: var(--tree-hover); }
+  .tree-active { background-color: var(--tree-active); }
+  .tree-chip   { background-color: var(--tree-active); }
 }
 
 /**
@@ -302,6 +364,11 @@ html::-webkit-scrollbar-thumb:hover {
    surface below — previously this text stayed dark-on-dark and made the
    whole page look like nothing had changed.
 
+   --cur-* / --tree-* are the curriculum's own palette (see CURRICULUM THEME
+   CLASSES above). Original keeps the yellow canvas with dark text and the
+   brown Work Tree panel; Light uses an off-white canvas with white cards;
+   Dark uses the near-black canvas with dark cards.
+
    --card-light intentionally does NOT change in dark mode: the small "light
    card" components (lesson cards, scenario cards, badges) keep their cream
    background and dark #2A2A2A text as designed island-cards in every theme
@@ -312,6 +379,32 @@ html::-webkit-scrollbar-thumb:hover {
   --text-on-accent: #2A2A2A;
   --text-on-accent-soft: rgba(42, 42, 42, 0.65);
   --border-on-accent: rgba(42, 42, 42, 0.18);
+
+  /* ---- Curriculum palette: Original ---- */
+  --cur-bg: #F7B731;
+  --cur-text: #2A2A2A;
+  --cur-text-soft: rgba(42, 42, 42, 0.7);
+  --cur-text-faint: rgba(42, 42, 42, 0.48);
+  --cur-border: rgba(42, 42, 42, 0.18);
+  --cur-surface: rgba(255, 255, 255, 0.55);
+  --cur-surface-hover: rgba(255, 255, 255, 0.8);
+  --cur-track: rgba(42, 42, 42, 0.16);
+  --cur-accent-bg: #2A2A2A;
+  --cur-accent-fg: #F7B731;
+  --cur-link: #2A2A2A;
+  --cur-success: #1F8E2C;
+  --cur-danger: #C4153A;
+  --cur-btn-bg: #2A2A2A;
+  --cur-btn-fg: #FFFFFF;
+  --cur-terminal-bg: #1F1F23;
+
+  --tree-bg: #4A2F2F;
+  --tree-text: #FFFFFF;
+  --tree-text-soft: rgba(255, 255, 255, 0.72);
+  --tree-text-faint: rgba(255, 255, 255, 0.42);
+  --tree-border: rgba(255, 255, 255, 0.1);
+  --tree-hover: rgba(255, 255, 255, 0.06);
+  --tree-active: rgba(255, 255, 255, 0.12);
 }
 
 [data-theme="light"] {
@@ -324,6 +417,31 @@ html::-webkit-scrollbar-thumb:hover {
   --text-secondary: #6C757D;
   --border-soft: rgba(33, 37, 41, 0.1);
   --nav-bg: rgba(255, 255, 255, 0.92);
+
+  --cur-bg: #F8F9FA;
+  --cur-text: #212529;
+  --cur-text-soft: rgba(33, 37, 41, 0.7);
+  --cur-text-faint: rgba(33, 37, 41, 0.48);
+  --cur-border: rgba(33, 37, 41, 0.14);
+  --cur-surface: #FFFFFF;
+  --cur-surface-hover: #F1F3F5;
+  --cur-track: rgba(33, 37, 41, 0.12);
+  --cur-accent-bg: #F7B731;
+  --cur-accent-fg: #2A2A2A;
+  --cur-link: #9A6700;
+  --cur-success: #2FAE3C;
+  --cur-danger: #D6264A;
+  --cur-btn-bg: #212529;
+  --cur-btn-fg: #FFFFFF;
+  --cur-terminal-bg: #1E2127;
+
+  --tree-bg: #FFFFFF;
+  --tree-text: #212529;
+  --tree-text-soft: rgba(33, 37, 41, 0.72);
+  --tree-text-faint: rgba(33, 37, 41, 0.45);
+  --tree-border: rgba(33, 37, 41, 0.12);
+  --tree-hover: rgba(33, 37, 41, 0.05);
+  --tree-active: rgba(33, 37, 41, 0.09);
 }
 
 [data-theme="dark"] {
@@ -338,6 +456,31 @@ html::-webkit-scrollbar-thumb:hover {
   --text-on-accent-soft: rgba(243, 244, 248, 0.68);
   --border-on-accent: rgba(243, 244, 248, 0.18);
   --nav-bg: rgba(10, 11, 16, 0.92);
+
+  --cur-bg: #0A0B10;
+  --cur-text: #F3F4F8;
+  --cur-text-soft: rgba(243, 244, 248, 0.7);
+  --cur-text-faint: rgba(243, 244, 248, 0.45);
+  --cur-border: rgba(243, 244, 248, 0.14);
+  --cur-surface: #14161F;
+  --cur-surface-hover: #1B1E2A;
+  --cur-track: rgba(255, 255, 255, 0.12);
+  --cur-accent-bg: #FFC94D;
+  --cur-accent-fg: #2A2A2A;
+  --cur-link: #FFC94D;
+  --cur-success: #46E85B;
+  --cur-danger: #FF4D6D;
+  --cur-btn-bg: #262A38;
+  --cur-btn-fg: #FFFFFF;
+  --cur-terminal-bg: #07080C;
+
+  --tree-bg: #14161F;
+  --tree-text: #F3F4F8;
+  --tree-text-soft: rgba(243, 244, 248, 0.72);
+  --tree-text-faint: rgba(243, 244, 248, 0.45);
+  --tree-border: rgba(255, 255, 255, 0.09);
+  --tree-hover: rgba(255, 255, 255, 0.05);
+  --tree-active: rgba(255, 255, 255, 0.1);
 }
 
 body {
@@ -353,12 +496,14 @@ body {
 [data-theme="light"] .bg-\[\#4A2F2F\]\/60,
 [data-theme="dark"]  .bg-\[\#4A2F2F\]\/60 { background-color: var(--card-dark) !important; }
 
-/* Full-page yellow canvases (Learn, Practice, the guest Dashboard preview,
-   the closing footer CTA) become a real dark surface in dark mode instead
-   of just tinting the yellow — this is the actual fix for dark mode barely
-   looking different from Original. Small accent usages of yellow (badges,
-   buttons that reference var(--sun-yellow) inline) are untouched, since
-   those still read fine against dark text in every theme. */
+/* Full-page yellow canvases (Practice, the guest Dashboard preview, the
+   closing footer CTA) become a real dark surface in dark mode instead
+   of just tinting the yellow — this is the actual fix for dark mode
+   barely looking different from Original. Small accent usages of yellow
+   (badges, buttons that reference var(--sun-yellow) inline) are
+   untouched, since those still read fine against dark text in every
+   theme. The curriculum (/learn) no longer relies on this rule — it uses
+   .bg-curriculum, driven by --cur-bg. */
 [data-theme="dark"] .bg-sun-yellow {
   background-color: var(--espresso) !important;
 }

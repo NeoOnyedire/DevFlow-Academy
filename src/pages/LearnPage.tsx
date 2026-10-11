@@ -6,6 +6,12 @@
  * incomplete lesson and replaces the URL. moduleId + lessonId -> renders
  * LessonContent. The CurriculumTree slides over the top as navigation —
  * it holds no lesson-flow state of its own.
+ *
+ * THEME: the page sits on `bg-curriculum` and every color comes from the
+ * --cur-* variables in index.css (Original = yellow canvas / dark text,
+ * Light = off-white canvas / white cards, Dark = near-black canvas / dark
+ * cards). No text-white or bg-white/NN utilities are used here, because
+ * the global Light-theme overrides remap those and used to break contrast.
  */
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
@@ -81,21 +87,21 @@ export default function LearnPage() {
   }
 
   return (
-    <PageWrapper bg="bg-sun-yellow">
+    <PageWrapper bg="bg-curriculum">
       <section className="relative px-[6vw] py-10 md:py-14 min-h-screen">
         <div className="flex items-center justify-between gap-4 mb-8">
           <div>
-            <p className="font-accent text-xs uppercase tracking-[0.14em]" style={{ color: 'var(--text-on-accent-soft)' }}>
+            <p className="font-accent text-xs uppercase tracking-[0.14em] cur-text-soft">
               {rolePath.label} · {completedModules.length}/{modules.length} modules
             </p>
-            <h1 className="font-display font-bold tracking-[0.02em] leading-none mt-1"
-              style={{ fontSize: 'clamp(30px, 4.5vw, 56px)', color: 'var(--text-on-accent)' }}>
+            <h1 className="font-display font-bold tracking-[0.02em] leading-none mt-1 cur-text"
+              style={{ fontSize: 'clamp(30px, 4.5vw, 56px)' }}>
               Curriculum
             </h1>
           </div>
           <button
             onClick={() => setIsTreeOpen(true)}
-            className="flex items-center gap-2 bg-[#2A2A2A] text-white font-display font-semibold px-4 py-2.5 rounded-xl hover:scale-105 transition-transform flex-shrink-0"
+            className="cur-btn flex items-center gap-2 font-display font-semibold px-4 py-2.5 rounded-xl hover:scale-105 transition-transform flex-shrink-0"
           >
             <PanelRightOpen className="w-4 h-4" /> <span className="hidden sm:inline">Work tree</span>
           </button>
@@ -111,17 +117,17 @@ export default function LearnPage() {
 
         {activeModule && !canWatchModule(activeModule.id) && (
           <div className="flex flex-col items-center justify-center text-center py-24 max-w-md mx-auto">
-            <div className="w-16 h-16 rounded-full bg-black/10 flex items-center justify-center mb-4">
-              <Lock className="w-8 h-8" style={{ color: 'var(--text-on-accent-soft)' }} />
+            <div className="cur-card w-16 h-16 rounded-full flex items-center justify-center mb-4">
+              <Lock className="w-8 h-8 cur-text-soft" />
             </div>
-            <h2 className="font-display font-bold text-2xl mb-2" style={{ color: 'var(--text-on-accent)' }}>
+            <h2 className="font-display font-bold text-2xl mb-2 cur-text">
               This module is locked
             </h2>
-            <p className="text-sm mb-6" style={{ color: 'var(--text-on-accent-soft)' }}>
+            <p className="text-sm mb-6 cur-text-soft">
               You've completed the free preview. Create a free account to unlock all {modules.length} modules.
             </p>
             <button onClick={() => openAuthModal('register')}
-              className="bg-rose-punch text-white font-display font-semibold px-6 py-3 rounded-xl hover:scale-105 transition-all flex items-center gap-2">
+              className="bg-rose-punch text-[#ffffff] font-display font-semibold px-6 py-3 rounded-xl hover:scale-105 transition-all flex items-center gap-2">
               Join Free — it takes 30 seconds <ChevronRight className="w-4 h-4" />
             </button>
           </div>
@@ -157,25 +163,25 @@ export default function LearnPage() {
 function RolePicker({ onChoose, onSkip }: { onChoose: (r: LearningRole) => void; onSkip: () => void }) {
   return (
     <div className="flex flex-col items-center text-center max-w-lg mx-auto py-16">
-      <div className="w-14 h-14 rounded-full bg-black/10 flex items-center justify-center mb-4">
-        <RouteIcon className="w-7 h-7" style={{ color: 'var(--text-on-accent)' }} />
+      <div className="cur-card w-14 h-14 rounded-full flex items-center justify-center mb-4">
+        <RouteIcon className="w-7 h-7 cur-text" />
       </div>
-      <h2 className="font-display font-bold text-2xl mb-2" style={{ color: 'var(--text-on-accent)' }}>
+      <h2 className="font-display font-bold text-2xl mb-2 cur-text">
         What describes you best?
       </h2>
-      <p className="text-sm mb-8" style={{ color: 'var(--text-on-accent-soft)' }}>
+      <p className="text-sm mb-8 cur-text-soft">
         We'll personalise the module order and tips to match your goals. You can change this any time.
       </p>
       <div className="w-full space-y-3">
         {ROLE_PATHS.map(path => (
           <button key={path.id} onClick={() => onChoose(path.id as LearningRole)}
-            className="w-full text-left p-4 rounded-xl bg-white/60 hover:bg-white/80 border border-black/10 transition-all">
-            <p className="font-display font-bold text-[#2A2A2A] text-lg">{path.label}</p>
-            <p className="text-[#2A2A2A]/60 text-sm mt-0.5">{path.focus}</p>
+            className="cur-card cur-card-hover w-full text-left p-4 rounded-xl">
+            <p className="font-display font-bold text-lg cur-text">{path.label}</p>
+            <p className="text-sm mt-0.5 cur-text-soft">{path.focus}</p>
           </button>
         ))}
       </div>
-      <button onClick={onSkip} className="mt-5 text-xs hover:opacity-70 transition-opacity" style={{ color: 'var(--text-on-accent-soft)' }}>
+      <button onClick={onSkip} className="mt-5 text-xs hover:opacity-70 transition-opacity cur-text-soft">
         Skip for now
       </button>
     </div>
@@ -202,18 +208,18 @@ function ModuleGrid({ modules, completedModules, onSelect }: {
         const isDone = completedModules.includes(mod.id)
         return (
           <button key={mod.id} onClick={() => onSelect(mod.id)}
-            className="text-left bg-white/60 hover:bg-white/80 border border-black/10 rounded-2xl p-5 transition-colors">
+            className="cur-card cur-card-hover text-left rounded-2xl p-5">
             <div className="flex items-center justify-between mb-3">
-              <span className="font-display font-bold text-[#2A2A2A]/40 text-sm">{mod.num}</span>
+              <span className="font-display font-bold text-sm cur-text-faint">{mod.num}</span>
               {isDone && (
-                <span className="text-[10px] font-accent uppercase tracking-wider bg-[#3CCF4A]/20 text-[#2FAE3C] px-2 py-0.5 rounded-full">
+                <span className="cur-correct text-[10px] font-accent uppercase tracking-wider px-2 py-0.5 rounded-full cur-success-text">
                   Done
                 </span>
               )}
             </div>
-            <h3 className="font-display font-bold text-[#2A2A2A] text-lg mb-1">{mod.title}</h3>
-            <p className="text-[#2A2A2A]/60 text-sm line-clamp-2">{mod.description}</p>
-            <p className="text-[#2A2A2A]/40 text-xs mt-3">{mod.duration} · {mod.difficulty}</p>
+            <h3 className="font-display font-bold text-lg mb-1 cur-text">{mod.title}</h3>
+            <p className="text-sm line-clamp-2 cur-text-soft">{mod.description}</p>
+            <p className="text-xs mt-3 cur-text-faint">{mod.duration} · {mod.difficulty}</p>
           </button>
         )
       })}
