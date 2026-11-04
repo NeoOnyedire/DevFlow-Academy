@@ -169,4 +169,15 @@ describe('deleteUser', () => {
     expect(secondAttempt).not.toBeNull()
     expect(secondAttempt!.name).toBe('New Owner')
   })
+
+  it('keeps the user record available when index cleanup fails, so deletion can be retried', async () => {
+    const user = await createPasswordUser('Retry Delete', 'retry-delete@example.com', 'password123')
+    vi.mocked(upstash.upstashSRem).mockRejectedValueOnce(new Error('temporary Redis failure'))
+
+    await expect(deleteUser(user!.id)).rejects.toThrow('temporary Redis failure')
+    expect(await getUserById(user!.id)).not.toBeNull()
+
+    await expect(deleteUser(user!.id)).resolves.toBe(true)
+    expect(await getUserById(user!.id)).toBeNull()
+  })
 })

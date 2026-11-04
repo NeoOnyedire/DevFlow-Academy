@@ -203,16 +203,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (!userId) { res.status(400).json({ error: 'Missing userId.' }); return }
 
       const target = await getUserById(userId)
-      if (!target) { res.status(404).json({ error: 'User not found.' }); return }
 
+      // These deletes are idempotent. Running them even when the Redis
+      // account is already gone lets an administrator safely retry after
+      // a partial cross-store deletion or a lost response.
       await sql`DELETE FROM user_progress WHERE user_id = ${userId}`
       await sql`DELETE FROM lesson_progress WHERE user_id = ${userId}`
       await sql`DELETE FROM leaderboard_entries WHERE user_id = ${userId}`
-      const removed = await deleteUser(userId)
 
-      if (!removed) { res.status(502).json({ error: 'Could not delete the account.' }); return }
+      if (target) {
+        const removed = await deleteUser(userId)
+        if (!removed) { res.status(502).json({ error: 'Could not delete the account.' }); return }
+      }
 
-      await logAction(admin.id, 'delete-account', userId, { name: target.name, email: target.email })
+      await logAction(admin.id, 'delete-account', userId, target
+        ? { name: target.name, email: target.email }
+        : { alreadyDeleted: true })
       res.status(200).json({ ok: true })
       return
     }

@@ -185,17 +185,21 @@ export async function deleteUser(id: string): Promise<boolean> {
   const user = await getUserById(id)
   if (!user) return false
 
-  const ops: Promise<unknown>[] = [
-    upstashCommand(['DEL', userKey(id)]),
-    upstashSRem(ALL_USERS_SET, id),
-  ]
+  const indexKeys: string[] = []
   if (user.provider === 'password') {
-    ops.push(upstashCommand(['DEL', emailIndexKey(user.email)]))
+    indexKeys.push(emailIndexKey(user.email))
   }
   if (user.provider === 'github' && user.githubId) {
-    ops.push(upstashCommand(['DEL', githubIndexKey(user.githubId)]))
+    indexKeys.push(githubIndexKey(user.githubId))
   }
-  await Promise.all(ops)
+
+  // Keep the user record until every index is removed. If Redis fails
+  // partway through, a retry can still load the account and finish cleanup.
+  for (const key of indexKeys) {
+    await upstashCommand(['DEL', key])
+  }
+  await upstashSRem(ALL_USERS_SET, id)
+  await upstashCommand(['DEL', userKey(id)])
   return true
 }
 
