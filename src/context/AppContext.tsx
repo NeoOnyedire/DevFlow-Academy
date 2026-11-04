@@ -53,8 +53,13 @@
 import { createContext, useContext, useState, useCallback, useMemo, useEffect, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from './AuthContext'
+import { getCurrentWeekKey, getWeeklyChallenge, type LearningRole, type WeeklyChallenge as WeeklyChallengeData } from '../../shared/weeklyChallenge'
 
-export type LearningRole = 'junior-dev' | 'devops' | 'career-switcher'
+export type { LearningRole } from '../../shared/weeklyChallenge'
+
+export interface WeeklyChallenge extends WeeklyChallengeData {
+  rolePrompt: string
+}
 
 export interface RolePath {
   id: LearningRole
@@ -70,16 +75,6 @@ export interface GitHubProfile {
   profileUrl: string
   publicRepos: number
   followers: number
-}
-
-export interface WeeklyChallenge {
-  id: string
-  title: string
-  brief: string
-  rolePrompt: string
-  command: string
-  reward: number
-  moduleId: string
 }
 
 /** A public review, as returned by the shared /api/reviews backend. */
@@ -189,58 +184,13 @@ export const ROLE_PATHS: RolePath[] = [
   },
 ]
 
-const CHALLENGE_TEMPLATES = [
-  {
-    title: 'Branch Rescue',
-    brief: 'A teammate mixed feature work into main. Create a clean recovery plan before anyone force pushes.',
-    command: 'git switch -c rescue/clean-history',
-    reward: 180,
-    moduleId: 'mod-06',
-  },
-  {
-    title: 'CI Fire Drill',
-    brief: 'The build failed after a merge. Find the likely commit, open a fix branch, and keep the release moving.',
-    command: 'git log --oneline -n 8',
-    reward: 220,
-    moduleId: 'mod-08',
-  },
-  {
-    title: 'Review Ready PR',
-    brief: 'Your feature works, but the branch has noisy commits. Prepare it for a calm teammate review.',
-    command: 'git rebase -i origin/main',
-    reward: 200,
-    moduleId: 'mod-05',
-  },
-  {
-    title: 'Conflict Clinic',
-    brief: 'Two developers edited the same layout file. Resolve the conflict and explain the final choice.',
-    command: 'git fetch origin && git merge origin/main',
-    reward: 160,
-    moduleId: 'mod-07',
-  },
-]
-
-function getWeekKey(date = new Date()) {
-  const start = new Date(date.getFullYear(), 0, 1)
-  const dayMs = 24 * 60 * 60 * 1000
-  const week = Math.ceil((((date.getTime() - start.getTime()) / dayMs) + start.getDay() + 1) / 7)
-  return `${date.getFullYear()}-W${String(week).padStart(2, '0')}`
-}
-
-function buildWeeklyChallenge(role: LearningRole): WeeklyChallenge {
-  const weekKey = getWeekKey()
-  const seed = [...weekKey, ...role].reduce((sum, char) => sum + char.charCodeAt(0), 0)
-  const template = CHALLENGE_TEMPLATES[seed % CHALLENGE_TEMPLATES.length]
+function buildWeeklyChallenge(role: LearningRole): WeeklyChallenge & { rolePrompt: string } {
+  const challenge = getWeeklyChallenge(getCurrentWeekKey(), role)
   const rolePath = ROLE_PATHS.find(path => path.id === role) || ROLE_PATHS[0]
 
   return {
-    id: `${weekKey}-${role}-${template.title.toLowerCase().replace(/\s+/g, '-')}`,
-    title: template.title,
-    brief: template.brief,
+    ...challenge,
     rolePrompt: `${rolePath.label} focus: ${rolePath.focus}`,
-    command: template.command,
-    reward: template.reward,
-    moduleId: template.moduleId,
   }
 }
 
@@ -263,7 +213,7 @@ async function requestReviews(): Promise<{ reviews: PublicReview[] | null; error
 /** Resolves to the ranked rows, or null if the request failed (keep whatever was shown). */
 async function requestLeaderboard(): Promise<LeaderboardEntry[] | null> {
   try {
-    const response = await fetch(`/api/leaderboard?week=${encodeURIComponent(getWeekKey())}`)
+    const response = await fetch(`/api/leaderboard?week=${encodeURIComponent(getCurrentWeekKey())}`)
     const data = await response.json()
     return Array.isArray(data.entries) ? data.entries : []
   } catch {
@@ -679,8 +629,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          points: weeklyChallenge.reward,
-          weekKey: getWeekKey(),
+          weekKey: getCurrentWeekKey(),
           challengeId: weeklyChallenge.id,
         }),
       })

@@ -15,17 +15,15 @@
 //   (user_id, challengeId) already is proof that challenge was
 //   completed, so this reads that directly instead of relying on a
 //   separate "completed" flag stored anywhere else.
-// POST { points, weekKey, challengeId } -> requires login, records this
-//   account's points for one challenge. ON CONFLICT DO NOTHING (see
-//   db/schema.sql's unique index) means clicking "complete" twice never
-//   double-counts the same challenge.
+// POST { weekKey, challengeId } -> requires login, validates the current
+//   server-defined challenge and awards its server-defined points.
+//   ON CONFLICT DO NOTHING prevents duplicate completions.
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { sql } from './_lib/db.js'
 import { getUserIdFromRequest } from './_lib/session.js'
 import { getUserById } from './_lib/users.js'
-
-const MAX_POINTS_PER_CHALLENGE = 1000
+import { getChallengeReward, getCurrentWeekKey } from '../shared/weeklyChallenge.js'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // ---- Read: public, no auth needed ----
@@ -97,18 +95,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return
   }
 
-  const { points, weekKey, challengeId } = (req.body || {}) as {
-    points?: number
+  const { weekKey, challengeId } = (req.body || {}) as {
     weekKey?: string
     challengeId?: string
   }
 
-  if (typeof points !== 'number' || !Number.isInteger(points) || points < 0 || points > MAX_POINTS_PER_CHALLENGE) {
-    res.status(400).json({ error: 'Invalid points value.' })
+  if (typeof weekKey !== 'string' || weekKey !== getCurrentWeekKey()
+    || typeof challengeId !== 'string' || !challengeId) {
+    res.status(400).json({ error: 'Invalid challenge or week.' })
     return
   }
-  if (!weekKey || typeof weekKey !== 'string' || !challengeId || typeof challengeId !== 'string') {
-    res.status(400).json({ error: 'Missing weekKey or challengeId.' })
+
+  const points = getChallengeReward(weekKey, challengeId)
+  if (points === null) {
+    res.status(400).json({ error: 'Invalid challenge or week.' })
     return
   }
 
