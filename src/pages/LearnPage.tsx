@@ -56,6 +56,11 @@ export default function LearnPage() {
   }, [moduleId, lessonId])
 
   const activeModule = modules.find(m => m.id === moduleId)
+  const displayedModules = isLoggedIn
+    ? modules
+    : [...modules].sort((a, b) =>
+      Number(b.id === GUEST_PREVIEW_MODULE) - Number(a.id === GUEST_PREVIEW_MODULE)
+    )
   const lessons = activeModule ? getLessonsForModule(activeModule.id) : []
   const canWatchModule = (id: string) => isLoggedIn || id === GUEST_PREVIEW_MODULE
 
@@ -111,7 +116,7 @@ export default function LearnPage() {
           shouldShowRolePicker ? (
             <RolePicker onChoose={handleRoleChoose} onSkip={() => setRolePickerDismissed(true)} />
           ) : (
-            <ModuleGrid modules={modules} completedModules={completedModules} onSelect={id => navigate(`/learn/${id}`)} />
+            <ModuleGrid modules={displayedModules} completedModules={completedModules} onSelect={id => navigate(`/learn/${id}`)} />
           )
         )}
 
@@ -219,7 +224,9 @@ function ModuleGrid({ modules, completedModules, onSelect }: {
             </div>
             <h3 className="font-display font-bold text-lg mb-1 cur-text">{mod.title}</h3>
             <p className="text-sm line-clamp-2 cur-text-soft">{mod.description}</p>
-            <p className="text-xs mt-3 cur-text-faint">{mod.duration} · {mod.difficulty}</p>
+            <p className="text-xs mt-3 cur-text-faint">
+              {mod.id === GUEST_PREVIEW_MODULE ? 'Free preview · ' : ''}{mod.duration} · {mod.difficulty}
+            </p>
           </button>
         )
       })}

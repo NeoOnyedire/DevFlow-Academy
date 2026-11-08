@@ -165,21 +165,21 @@ export const ROLE_PATHS: RolePath[] = [
     id: 'junior-dev',
     label: 'Junior Dev',
     focus: 'Commits, branches, pull requests, and confident team habits.',
-    recommendedModules: ['mod-01', 'mod-02', 'mod-03', 'mod-04', 'mod-07', 'mod-05', 'mod-06', 'mod-08'],
+    recommendedModules: ['mod-01', 'mod-02', 'mod-03', 'mod-04', 'mod-07', 'mod-05', 'mod-06', 'mod-08', 'mod-00'],
     helperTone: 'I will keep this practical and beginner-friendly.',
   },
   {
     id: 'devops',
     label: 'DevOps',
     focus: 'Clean history, rollback thinking, automation, and CI/CD workflows.',
-    recommendedModules: ['mod-08', 'mod-06', 'mod-07', 'mod-05', 'mod-02', 'mod-03', 'mod-01', 'mod-04'],
+    recommendedModules: ['mod-08', 'mod-06', 'mod-07', 'mod-05', 'mod-02', 'mod-03', 'mod-01', 'mod-04', 'mod-00'],
     helperTone: 'I will point you toward release safety and automation.',
   },
   {
     id: 'career-switcher',
     label: 'Career Mode',
     focus: 'Portfolio proof, interview stories, and job-ready Git confidence.',
-    recommendedModules: ['mod-01', 'mod-04', 'mod-05', 'mod-02', 'mod-03', 'mod-07', 'mod-06', 'mod-08'],
+    recommendedModules: ['mod-01', 'mod-04', 'mod-05', 'mod-02', 'mod-03', 'mod-07', 'mod-06', 'mod-08', 'mod-00'],
     helperTone: 'I will connect each lesson to portfolio and interview outcomes.',
   },
 ]
@@ -222,7 +222,18 @@ async function requestLeaderboard(): Promise<LeaderboardEntry[] | null> {
 }
 
 /** Curriculum data — free YouTube videos from reputable channels */
-const CURRICULUM_MODULES: CurriculumModule[] = [
+export const CURRICULUM_MODULES: CurriculumModule[] = [
+  {
+    id: 'mod-00',
+    num: '00',
+    title: 'GitHub Account Setup',
+    description: 'A quick, free preview to set up the GitHub account you will use throughout the course.',
+    youtubeId: '',
+    channel: 'DevFlow Academy',
+    duration: '3 min',
+    difficulty: 'Beginner',
+    tags: ['preview', 'setup'],
+  },
   {
     id: 'mod-01',
     num: '01',

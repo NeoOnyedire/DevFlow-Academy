@@ -28,6 +28,7 @@ import type { Lesson } from '../../content/lessons'
 import LessonPlayer from './LessonPlayer'
 import QuizStep from './QuizStep'
 import GitSandbox from './GitSandbox'
+import WorkflowSandbox from './WorkflowSandbox'
 
 const GITTER_GATE_MODULE = 'mod-01'
 const GUEST_TASK_STORAGE = 'devflow_guest_task_lessons'
@@ -200,6 +201,9 @@ function LessonStepView({ lesson, isLessonDone, isLoggedIn, finishLesson }: Step
   }
 
   if (step === 'sandbox' && lesson.sandbox) {
+    if (lesson.sandbox.workflowRequirements) {
+      return <WorkflowSandbox task={lesson.sandbox} onSolved={finishLesson} />
+    }
     return <GitSandbox task={lesson.sandbox} onSolved={finishLesson} />
   }
 

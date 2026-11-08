@@ -7,19 +7,22 @@
 //
 // mod-00 is special: it's the "create a GitHub account" lesson, and it's
 // the ONE lesson in the whole curriculum visible to guests (no login
-// required) — see CurriculumPanel's canWatchModule / FREE_PREVIEW logic.
+// required) — see LearnPage's guest preview access check.
 // It has no video and no quiz, just a short checklist task, since the
 // entire point is to get someone an account before anything else.
 //
-// Video snippets use YouTube's own start/end params (?start=&end=) against
-// real chapter markers pulled from each video's official description —
-// not arbitrary cut points, so the snippet is a coherent standalone idea.
-// Only Module 1 is fully authored below as the reference implementation;
-// the TODO stubs after it show the exact shape the remaining modules
-// (mod-02 .. mod-08) need filled in the same way, using their own videos'
-// chapter lists.
+// Video snippets use YouTube's start/end parameters. Module 1 timings are
+// recorded as chapter-aligned; timings for modules 2-8 remain estimates
+// until checked against the current source videos.
 
 export type LessonType = 'task' | 'video-quiz-sandbox'
+
+export interface WorkflowRequirements {
+  event: string
+  commands: string[]
+  actions?: string[]
+  path?: string
+}
 
 export interface QuizQuestion {
   id: string
@@ -33,6 +36,11 @@ export interface SandboxTask {
   prompt: string
   /** Command(s) considered a correct solution — GitSandbox does loose matching, not exact string compare. */
   expectedCommands: string[]
+  /** Ordered command alternatives; each inner array must be completed successfully. */
+  expectedCommandSequences?: string[][]
+  requiredFiles?: string[]
+  scenario?: 'merge-conflict'
+  workflowRequirements?: WorkflowRequirements
   hint: string
 }
 
@@ -109,9 +117,10 @@ export const MOD_01_LESSONS: Lesson[] = [
       },
     ],
     sandbox: {
-      prompt: 'No commands yet — just confirm the sandbox is loaded by checking its status.',
-      expectedCommands: ['git status'],
-      hint: 'Type: git status',
+      prompt: 'Initialize a repository, then inspect its status. Notice that Git starts with a clean working tree.',
+      expectedCommands: [],
+      expectedCommandSequences: [['git init', 'git status']],
+      hint: 'Type: git init, then: git status',
     },
   },
   {
@@ -162,9 +171,11 @@ export const MOD_01_LESSONS: Lesson[] = [
       },
     ],
     sandbox: {
-      prompt: 'Create a file called README.md, then check what Git thinks of it.',
-      expectedCommands: ['git status'],
-      hint: 'Use the "New file" button to create README.md, then type: git status',
+      prompt: 'Initialize a repository, create README.md, then check Git status to see it as an untracked file.',
+      expectedCommands: [],
+      expectedCommandSequences: [['git init', 'git status']],
+      requiredFiles: ['README.md'],
+      hint: 'Type: git init, create README.md with the New file button, then: git status',
     },
   },
   {
@@ -257,7 +268,8 @@ export const MOD_01_LESSONS: Lesson[] = [
     ],
     sandbox: {
       prompt: 'Create and switch to a new branch called feature/readme.',
-      expectedCommands: ['git switch -c feature/readme', 'git checkout -b feature/readme'],
+      expectedCommands: [],
+      expectedCommandSequences: [['git init', 'git switch -c feature/readme']],
       hint: 'Type: git switch -c feature/readme',
     },
   },
@@ -280,9 +292,18 @@ export const MOD_01_LESSONS: Lesson[] = [
       },
     ],
     sandbox: {
-      prompt: 'Switch back to main, then merge feature/readme into it.',
-      expectedCommands: ['git switch main', 'git merge feature/readme'],
-      hint: 'Type: git switch main, then: git merge feature/readme',
+      prompt: 'Create README.md, commit it on feature/readme, then switch to main and merge the feature branch.',
+      expectedCommands: [],
+      expectedCommandSequences: [[
+        'git init',
+        'git switch -c feature/readme',
+        'git add README.md',
+        'git commit -m',
+        'git switch main',
+        'git merge feature/readme',
+      ]],
+      requiredFiles: ['README.md'],
+      hint: 'Initialize the repo, create README.md, commit it on feature/readme, then switch to main and merge.',
     },
   },
 ]
@@ -291,16 +312,8 @@ export const MOD_01_LESSONS: Lesson[] = [
  * ============================================================================
  * mod-02 through mod-08
  * ============================================================================
- * IMPORTANT — timestamp accuracy: mod-01's startSeconds/endSeconds came from
- * that video's real, official YouTube chapter list (fetched directly from
- * its description). YouTube rate-limited further chapter lookups while
- * authoring these remaining modules, so the timestamps below are ESTIMATES
- * based on each video's known topic order and typical section length —
- * NOT verified against the actual chapter markers. Each is flagged inline.
- * Before shipping, repeat the mod-01 process: fetch the video's watch page,
- * read its "Chapters" list in the description, and correct these numbers.
- * The lesson titles, quiz content, and sandbox tasks are complete and don't
- * depend on the exact cut points — only the video seek positions need a pass.
+ * The lesson and quiz content is authored for each module. Video timestamps
+ * below are estimates and must be checked against the current source videos.
  * ============================================================================
  */
 
@@ -329,8 +342,9 @@ export const MOD_02_LESSONS: Lesson[] = [
       },
     ],
     sandbox: {
-      prompt: 'Set your Git username to "Learner" and your email to "learner@example.com".',
-      expectedCommands: ['git config user.name', 'git config user.email'],
+      prompt: 'Set both your Git author name and email for this repository.',
+      expectedCommands: [],
+      expectedCommandSequences: [['git config user.name', 'git config user.email']],
       hint: 'Type: git config user.name "Learner", then: git config user.email "learner@example.com"',
     },
   },
@@ -387,9 +401,10 @@ export const MOD_02_LESSONS: Lesson[] = [
       },
     ],
     sandbox: {
-      prompt: 'Add a remote named origin, then push your commits to it.',
-      expectedCommands: ['git remote add origin', 'git push'],
-      hint: 'Type: git remote add origin https://github.com/you/repo.git, then: git push',
+      prompt: 'Initialize a repository, configure a remote named origin, then push your current branch.',
+      expectedCommands: [],
+      expectedCommandSequences: [['git init', 'git remote add origin', 'git push']],
+      hint: 'Type git init, then add origin with git remote add origin https://github.com/you/repo.git, then: git push',
     },
   },
   {
@@ -416,8 +431,9 @@ export const MOD_02_LESSONS: Lesson[] = [
       },
     ],
     sandbox: {
-      prompt: 'Fetch from origin, then pull the latest changes.',
-      expectedCommands: ['git fetch', 'git pull'],
+      prompt: 'Initialize a repository, fetch from origin to inspect remote changes, then pull them.',
+      expectedCommands: [],
+      expectedCommandSequences: [['git init', 'git fetch', 'git pull']],
       hint: 'Type: git fetch, then: git pull',
     },
   },
@@ -448,9 +464,10 @@ export const MOD_03_LESSONS: Lesson[] = [
       },
     ],
     sandbox: {
-      prompt: 'Look at your commit history, then check for any uncommitted differences.',
-      expectedCommands: ['git log', 'git diff'],
-      hint: 'Type: git log --oneline, then: git diff',
+      prompt: 'Clone the sample repository, inspect its commit history, then check for working-tree differences.',
+      expectedCommands: [],
+      expectedCommandSequences: [['git clone', 'git log', 'git diff']],
+      hint: 'Type git clone https://github.com/example/sample-repo.git, then: git log --oneline, then: git diff',
     },
   },
   {
@@ -477,9 +494,10 @@ export const MOD_03_LESSONS: Lesson[] = [
       },
     ],
     sandbox: {
-      prompt: 'Remove a tracked file, then restore another file\'s uncommitted changes.',
-      expectedCommands: ['git rm', 'git restore'],
-      hint: 'Type: git rm old-file.txt, then: git restore README.md',
+      prompt: 'Clone the sample repository, remove README.md, then restore it from the last commit.',
+      expectedCommands: [],
+      expectedCommandSequences: [['git clone', 'git rm README.md', 'git restore README.md']],
+      hint: 'Type git clone https://github.com/example/sample-repo.git, then: git rm README.md, then: git restore README.md',
     },
   },
   {
@@ -502,8 +520,9 @@ export const MOD_03_LESSONS: Lesson[] = [
     ],
     sandbox: {
       prompt: 'Undo your last commit while keeping the file changes.',
-      expectedCommands: ['git reset'],
-      hint: 'Type: git reset --soft HEAD~1',
+      expectedCommands: [],
+      expectedCommandSequences: [['git clone', 'git reset --soft HEAD~1']],
+      hint: 'Clone the sample repository, then type: git reset --soft HEAD~1',
     },
   },
 ]
@@ -533,9 +552,18 @@ export const MOD_04_LESSONS: Lesson[] = [
       },
     ],
     sandbox: {
-      prompt: 'Push a feature branch so it\'s ready to open as a pull request.',
-      expectedCommands: ['git push'],
-      hint: 'Type: git switch -c feature/pr-practice, then: git push',
+      prompt: 'Create README.md, make a feature branch with a commit, add a remote, and push the branch so it is ready for a pull request.',
+      expectedCommands: [],
+      expectedCommandSequences: [[
+        'git init',
+        'git switch -c feature/pr-practice',
+        'git add README.md',
+        'git commit -m',
+        'git remote add origin',
+        'git push',
+      ]],
+      requiredFiles: ['README.md'],
+      hint: 'Run git init, create README.md, then switch to feature/pr-practice, stage and commit it, add origin, and push.',
     },
   },
   {
@@ -561,6 +589,13 @@ export const MOD_04_LESSONS: Lesson[] = [
         explanation: 'Reviewers aren\'t mind readers — context up front saves everyone round-trips.',
       },
     ],
+    sandbox: {
+      prompt: 'Prepare a change for review: initialize the repository, create README.md, stage it, and inspect the diff before describing the change in a pull request.',
+      expectedCommands: [],
+      expectedCommandSequences: [['git init', 'git add README.md', 'git diff']],
+      requiredFiles: ['README.md'],
+      hint: 'Type git init, create README.md, then run git add README.md and git diff.',
+    },
   },
   {
     id: 'mod-04-lesson-03',
@@ -586,9 +621,18 @@ export const MOD_04_LESSONS: Lesson[] = [
       },
     ],
     sandbox: {
-      prompt: 'Switch to main and merge your feature branch into it.',
-      expectedCommands: ['git switch main', 'git merge'],
-      hint: 'Type: git switch main, then: git merge feature/pr-practice',
+      prompt: 'Create a feature branch with a committed README change, return to main, and merge the reviewed branch.',
+      expectedCommands: [],
+      expectedCommandSequences: [[
+        'git init',
+        'git switch -c feature/pr-practice',
+        'git add README.md',
+        'git commit -m',
+        'git switch main',
+        'git merge feature/pr-practice',
+      ]],
+      requiredFiles: ['README.md'],
+      hint: 'Initialize, create README.md, commit it on feature/pr-practice, switch to main, then merge the feature branch.',
     },
   },
 ]
@@ -643,8 +687,9 @@ export const MOD_05_LESSONS: Lesson[] = [
     ],
     sandbox: {
       prompt: 'Rebase your current branch onto main.',
-      expectedCommands: ['git rebase'],
-      hint: 'Type: git rebase main',
+      expectedCommands: [],
+      expectedCommandSequences: [['git init', 'git switch -c feature/rebase-practice', 'git rebase main']],
+      hint: 'Type git init, create a branch, then: git rebase main',
     },
   },
   {
@@ -693,9 +738,11 @@ export const MOD_06_LESSONS: Lesson[] = [
       },
     ],
     sandbox: {
-      prompt: 'Stash your current changes, then bring them back.',
-      expectedCommands: ['git stash'],
-      hint: 'Type: git stash, then: git stash pop',
+      prompt: 'Create an untracked README.md, stash your work to get a clean tree, then restore it with stash pop.',
+      expectedCommands: [],
+      expectedCommandSequences: [['git init', 'git stash', 'git stash pop']],
+      requiredFiles: ['README.md'],
+      hint: 'Create README.md, then run git stash followed by git stash pop.',
     },
   },
   {
@@ -723,8 +770,9 @@ export const MOD_06_LESSONS: Lesson[] = [
     ],
     sandbox: {
       prompt: 'Check the log for a commit hash, then cherry-pick it onto your current branch.',
-      expectedCommands: ['git cherry-pick'],
-      hint: 'Type: git log --oneline to find a hash, then: git cherry-pick <hash>',
+      expectedCommands: [],
+      expectedCommandSequences: [['git clone', 'git log', 'git cherry-pick']],
+      hint: 'Clone the sample repo, type git log --oneline to find its hash, then: git cherry-pick <hash>',
     },
   },
   {
@@ -752,8 +800,9 @@ export const MOD_06_LESSONS: Lesson[] = [
     ],
     sandbox: {
       prompt: 'Revert your most recent commit safely, without rewriting history.',
-      expectedCommands: ['git revert'],
-      hint: 'Type: git log --oneline to find the hash, then: git revert <hash>',
+      expectedCommands: [],
+      expectedCommandSequences: [['git clone', 'git log', 'git revert']],
+      hint: 'Clone the sample repo, type git log --oneline to find its hash, then: git revert <hash>',
     },
   },
 ]
@@ -808,8 +857,9 @@ export const MOD_07_LESSONS: Lesson[] = [
     ],
     sandbox: {
       prompt: 'Create a second branch so you have two lines of work that could later conflict.',
-      expectedCommands: ['git switch -c', 'git checkout -b'],
-      hint: 'Type: git switch -c feature/conflict-practice',
+      expectedCommands: [],
+      expectedCommandSequences: [['git init', 'git switch -c feature/conflict-practice']],
+      hint: 'Type git init, then: git switch -c feature/conflict-practice',
     },
   },
   {
@@ -836,19 +886,18 @@ export const MOD_07_LESSONS: Lesson[] = [
       },
     ],
     sandbox: {
-      prompt: 'Merge your branch into main to finish the workflow.',
-      expectedCommands: ['git merge'],
-      hint: 'Type: git switch main, then: git merge feature/conflict-practice',
+      prompt: 'Merge the prepared feature branch. When Git reports a conflict, choose which README version to keep, then commit the resolution.',
+      expectedCommands: [],
+      expectedCommandSequences: [['git merge feature/conflict-practice', 'git commit -m']],
+      scenario: 'merge-conflict',
+      hint: 'Type git merge feature/conflict-practice, resolve README.md in the panel, then commit the resolution.',
     },
   },
 ]
 
 /**
- * mod-08 is different in kind: GitHub Actions / CI-CD isn't something a
- * local git-command sandbox can meaningfully simulate (it's YAML + GitHub's
- * own servers, not git plumbing). These lessons are video + quiz only — no
- * `sandbox` field, so the lesson flow skips straight from quiz to complete.
- * See INTEGRATION.md.
+ * GitHub Actions lessons use a small workflow editor instead of the Git
+ * command simulator, so learners can practice triggers and CI steps.
  */
 export const MOD_08_LESSONS: Lesson[] = [
   {
@@ -874,6 +923,12 @@ export const MOD_08_LESSONS: Lesson[] = [
         explanation: 'You define the trigger yourself (push, PR, schedule, manual) in the workflow\'s `on:` block — nothing runs unless you configure it to.',
       },
     ],
+    sandbox: {
+      prompt: 'Build a small CI workflow that runs on pull requests and installs dependencies before running tests.',
+      expectedCommands: [],
+      workflowRequirements: { event: 'pull_request', commands: ['npm ci', 'npm test'] },
+      hint: 'Add pull_request under on:, then add run steps for npm ci and npm test in that order.',
+    },
   },
   {
     id: 'mod-08-lesson-02',
@@ -893,6 +948,17 @@ export const MOD_08_LESSONS: Lesson[] = [
         explanation: 'GitHub specifically looks in `.github/workflows/*.yml` — outside that path, a YAML file is just a YAML file to GitHub.',
       },
     ],
+    sandbox: {
+      prompt: 'Complete the workflow steps so a pull request checks out the code, installs dependencies, and runs the test suite.',
+      expectedCommands: [],
+      workflowRequirements: {
+        event: 'pull_request',
+        commands: ['npm ci', 'npm test'],
+        actions: ['actions/checkout@v4'],
+        path: '.github/workflows/ci.yml',
+      },
+      hint: 'Use .github/workflows/ci.yml, keep actions/checkout@v4, then add run steps for npm ci and npm test.',
+    },
   },
   {
     id: 'mod-08-lesson-03',

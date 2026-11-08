@@ -59,6 +59,7 @@ interface RepoState {
   headCommitHash: string | null
   config: { name: string | null; email: string | null }
   remote: string | null
+  mergeConflict: boolean
   /** Snapshot of `files` taken by `git stash`, restored by `git stash pop`. */
   stashSnapshot: Record<string, { staged: boolean; committed: boolean }> | null
 }
@@ -72,6 +73,23 @@ const INITIAL_STATE: RepoState = {
   headCommitHash: null,
   config: { name: null, email: null },
   remote: null,
+  mergeConflict: false,
+  stashSnapshot: null,
+}
+
+const MERGE_CONFLICT_STATE: RepoState = {
+  initialized: true,
+  files: { 'README.md': { staged: false, committed: true } },
+  commits: [
+    { hash: 'base123', message: 'Add README', parentHash: null, branch: 'main', files: ['README.md'] },
+    { hash: 'feat456', message: 'Update README on feature', parentHash: 'base123', branch: 'feature/conflict-practice', files: ['README.md'] },
+  ],
+  branches: ['main', 'feature/conflict-practice'],
+  currentBranch: 'main',
+  headCommitHash: 'base123',
+  config: { name: null, email: null },
+  remote: null,
+  mergeConflict: false,
   stashSnapshot: null,
 }
 
@@ -85,7 +103,9 @@ interface Props {
 }
 
 export default function GitSandbox({ task, onSolved }: Props) {
-  const [repo, setRepo] = useState<RepoState>(INITIAL_STATE)
+  const [repo, setRepo] = useState<RepoState>(() =>
+    task.scenario === 'merge-conflict' ? MERGE_CONFLICT_STATE : INITIAL_STATE
+  )
   const [history, setHistory] = useState<{ cmd: string; output: string[] }[]>([])
   const [input, setInput] = useState('')
   const [newFileName, setNewFileName] = useState('')
@@ -101,14 +121,35 @@ export default function GitSandbox({ task, onSolved }: Props) {
     inputRef.current?.focus()
   }, [])
 
-  const checkSolved = useCallback((cmd: string) => {
-    const normalized = cmd.trim().replace(/\s+/g, ' ')
-    const isMatch = task.expectedCommands.some(expected => normalized.startsWith(expected.split(' "')[0]))
-    if (isMatch) {
+  const checkSolved = useCallback((cmd: string, output: string[]) => {
+    const entries = [...history, { cmd, output }]
+    const commandMatches = (actual: string, expected: string) => {
+      const normalized = actual.trim().replace(/\s+/g, ' ')
+      const prefix = expected.trim().replace(/\s+/g, ' ')
+      return normalized === prefix || normalized.startsWith(`${prefix} `)
+    }
+    const succeeded = (entry: { cmd: string; output: string[] }) =>
+      !entry.output.some(line => /^(?:fatal:|error:|command not found:|nothing to commit|No local changes to save|No stash entries found)/i.test(line))
+    const matchesSequence = (sequence: string[]) => {
+      let next = 0
+      for (const entry of entries) {
+        if (succeeded(entry) && commandMatches(entry.cmd, sequence[next])) next++
+        if (next === sequence.length) return true
+      }
+      return false
+    }
+    const sequences = task.expectedCommandSequences ?? []
+    const isMatch = sequences.length > 0
+      ? sequences.some(matchesSequence)
+      : task.expectedCommands.some(expected =>
+        entries.some(entry => succeeded(entry) && commandMatches(entry.cmd, expected))
+      )
+    const hasRequiredFiles = (task.requiredFiles ?? []).every(name => name in repo.files)
+    if (isMatch && hasRequiredFiles) {
       setSolved(true)
       onSolved()
     }
-  }, [task, onSolved])
+  }, [history, task, onSolved, repo.files])
 
   const addNewFile = () => {
     const name = newFileName.trim()
@@ -124,10 +165,22 @@ export default function GitSandbox({ task, onSolved }: Props) {
   const runCommand = (raw: string) => {
     const cmd = raw.trim()
     if (!cmd) return
-    const output = interpret(cmd, repo, setRepo)
+    const output = interpret(cmd, repo, setRepo, task.scenario)
     setHistory(prev => [...prev, { cmd, output }])
-    checkSolved(cmd)
+    checkSolved(cmd, output)
     setInput('')
+  }
+
+  const resolveConflict = (version: 'main' | 'feature') => {
+    setRepo(prev => ({
+      ...prev,
+      mergeConflict: false,
+      files: { ...prev.files, 'README.md': { staged: true, committed: false } },
+    }))
+    setHistory(prev => [...prev, {
+      cmd: `# kept ${version} version of README.md`,
+      output: [`Resolved README.md using the ${version} version and staged it.`],
+    }])
   }
 
   const untracked = Object.entries(repo.files).filter(([, f]) => !f.staged && !f.committed).map(([n]) => n)
@@ -185,6 +238,20 @@ export default function GitSandbox({ task, onSolved }: Props) {
 
         {/* Repo state panel */}
         <div className="cur-card rounded-xl p-4 space-y-4">
+          {repo.mergeConflict && (
+            <div className="rounded-lg border border-amber-400/40 bg-amber-400/10 p-3">
+              <p className="text-sm font-semibold cur-text">Resolve README.md conflict</p>
+              <p className="text-xs mt-1 mb-3 cur-text-soft">Choose which version to keep. Git will stage the resolved file for the merge commit.</p>
+              <div className="flex flex-wrap gap-2">
+                <button onClick={() => resolveConflict('main')} className="cur-btn rounded-lg px-3 py-1.5 text-xs">
+                  Keep main version
+                </button>
+                <button onClick={() => resolveConflict('feature')} className="cur-btn rounded-lg px-3 py-1.5 text-xs">
+                  Keep feature version
+                </button>
+              </div>
+            </div>
+          )}
           <div>
             <p className="text-[10px] font-accent uppercase tracking-wider mb-2 cur-text-faint">New file (working dir only)</p>
             <div className="flex gap-2">
@@ -247,7 +314,12 @@ export default function GitSandbox({ task, onSolved }: Props) {
 }
 
 /** Interprets one command line against the repo state, returns terminal output lines. */
-function interpret(cmd: string, repo: RepoState, setRepo: (updater: (prev: RepoState) => RepoState) => void): string[] {
+function interpret(
+  cmd: string,
+  repo: RepoState,
+  setRepo: (updater: (prev: RepoState) => RepoState) => void,
+  scenario?: SandboxTask['scenario'],
+): string[] {
   const parts = cmd.split(' ')
   if (parts[0] !== 'git') return [`command not found: ${parts[0]}`]
 
@@ -264,6 +336,9 @@ function interpret(cmd: string, repo: RepoState, setRepo: (updater: (prev: RepoS
     const untracked = Object.entries(repo.files).filter(([, f]) => !f.staged && !f.committed).map(([n]) => n)
     const staged = Object.entries(repo.files).filter(([, f]) => f.staged).map(([n]) => n)
     const lines = [`On branch ${repo.currentBranch}`]
+    if (repo.mergeConflict) {
+      lines.push('You have unmerged paths:', '  (fix conflicts and run "git commit")')
+    }
     if (staged.length) lines.push('Changes to be committed:', ...staged.map(f => `  new file:   ${f}`))
     if (untracked.length) lines.push('Untracked files:', ...untracked.map(f => `  ${f}`))
     if (!staged.length && !untracked.length) lines.push('nothing to commit, working tree clean')
@@ -273,6 +348,12 @@ function interpret(cmd: string, repo: RepoState, setRepo: (updater: (prev: RepoS
   if (sub === 'add') {
     const target = parts[2]
     if (!target) return ['fatal: nothing specified, nothing added.']
+    if (target !== '.' && !repo.files[target]) {
+      return [`fatal: pathspec '${target}' did not match any files`]
+    }
+    if (target === '.' && Object.keys(repo.files).length === 0) {
+      return ['fatal: nothing to add']
+    }
     setRepo(prev => {
       const files = { ...prev.files }
       const names = target === '.' ? Object.keys(files) : [target]
@@ -285,6 +366,7 @@ function interpret(cmd: string, repo: RepoState, setRepo: (updater: (prev: RepoS
   }
 
   if (sub === 'commit') {
+    if (repo.mergeConflict) return ['fatal: cannot commit because you have unmerged files']
     const staged = Object.entries(repo.files).filter(([, f]) => f.staged).map(([n]) => n)
     if (staged.length === 0) return ['nothing to commit, working tree clean']
     const messageMatch = cmd.match(/-m\s+"([^"]+)"/)
@@ -328,6 +410,15 @@ function interpret(cmd: string, repo: RepoState, setRepo: (updater: (prev: RepoS
     const name = parts[2]
     if (!name) return ['fatal: missing branch name to merge']
     if (!repo.branches.includes(name)) return [`fatal: invalid reference: ${name}`]
+    if (repo.mergeConflict) return ['fatal: a merge is already in progress']
+    if (scenario === 'merge-conflict' && name === 'feature/conflict-practice') {
+      setRepo(prev => ({ ...prev, mergeConflict: true }))
+      return [
+        'Auto-merging README.md',
+        'CONFLICT (content): Merge conflict in README.md',
+        'Automatic merge failed; fix conflicts and then commit the result.',
+      ]
+    }
     return [`Merge made by the 'ort' strategy.`, `${name} -> ${repo.currentBranch}`]
   }
 
@@ -349,6 +440,7 @@ function interpret(cmd: string, repo: RepoState, setRepo: (updater: (prev: RepoS
   }
 
   if (sub === 'clone') {
+    if (!parts[2]) return ['fatal: repository URL required']
     // Simulated network op — seeds a small, already-committed starter repo.
     setRepo(prev => ({
       ...prev,
@@ -362,6 +454,7 @@ function interpret(cmd: string, repo: RepoState, setRepo: (updater: (prev: RepoS
   if (sub === 'remote') {
     const name = parts[3]
     if (parts[2] === 'add' && name) {
+      if (!parts[4]) return ['fatal: remote URL required']
       setRepo(prev => ({ ...prev, remote: name }))
       return [`Remote '${parts[3]}' added.`]
     }
@@ -395,7 +488,16 @@ function interpret(cmd: string, repo: RepoState, setRepo: (updater: (prev: RepoS
   if (sub === 'restore') {
     const staged = parts[2] === '--staged'
     const target = staged ? parts[3] : parts[2]
-    if (!target || !repo.files[target]) return [`error: pathspec '${target}' did not match any file(s) known to git`]
+    if (!target) return ['error: missing pathspec']
+    if (!repo.files[target]) {
+      const trackedInHistory = repo.commits.some(commit => commit.files.includes(target))
+      if (!trackedInHistory || staged) return [`error: pathspec '${target}' did not match any file(s) known to git`]
+      setRepo(prev => ({
+        ...prev,
+        files: { ...prev.files, [target]: { staged: false, committed: true } },
+      }))
+      return [`Restored '${target}' from the last commit.`]
+    }
     setRepo(prev => ({
       ...prev,
       files: { ...prev.files, [target]: { ...prev.files[target], staged: false } },
