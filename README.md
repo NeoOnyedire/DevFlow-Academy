@@ -36,3 +36,9 @@ So instead of just sharing resources, we’re building a platform that makes lea
 - **Interactive Terminal**: xterm.js + custom backend simulation
 - **Styling**: Tailwind CSS
 - **Database**: (TBD)
+
+## Quality Checks
+
+Run the unit tests, lint, and TypeScript checks with `npm test`, `npm run lint`, and `npm run typecheck`.
+
+Browser-based learner journey tests use Playwright. Install its Chromium browser once with `npx playwright install chromium`, then run `npm run test:e2e`. These tests use mocked API responses and do not require a real account or backend services. CI runs all checks on pull requests.

@@ -5,9 +5,10 @@ export interface CommandFailureFeedback {
   retryHint: string
 }
 
-export function explainCommandFailure(output: string[]): CommandFailureFeedback | null {
+export function explainCommandFailure(output: string[], command = ''): CommandFailureFeedback | null {
   const message = output.find(line =>
     /^(?:fatal:|error:|command not found:|git: .* is not supported in this sandbox yet\.|nothing to commit|No local changes to save|No stash entries found)/i.test(line)
+    && !(line.startsWith('nothing to commit') && command.trim().startsWith('git status'))
   )
   if (!message) return null
 
@@ -59,7 +60,7 @@ export function getSequenceProgress(
   if (sequences.length === 0) return null
 
   const successful = (entry: { cmd: string; output: string[] }) =>
-    explainCommandFailure(entry.output) === null
+    explainCommandFailure(entry.output, entry.cmd) === null
   const matches = (actual: string, expected: string) => {
     const command = actual.trim().replace(/\s+/g, ' ')
     const pattern = expected.trim().replace(/\s+/g, ' ')

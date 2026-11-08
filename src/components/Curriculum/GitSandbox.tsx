@@ -112,7 +112,7 @@ export default function GitSandbox({ task, onSolved }: Props) {
   const [newFileName, setNewFileName] = useState('')
   const [solved, setSolved] = useState(false)
   const latestEntry = history[history.length - 1]
-  const commandFeedback = latestEntry ? explainCommandFailure(latestEntry.output) : null
+  const commandFeedback = latestEntry ? explainCommandFailure(latestEntry.output, latestEntry.cmd) : null
   const sequenceProgress = getSequenceProgress(history, task)
   const scrollRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -133,7 +133,7 @@ export default function GitSandbox({ task, onSolved }: Props) {
       return normalized === prefix || normalized.startsWith(`${prefix} `)
     }
     const succeeded = (entry: { cmd: string; output: string[] }) =>
-      explainCommandFailure(entry.output) === null
+      explainCommandFailure(entry.output, entry.cmd) === null
     const matchesSequence = (sequence: string[]) => {
       let next = 0
       for (const entry of entries) {

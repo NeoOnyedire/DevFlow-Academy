@@ -12,6 +12,8 @@ describe('learning feedback', () => {
       reason: expect.stringContaining('simulator does not implement'),
       retryHint: expect.stringContaining('supported command'),
     })
+    expect(explainCommandFailure(['On branch main', 'nothing to commit, working tree clean'], 'git status')).toBeNull()
+    expect(explainCommandFailure(['nothing to commit (create/copy files and use "git add" to track)'], 'git commit -m "save"')).not.toBeNull()
     expect(explainCommandFailure(['Everything is up to date.'])).toBeNull()
   })
 

@@ -146,7 +146,9 @@ export default function LearnPage() {
             onAdvance={(nextLessonId, moduleCompleted) => {
               if (nextLessonId) { navigate(`/learn/${activeModule.id}/${nextLessonId}`); return }
               if (moduleCompleted) {
-                const next = modules.find(m => !completedModules.includes(m.id) && m.id !== activeModule.id)
+                const next = isLoggedIn
+                  ? modules.find(m => !completedModules.includes(m.id) && m.id !== activeModule.id)
+                  : undefined
                 if (next) { navigate(`/learn/${next.id}`); return }
               }
               navigate('/learn')

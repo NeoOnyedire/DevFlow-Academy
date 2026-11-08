@@ -3,8 +3,9 @@ import react from "@vitejs/plugin-react"
 import { defineConfig } from "vite"
 
 // https://vite.dev/config/
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   base: '/',
+  envDir: mode === 'test' ? path.resolve(__dirname, 'e2e') : undefined,
   plugins: [react()],
   server: {
     port: 3000,
@@ -14,4 +15,4 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
-});
+}))
