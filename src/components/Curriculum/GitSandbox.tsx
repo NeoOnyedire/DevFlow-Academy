@@ -41,25 +41,21 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { Terminal, FilePlus, CheckCircle2, GitBranch as BranchIcon } from 'lucide-react'
 import type { SandboxTask } from '../../content/lessons'
+import { createMergeCommit, getCommitHistory, getMergeDisposition, type BranchRefs, type GitCommit } from '../../lib/gitGraph'
 
-interface Commit {
-  hash: string
-  message: string
-  parentHash: string | null
-  branch: string
-  files: string[] // filenames included in this commit's snapshot
-}
+type Commit = GitCommit
 
 interface RepoState {
   initialized: boolean
   files: Record<string, { staged: boolean; committed: boolean }>
   commits: Commit[]
-  branches: string[]
+  branches: BranchRefs
   currentBranch: string
   headCommitHash: string | null
   config: { name: string | null; email: string | null }
   remote: string | null
   mergeConflict: boolean
+  mergeTargetHash: string | null
   /** Snapshot of `files` taken by `git stash`, restored by `git stash pop`. */
   stashSnapshot: Record<string, { staged: boolean; committed: boolean }> | null
 }
@@ -68,12 +64,13 @@ const INITIAL_STATE: RepoState = {
   initialized: false,
   files: {},
   commits: [],
-  branches: ['main'],
+  branches: { main: null },
   currentBranch: 'main',
   headCommitHash: null,
   config: { name: null, email: null },
   remote: null,
   mergeConflict: false,
+  mergeTargetHash: null,
   stashSnapshot: null,
 }
 
@@ -81,15 +78,17 @@ const MERGE_CONFLICT_STATE: RepoState = {
   initialized: true,
   files: { 'README.md': { staged: false, committed: true } },
   commits: [
-    { hash: 'base123', message: 'Add README', parentHash: null, branch: 'main', files: ['README.md'] },
-    { hash: 'feat456', message: 'Update README on feature', parentHash: 'base123', branch: 'feature/conflict-practice', files: ['README.md'] },
+    { hash: 'base123', message: 'Add README', parentHash: null, branch: 'main', files: ['README.md'], snapshot: ['README.md'] },
+    { hash: 'main789', message: 'Update README on main', parentHash: 'base123', branch: 'main', files: ['README.md'], snapshot: ['README.md'] },
+    { hash: 'feat456', message: 'Update README on feature', parentHash: 'base123', branch: 'feature/conflict-practice', files: ['README.md'], snapshot: ['README.md'] },
   ],
-  branches: ['main', 'feature/conflict-practice'],
+  branches: { main: 'main789', 'feature/conflict-practice': 'feat456' },
   currentBranch: 'main',
-  headCommitHash: 'base123',
+  headCommitHash: 'main789',
   config: { name: null, email: null },
   remote: null,
   mergeConflict: false,
+  mergeTargetHash: null,
   stashSnapshot: null,
 }
 
@@ -293,11 +292,17 @@ export default function GitSandbox({ task, onSolved }: Props) {
             </p>
             {repo.commits.length === 0 ? <p className="text-xs cur-text-faint">No commits yet.</p> : (
               <div className="space-y-1.5">
-                {repo.commits.map(c => (
+                {getCommitHistory(repo.headCommitHash, repo.commits).map(c => (
                   <div key={c.hash} className="flex items-center gap-2 text-xs">
                     <span className="font-mono cur-link">{c.hash}</span>
                     <span className="truncate cur-text-soft">{c.message}</span>
-                    <span className="ml-auto cur-text-faint">{c.branch}</span>
+                    <span className="ml-auto cur-text-faint">
+                      {Object.entries(repo.branches)
+                        .filter(([, hash]) => hash === c.hash)
+                        .map(([name]) => name)
+                        .join(', ')}
+                      {repo.headCommitHash === c.hash && ' · HEAD'}
+                    </span>
                   </div>
                 ))}
               </div>
@@ -376,19 +381,36 @@ function interpret(
     setRepo(prev => {
       const files = { ...prev.files }
       staged.forEach(name => { files[name] = { staged: false, committed: true } })
-      const commit: Commit = {
-        hash, message, parentHash: prev.headCommitHash, branch: prev.currentBranch, files: staged,
+      const commit: Commit = prev.mergeTargetHash && prev.headCommitHash
+        ? {
+          ...createMergeCommit(prev.currentBranch, prev.headCommitHash, prev.mergeTargetHash, hash, staged),
+          snapshot: Object.keys(files),
+        }
+        : {
+          hash,
+          message,
+          parentHash: prev.headCommitHash,
+          branch: prev.currentBranch,
+          files: staged,
+          snapshot: Object.keys(files),
+        }
+      return {
+        ...prev,
+        files,
+        commits: [...prev.commits, commit],
+        branches: { ...prev.branches, [prev.currentBranch]: hash },
+        headCommitHash: hash,
+        mergeTargetHash: null,
       }
-      return { ...prev, files, commits: [...prev.commits, commit], headCommitHash: hash }
     })
     return [`[${repo.currentBranch} ${hash}] ${message}`, `${staged.length} file(s) changed`]
   }
 
   if (sub === 'branch') {
     const name = parts[2]
-    if (!name) return repo.branches.map(b => (b === repo.currentBranch ? `* ${b}` : `  ${b}`))
-    if (repo.branches.includes(name)) return [`fatal: a branch named '${name}' already exists`]
-    setRepo(prev => ({ ...prev, branches: [...prev.branches, name] }))
+    if (!name) return Object.keys(repo.branches).map(b => (b === repo.currentBranch ? `* ${b}` : `  ${b}`))
+    if (name in repo.branches) return [`fatal: a branch named '${name}' already exists`]
+    setRepo(prev => ({ ...prev, branches: { ...prev.branches, [name]: prev.headCommitHash } }))
     return [`Branch '${name}' created.`]
   }
 
@@ -397,29 +419,83 @@ function interpret(
     const name = creating ? parts[3] : parts[2]
     if (!name) return ['fatal: missing branch name']
     if (creating) {
-      if (repo.branches.includes(name)) return [`fatal: a branch named '${name}' already exists`]
-      setRepo(prev => ({ ...prev, branches: [...prev.branches, name], currentBranch: name }))
+      if (name in repo.branches) return [`fatal: a branch named '${name}' already exists`]
+      setRepo(prev => ({
+        ...prev,
+        branches: { ...prev.branches, [name]: prev.headCommitHash },
+        currentBranch: name,
+      }))
       return [`Switched to a new branch '${name}'`]
     }
-    if (!repo.branches.includes(name)) return [`fatal: invalid reference: ${name}`]
-    setRepo(prev => ({ ...prev, currentBranch: name }))
+    if (!(name in repo.branches)) return [`fatal: invalid reference: ${name}`]
+    if (repo.mergeConflict || repo.mergeTargetHash) return ['fatal: cannot switch branches during a merge']
+    if (Object.values(repo.files).some(file => file.staged || !file.committed)) {
+      return ['error: commit or stash your changes before switching branches']
+    }
+    setRepo(prev => ({
+      ...prev,
+      currentBranch: name,
+      headCommitHash: prev.branches[name],
+      files: Object.fromEntries(
+        (prev.commits.find(commit => commit.hash === prev.branches[name])?.snapshot ?? [])
+          .map(file => [file, { staged: false, committed: true }]),
+      ),
+    }))
     return [`Switched to branch '${name}'`]
   }
 
   if (sub === 'merge') {
     const name = parts[2]
     if (!name) return ['fatal: missing branch name to merge']
-    if (!repo.branches.includes(name)) return [`fatal: invalid reference: ${name}`]
-    if (repo.mergeConflict) return ['fatal: a merge is already in progress']
+    if (!(name in repo.branches)) return [`fatal: invalid reference: ${name}`]
+    if (repo.mergeConflict || repo.mergeTargetHash) return ['fatal: a merge is already in progress']
     if (scenario === 'merge-conflict' && name === 'feature/conflict-practice') {
-      setRepo(prev => ({ ...prev, mergeConflict: true }))
+      setRepo(prev => ({ ...prev, mergeConflict: true, mergeTargetHash: prev.branches[name] }))
       return [
         'Auto-merging README.md',
         'CONFLICT (content): Merge conflict in README.md',
         'Automatic merge failed; fix conflicts and then commit the result.',
       ]
     }
-    return [`Merge made by the 'ort' strategy.`, `${name} -> ${repo.currentBranch}`]
+    const sourceHash = repo.branches[name]
+    const disposition = getMergeDisposition(repo.headCommitHash, sourceHash, repo.commits)
+    if (disposition === 'already-up-to-date') return ['Already up to date.']
+    if (disposition === 'fast-forward' && sourceHash) {
+      setRepo(prev => ({
+        ...prev,
+        branches: { ...prev.branches, [prev.currentBranch]: sourceHash },
+        headCommitHash: sourceHash,
+        files: Object.fromEntries(
+          (prev.commits.find(commit => commit.hash === sourceHash)?.snapshot ?? [])
+            .map(file => [file, { staged: false, committed: true }]),
+        ),
+      }))
+      return [`Updating ${repo.headCommitHash?.slice(0, 7) ?? '0000000'}..${sourceHash.slice(0, 7)}`, `Fast-forward ${repo.currentBranch} to ${name}.`]
+    }
+    if (!repo.headCommitHash || !sourceHash) return ['fatal: refusing to merge unrelated histories']
+
+    const hash = shortHash()
+    const currentFiles = repo.commits.find(commit => commit.hash === repo.headCommitHash)?.snapshot ?? []
+    const sourceFiles = repo.commits.find(commit => commit.hash === sourceHash)?.snapshot ?? []
+    const mergeCommit = createMergeCommit(
+      repo.currentBranch,
+      repo.headCommitHash,
+      sourceHash,
+      hash,
+      [...new Set([...currentFiles, ...sourceFiles])],
+    )
+    mergeCommit.snapshot = [...new Set([...currentFiles, ...sourceFiles])]
+    const files = Object.fromEntries(
+      mergeCommit.snapshot.map(file => [file, { staged: false, committed: true }]),
+    )
+    setRepo(prev => ({
+      ...prev,
+      commits: [...prev.commits, mergeCommit],
+      branches: { ...prev.branches, [prev.currentBranch]: hash },
+      headCommitHash: hash,
+      files,
+    }))
+    return [`Merge made by the 'ort' strategy.`, `[${repo.currentBranch} ${hash}] ${mergeCommit.message}`]
   }
 
   if (sub === 'log') {
@@ -442,11 +518,25 @@ function interpret(
   if (sub === 'clone') {
     if (!parts[2]) return ['fatal: repository URL required']
     // Simulated network op — seeds a small, already-committed starter repo.
+    const hash = shortHash()
+    const commit: Commit = {
+      hash,
+      message: 'Initial commit',
+      parentHash: null,
+      branch: 'main',
+      files: ['README.md', 'index.html'],
+      snapshot: ['README.md', 'index.html'],
+    }
     setRepo(prev => ({
       ...prev,
       initialized: true,
       files: { 'README.md': { staged: false, committed: true }, 'index.html': { staged: false, committed: true } },
-      commits: [{ hash: shortHash(), message: 'Initial commit', parentHash: null, branch: 'main', files: ['README.md', 'index.html'] }],
+      commits: [commit],
+      branches: { main: hash },
+      currentBranch: 'main',
+      headCommitHash: hash,
+      mergeConflict: false,
+      mergeTargetHash: null,
     }))
     return ['Cloning into \'sample-repo\'...', 'remote: Enumerating objects, done.', 'Receiving objects: 100%, done.']
   }
@@ -509,13 +599,24 @@ function interpret(
     if (repo.commits.length === 0) return ['fatal: your current branch has no commits yet']
     const hard = cmd.includes('--hard')
     setRepo(prev => {
-      const commits = prev.commits.slice(0, -1)
-      const undone = prev.commits[prev.commits.length - 1]
-      const files = { ...prev.files }
+      const undone = prev.commits.find(commit => commit.hash === prev.headCommitHash)
+      if (!undone) return prev
+      const parent = prev.commits.find(commit => commit.hash === undone.parentHash)
+      let files = { ...prev.files }
       if (!hard) {
         undone.files.forEach(name => { if (files[name]) files[name] = { ...files[name], committed: false, staged: true } })
+      } else {
+        files = Object.fromEntries(
+          (parent?.snapshot ?? []).map(name => [name, { staged: false, committed: true }]),
+        )
       }
-      return { ...prev, commits, headCommitHash: commits.length ? commits[commits.length - 1].hash : null, files }
+      const headCommitHash = undone.parentHash
+      return {
+        ...prev,
+        headCommitHash,
+        branches: { ...prev.branches, [prev.currentBranch]: headCommitHash },
+        files,
+      }
     })
     return hard
       ? ['HEAD is now at previous commit — working tree changes discarded.']
@@ -553,7 +654,15 @@ function interpret(
     const newHash = shortHash()
     setRepo(prev => ({
       ...prev,
-      commits: [...prev.commits, { hash: newHash, message: `Revert "${target.message}"`, parentHash: prev.headCommitHash, branch: prev.currentBranch, files: target.files }],
+      commits: [...prev.commits, {
+        hash: newHash,
+        message: `Revert "${target.message}"`,
+        parentHash: prev.headCommitHash,
+        branch: prev.currentBranch,
+        files: target.files,
+        snapshot: Object.keys(prev.files),
+      }],
+      branches: { ...prev.branches, [prev.currentBranch]: newHash },
       headCommitHash: newHash,
     }))
     return [`[${repo.currentBranch} ${newHash}] Revert "${target.message}"`]
@@ -562,7 +671,7 @@ function interpret(
   if (sub === 'rebase') {
     const target = parts[2]
     if (!target) return ['usage: git rebase <branch>']
-    if (!repo.branches.includes(target)) return [`fatal: invalid upstream '${target}'`]
+    if (!(target in repo.branches) || !repo.branches[target]) return [`fatal: invalid upstream '${target}'`]
     return [`Successfully rebased and updated refs/heads/${repo.currentBranch}.`]
   }
 
@@ -573,7 +682,15 @@ function interpret(
     const newHash = shortHash()
     setRepo(prev => ({
       ...prev,
-      commits: [...prev.commits, { hash: newHash, message: source.message, parentHash: prev.headCommitHash, branch: prev.currentBranch, files: source.files }],
+      commits: [...prev.commits, {
+        hash: newHash,
+        message: source.message,
+        parentHash: prev.headCommitHash,
+        branch: prev.currentBranch,
+        files: source.files,
+        snapshot: [...new Set([...(prev.commits.find(commit => commit.hash === prev.headCommitHash)?.snapshot ?? []), ...source.files])],
+      }],
+      branches: { ...prev.branches, [prev.currentBranch]: newHash },
       headCommitHash: newHash,
     }))
     return [`[${repo.currentBranch} ${newHash}] ${source.message}`, 'Date: (cherry picked from commit ' + hash + ')']
