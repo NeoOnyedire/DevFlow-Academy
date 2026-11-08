@@ -7,8 +7,9 @@
  * which were invisible on the dark canvas.
  */
 import { useState } from 'react'
-import { Check, X, ArrowRight } from 'lucide-react'
+import { Check, X, ArrowRight, MessageCircle } from 'lucide-react'
 import type { QuizQuestion } from '../../content/lessons'
+import { requestGitterHelp } from '../../lib/gitterSupport'
 
 interface Props {
   questions: QuizQuestion[]
@@ -79,9 +80,36 @@ export default function QuizStep({ questions, onComplete }: Props) {
 
       {selected !== null && (
         <div className="cur-card mb-5 p-4 rounded-xl">
+          {!isCorrect && (
+            <p className="text-sm font-semibold mb-2 cur-danger-text">
+              Not quite. “{question.options[selected]}” is not the best answer.
+            </p>
+          )}
           <p className="text-sm leading-relaxed cur-text-soft">
-            {question.explanation}
+            {!isCorrect && question.incorrectFeedback?.[selected]
+              ? question.incorrectFeedback[selected]
+              : !isCorrect
+                ? `Your choice doesn’t match the key idea: ${question.explanation}`
+                : question.explanation}
           </p>
+          {!isCorrect && (
+            <>
+              <p className="text-sm mt-2 cur-text-soft">
+                Correct answer: <strong className="cur-text">{question.options[question.correctIndex]}</strong>
+              </p>
+              <p className="text-sm mt-2 cur-text-soft">
+                Retry hint: {question.retryHint ?? `Keep this idea in mind: ${question.explanation}`}
+              </p>
+              <button
+                onClick={() => requestGitterHelp(
+                  `I'm answering this Git curriculum quiz question: "${question.question}". I chose "${question.options[selected]}". The correct answer is "${question.options[question.correctIndex]}". Please explain why my choice is wrong and give me a short retry hint.`
+                )}
+                className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold cur-link hover:underline"
+              >
+                <MessageCircle className="w-3.5 h-3.5" /> Ask Gitter for help (Lite is free)
+              </button>
+            </>
+          )}
         </div>
       )}
 

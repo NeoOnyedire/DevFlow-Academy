@@ -30,6 +30,8 @@ export interface QuizQuestion {
   options: string[]
   correctIndex: number
   explanation: string
+  incorrectFeedback?: Record<number, string>
+  retryHint?: string
 }
 
 export interface SandboxTask {

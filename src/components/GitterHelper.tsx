@@ -5,7 +5,7 @@
  *
  * - "Gitter Lite" (default): answers come from a local, built-in Git
  *   knowledge base (src/lib/gitterLite.ts). No key, no signup, no
- *   network call, no cost — works for every logged-in user immediately.
+ *   network call, no cost — works for guests and logged-in users.
  *
  * - "Gitter AI" (optional, opt-in): real conversational AI, powered by
  *   the user's own API key from Google Gemini, Groq, or Anthropic. The
@@ -27,7 +27,7 @@
  * - Completion badge on the toggle button
  * - Mobile keyboard fix using visualViewport
  * - Typing indicator, avatar messages, greeting by name
- * - Login gate, 340px width cap
+ * - 340px width cap
  * - Chat history persists to sessionStorage, cleared on logout
  *
  * LINT FIX (react-hooks/set-state-in-effect): the first-open greeting used
@@ -41,6 +41,7 @@ import { Bot, ChevronDown, MessageCircle, Send, Sparkles, Star, KeyRound, Zap, C
 import { useApp } from '../context/AppContext'
 import { useAuth } from '../context/AuthContext'
 import { answerWithGitterLite } from '../lib/gitterLite'
+import { GITTER_HELP_EVENT } from '../lib/gitterSupport'
 import {
   GITTER_API_KEY_STORAGE as API_KEY_STORAGE,
   GITTER_PROVIDER_STORAGE as PROVIDER_STORAGE,
@@ -123,7 +124,7 @@ export default function GitterHelper() {
   const [provider, setProvider] = useState<AiProvider>(
     () => (localStorage.getItem(PROVIDER_STORAGE) as AiProvider) || 'gemini'
   )
-  const isAiMode = !!apiKey
+  const isAiMode = isLoggedIn && !!apiKey
 
   const [showKeySettings, setShowKeySettings] = useState(false)
   const [setupProvider, setSetupProvider] = useState<AiProvider>('gemini')
@@ -203,15 +204,14 @@ export default function GitterHelper() {
 
   // Focus input on open
   useEffect(() => {
-    if (isOpen && isLoggedIn) {
+    if (isOpen) {
       setTimeout(() => inputRef.current?.focus(), 150)
     }
-  }, [isOpen, isLoggedIn])
+  }, [isOpen])
 
   /** Shows the typing indicator, then Gitter's first message. Called from event handlers only. */
   const startGreeting = () => {
-    if (!user) return
-    const firstName = user.name.split(' ')[0]
+    const firstName = user?.name.split(' ')[0] ?? 'there'
     setHasGreeted(true)
     setIsTyping(true)
     setTimeout(() => {
@@ -227,7 +227,7 @@ export default function GitterHelper() {
   const toggleOpen = () => {
     const willOpen = !isOpen
     setIsOpen(willOpen)
-    if (willOpen && isLoggedIn && user && !hasGreeted) startGreeting()
+    if (willOpen && !hasGreeted) startGreeting()
   }
 
   /** Save a newly entered API key and switch into AI mode. */
@@ -332,18 +332,18 @@ export default function GitterHelper() {
     }
   }, [question, isTyping, messages, rolePath.label, nextModule.title, completedModules.length, modules.length, isAiMode, apiKey, provider])
 
-  // Not logged in
-  if (!isLoggedIn) {
-    return (
-      <div className="fixed bottom-4 right-4 z-[140]">
-        <div className="flex items-center gap-2 bg-[#4A2F2F]/60 border border-white/10 px-4 py-3
-          font-display font-semibold text-white/30 text-sm card-shadow select-none"
-          style={{ borderRadius: 8 }} title="Sign in to chat with Gitter">
-          <Bot className="h-5 w-5" /> Gitter
-        </div>
-      </div>
-    )
-  }
+  useEffect(() => {
+    const handleHelpRequest = (event: Event) => {
+      const prompt = (event as CustomEvent<string>).detail
+      if (!prompt) return
+      setIsOpen(true)
+      setHasGreeted(true)
+      void sendMessage(prompt)
+    }
+
+    window.addEventListener(GITTER_HELP_EVENT, handleHelpRequest)
+    return () => window.removeEventListener(GITTER_HELP_EVENT, handleHelpRequest)
+  }, [sendMessage])
 
   return (
     <div className="fixed bottom-4 right-4 z-[140]" style={{ width: 'min(calc(100vw - 2rem), 340px)' }}>
@@ -375,14 +375,16 @@ export default function GitterHelper() {
                   <Trash2 className="h-4 w-4" />
                 </button>
               )}
-              <button
-                onClick={() => setShowKeySettings(v => !v)}
-                className="rounded-lg p-1.5 text-white/50 hover:bg-white/10 hover:text-white transition-colors"
-                aria-label="AI settings"
-                title={isAiMode ? 'AI mode settings' : 'Upgrade to Gitter AI'}
-              >
-                <KeyRound className={`h-4 w-4 ${isAiMode ? 'text-[#3CCF4A]' : ''}`} />
-              </button>
+              {isLoggedIn && (
+                <button
+                  onClick={() => setShowKeySettings(v => !v)}
+                  className="rounded-lg p-1.5 text-white/50 hover:bg-white/10 hover:text-white transition-colors"
+                  aria-label="AI settings"
+                  title={isAiMode ? 'AI mode settings' : 'Upgrade to Gitter AI'}
+                >
+                  <KeyRound className={`h-4 w-4 ${isAiMode ? 'text-[#3CCF4A]' : ''}`} />
+                </button>
+              )}
               <button onClick={() => setIsOpen(false)}
                 className="rounded-lg p-1.5 text-white/50 hover:bg-white/10 hover:text-white transition-colors"
                 aria-label="Collapse Gitter">
@@ -501,7 +503,7 @@ export default function GitterHelper() {
               <span className="font-display font-semibold text-[#F7B731] text-xs">This week</span>
             </div>
             <p className="text-white/70 text-xs leading-snug">{helperTip}</p>
-            {!isAiMode && !showKeySettings && (
+            {isLoggedIn && !isAiMode && !showKeySettings && (
               <button
                 onClick={() => setShowKeySettings(true)}
                 className="mt-1.5 flex items-center gap-1 text-[10px] text-[#F7B731]/80 hover:text-[#F7B731] transition-colors"

@@ -39,9 +39,11 @@
  * ============================================================================
  */
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { Terminal, FilePlus, CheckCircle2, GitBranch as BranchIcon } from 'lucide-react'
+import { Terminal, FilePlus, CheckCircle2, GitBranch as BranchIcon, MessageCircle } from 'lucide-react'
 import type { SandboxTask } from '../../content/lessons'
 import { createMergeCommit, getCommitHistory, getMergeDisposition, type BranchRefs, type GitCommit } from '../../lib/gitGraph'
+import { explainCommandFailure, getSequenceProgress } from '../../lib/learningFeedback'
+import { requestGitterHelp } from '../../lib/gitterSupport'
 
 type Commit = GitCommit
 
@@ -109,6 +111,9 @@ export default function GitSandbox({ task, onSolved }: Props) {
   const [input, setInput] = useState('')
   const [newFileName, setNewFileName] = useState('')
   const [solved, setSolved] = useState(false)
+  const latestEntry = history[history.length - 1]
+  const commandFeedback = latestEntry ? explainCommandFailure(latestEntry.output) : null
+  const sequenceProgress = getSequenceProgress(history, task)
   const scrollRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -128,7 +133,7 @@ export default function GitSandbox({ task, onSolved }: Props) {
       return normalized === prefix || normalized.startsWith(`${prefix} `)
     }
     const succeeded = (entry: { cmd: string; output: string[] }) =>
-      !entry.output.some(line => /^(?:fatal:|error:|command not found:|nothing to commit|No local changes to save|No stash entries found)/i.test(line))
+      explainCommandFailure(entry.output) === null
     const matchesSequence = (sequence: string[]) => {
       let next = 0
       for (const entry of entries) {
@@ -310,7 +315,29 @@ export default function GitSandbox({ task, onSolved }: Props) {
           </div>
 
           {!solved && (
-            <p className="text-xs pt-2 cur-text-faint" style={{ borderTop: '1px solid var(--cur-border)' }}>Hint: {task.hint}</p>
+            <div className="pt-2" style={{ borderTop: '1px solid var(--cur-border)' }}>
+              {commandFeedback && (
+                <div role="status" className="mb-3 rounded-lg border border-rose-400/30 bg-rose-400/10 p-3">
+                  <p className="text-xs font-semibold cur-text">Why it didn’t work</p>
+                  <p className="text-xs mt-1 cur-text-soft">{commandFeedback.reason}</p>
+                  <p className="text-xs mt-1 cur-text-soft">Try next: {commandFeedback.retryHint}</p>
+                  <button
+                    onClick={() => requestGitterHelp(
+                      `I'm using the Git sandbox. Task: ${task.prompt}. I ran "${latestEntry?.cmd}" and got: ${latestEntry?.output.join(' ')}. Explain what happened and how to fix it.`
+                    )}
+                    className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold cur-link hover:underline"
+                  >
+                    <MessageCircle className="w-3.5 h-3.5" /> Ask Gitter for help (Lite is free)
+                  </button>
+                </div>
+              )}
+              {sequenceProgress && sequenceProgress.completed < sequenceProgress.total && (
+                <p className="text-xs mb-2 cur-text-soft">
+                  Progress: {sequenceProgress.completed} of {sequenceProgress.total} steps. Next: <code>{sequenceProgress.nextCommand}</code>
+                </p>
+              )}
+              <p className="text-xs cur-text-faint">Hint: {task.hint}</p>
+            </div>
           )}
         </div>
       </div>

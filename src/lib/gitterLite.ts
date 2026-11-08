@@ -21,6 +21,41 @@ interface LiteEntry {
 
 const LITE_KNOWLEDGE: LiteEntry[] = [
   {
+    keywords: ['not a git repository', 'not a git repo'],
+    answer:
+      "Git couldn't find a repository in the current folder. In the sandbox, start one with `git init`; on your computer, move into the project folder or initialize it with `git init`, then retry.",
+  },
+  {
+    keywords: ['nothing to commit', 'changes not staged', 'no changes added to commit'],
+    answer:
+      "A commit records staged changes, and Git doesn't see any staged work yet. Check `git status`, then stage the intended files with `git add <file>` (or `git add .`) before committing.",
+  },
+  {
+    keywords: ['pathspec', 'did not match any files', 'no such file'],
+    answer:
+      "Git couldn't find that path. Check the exact file name with `git status` and make sure the file exists; then retry `git add <file>` using the correct path.",
+  },
+  {
+    keywords: ['no configured push destination', 'no push destination', 'remote add origin'],
+    answer:
+      "Git has no remote repository configured for this push. Add one with `git remote add origin <repository-url>`, then push your branch with `git push -u origin <branch>`.",
+  },
+  {
+    keywords: ['unmerged files', 'resolve conflict', 'unresolved conflict'],
+    answer:
+      "Git is waiting for you to resolve the conflict before it can finish the merge. Edit each conflicted file, remove the conflict markers while keeping the intended content, stage it with `git add <file>`, then commit the merge.",
+  },
+  {
+    keywords: ['invalid upstream', 'invalid reference', 'branch does not exist'],
+    answer:
+      "Git can't find that branch or reference. Check available branches with `git branch`; if you need a new branch, create it with `git switch -c <branch>`.",
+  },
+  {
+    keywords: ['workflow validation', 'workflow path', 'github actions workflow', 'pull_request workflow', 'actions/checkout'],
+    answer:
+      "A GitHub Actions workflow needs to live under `.github/workflows/` and define an event under `on:` plus at least one job with steps. For a basic CI workflow, use `actions/checkout@v4`, set up the project as needed, then run its install and test commands.",
+  },
+  {
     keywords: ['what should i learn next', 'next module', 'what next', 'where do i start', 'where should i start'],
     answer:
       "Head to your dashboard — it always shows your next unfinished module based on your role path. If you're brand new, Module 1 (Git & GitHub Crash Course) is the best place to start.",
@@ -113,7 +148,7 @@ const LITE_KNOWLEDGE: LiteEntry[] = [
 ]
 
 const FALLBACK_ANSWER =
-  "I'm running in Gitter Lite mode right now, so I only know a set of common Git questions — that one's outside my list. Try the Fix an Error search page for specific error messages, or add a free Gemini or Groq API key in settings to unlock full AI chat."
+  "I'm running in free Gitter Lite mode, so I know common Git questions and errors but may not have that exact answer. Try the Fix an Error search page, or optionally add your own Gemini or Groq key in settings for AI chat."
 
 /**
  * Scores and returns the best matching canned answer for a free-text

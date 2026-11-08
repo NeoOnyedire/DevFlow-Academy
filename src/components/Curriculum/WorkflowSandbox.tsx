@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { CheckCircle2, FileCode2 } from 'lucide-react'
+import { CheckCircle2, FileCode2, MessageCircle } from 'lucide-react'
 import type { SandboxTask } from '../../content/lessons'
 import { validateWorkflow } from '../../lib/workflowValidation'
+import { requestGitterHelp } from '../../lib/gitterSupport'
 
 interface Props {
   task: SandboxTask
@@ -22,6 +23,7 @@ export default function WorkflowSandbox({ task, onSolved }: Props) {
   const [workflow, setWorkflow] = useState(STARTER_WORKFLOW)
   const [workflowPath, setWorkflowPath] = useState(task.workflowRequirements?.path ? '' : '.github/workflows/ci.yml')
   const [feedback, setFeedback] = useState('')
+  const [validationFailed, setValidationFailed] = useState(false)
   const [solved, setSolved] = useState(false)
 
   const handleValidateWorkflow = () => {
@@ -34,10 +36,12 @@ export default function WorkflowSandbox({ task, onSolved }: Props) {
     const validationError = validateWorkflow(workflowPath, workflow, requirements)
     if (validationError) {
       setFeedback(validationError)
+      setValidationFailed(true)
       return
     }
 
     setFeedback('Workflow checks passed: the trigger and CI steps are in place.')
+    setValidationFailed(false)
     setSolved(true)
     onSolved()
   }
@@ -80,6 +84,7 @@ export default function WorkflowSandbox({ task, onSolved }: Props) {
           onChange={event => {
             setWorkflow(event.target.value)
             setFeedback('')
+            setValidationFailed(false)
           }}
           className="cur-terminal term-input mt-1.5 block min-h-56 w-full rounded-xl p-4 font-mono text-xs leading-6 outline-none focus:ring-2 focus:ring-[#F7B731]"
           spellCheck={false}
@@ -90,7 +95,25 @@ export default function WorkflowSandbox({ task, onSolved }: Props) {
       <p className="text-xs mb-3 cur-text-faint">
         This lab checks the required workflow structure and steps; GitHub performs full YAML validation when you push it.
       </p>
-      {feedback && <p role="status" className={`text-sm mb-3 ${solved ? 'cur-success-text' : 'cur-text-soft'}`}>{feedback}</p>}
+      {feedback && (
+        <div role="status" className={`text-sm mb-3 ${solved ? 'cur-success-text' : 'cur-text-soft'}`}>
+          <p>{feedback}</p>
+          {validationFailed && (
+            <>
+              <p className="mt-1 text-xs">Why it matters: GitHub Actions needs the expected file location and workflow steps before it can run this CI check.</p>
+              <p className="mt-1 text-xs">Try next: {task.hint}</p>
+              <button
+                onClick={() => requestGitterHelp(
+                  `I'm working on a GitHub Actions workflow exercise. Task: ${task.prompt}. My workflow path is "${workflowPath}". The validator says: "${feedback}". Here is my YAML:\n${workflow}\nExplain the issue and suggest a focused fix.`
+                )}
+                className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold cur-link hover:underline"
+              >
+                <MessageCircle className="w-3.5 h-3.5" /> Ask Gitter for help (Lite is free)
+              </button>
+            </>
+          )}
+        </div>
+      )}
       {!solved && (
         <button
           onClick={handleValidateWorkflow}
