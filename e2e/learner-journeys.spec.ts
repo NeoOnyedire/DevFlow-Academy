@@ -9,7 +9,7 @@ const testUser = {
   emailVerified: true,
 }
 
-async function mockAppApi(page: Page, signedIn = false) {
+async function mockAppApi(page: Page, signedIn = false, completedLessonIds: string[] = []) {
   await page.route('**/api/**', async route => {
     const { pathname } = new URL(route.request().url())
     let data: Record<string, unknown> = {}
@@ -20,7 +20,7 @@ async function mockAppApi(page: Page, signedIn = false) {
       data = { completedModules: [] }
     } else if (pathname === '/api/lesson-progress') {
       data = route.request().method() === 'GET'
-        ? { completedLessonIds: [] }
+        ? { completedLessonIds }
         : { ok: true, moduleCompleted: false }
     } else if (pathname === '/api/reviews') {
       data = { reviews: [] }
@@ -109,6 +109,38 @@ test.describe('signed-in learning journey', () => {
     await commandInput.fill('git status')
     await commandInput.press('Enter')
     await expect(page.getByText('Solved', { exact: true })).toBeVisible()
+  })
+
+  test('completes Module 1 without connecting an AI key or paying for AI', async ({ page }) => {
+    await mockAppApi(page, true, [
+      'mod-01-lesson-01',
+      'mod-01-lesson-02',
+      'mod-01-lesson-03',
+      'mod-01-lesson-04',
+      'mod-01-lesson-05',
+      'mod-01-lesson-06',
+    ])
+    await page.goto('/learn/mod-01/mod-01-lesson-07', { waitUntil: 'domcontentloaded' })
+    await page.getByRole('button', { name: /Continue to quiz/ }).click()
+    await page.getByRole('button', { name: 'main' }).click()
+    await page.getByRole('button', { name: /Continue to sandbox/ }).click()
+
+    await page.getByRole('textbox', { name: 'README.md' }).fill('README.md')
+    await page.getByRole('button', { name: 'Create file' }).click()
+    const commandInput = page.getByPlaceholder('git status')
+    for (const command of [
+      'git init',
+      'git switch -c feature/readme',
+      'git add README.md',
+      'git commit -m "Add README"',
+      'git switch main',
+      'git merge feature/readme',
+    ]) {
+      await commandInput.fill(command)
+      await commandInput.press('Enter')
+    }
+
+    await expect(page).toHaveURL(/\/learn\/mod-02\//)
   })
 
   test('explains workflow validation failures and accepts a corrected CI workflow', async ({ page }) => {

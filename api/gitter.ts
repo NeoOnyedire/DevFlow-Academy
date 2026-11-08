@@ -82,7 +82,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.status(401).json({
       error: 'MISSING_API_KEY',
       message:
-        'Gitter AI needs a free API key from Gemini, Groq, or Anthropic. Add one in settings, or keep chatting with Gitter Lite — no key required.',
+        'Gitter AI needs an API key from Gemini, Groq, or Anthropic. Provider charges may apply. You can keep using free Gitter Lite with no key.',
     })
     return
   }

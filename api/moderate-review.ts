@@ -1,10 +1,8 @@
 /**
  * api/moderate-review.ts
  *
- * AI moderation gate in front of review submission. Requires the reviewer
- * to have activated Gitter AI (their own BYOK key), and uses that same
- * key/provider to ask whether the review looks like genuine, on-topic
- * feedback before api/reviews.ts's real write path runs.
+ * Optional AI moderation for a review. The client calls this only when
+ * the reviewer has connected Gitter AI with their own provider key.
  *
  * This is a soft filter, not a security boundary — api/reviews.ts still
  * independently enforces login, one-review-per-account, and rate limits
@@ -88,7 +86,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!apiKey || typeof apiKey !== 'string' || apiKey.trim().length < 10) {
     res.status(401).json({
       error: 'GITTER_AI_REQUIRED',
-      message: 'Activate Gitter AI with a free API key before leaving a review — this keeps reviews genuine.',
+      message: 'This optional AI review check needs a provider API key. You can submit without the check; provider usage may have its own costs.',
     })
     return
   }

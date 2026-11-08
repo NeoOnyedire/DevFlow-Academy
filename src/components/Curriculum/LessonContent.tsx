@@ -19,10 +19,9 @@
  *    calls setState from the promise callback, never synchronously.
  */
 import { useEffect, useState } from 'react'
-import { CheckCircle2, ExternalLink, Sparkles } from 'lucide-react'
+import { CheckCircle2, ExternalLink } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { useApp } from '../../context/AppContext'
-import { hasGitterAiActivated } from '../../lib/gitterKeys'
 import { fetchCompletedLessonIds, saveLessonStep } from '../../lib/lessonProgress'
 import type { Lesson } from '../../content/lessons'
 import LessonPlayer from './LessonPlayer'
@@ -30,7 +29,6 @@ import QuizStep from './QuizStep'
 import GitSandbox from './GitSandbox'
 import WorkflowSandbox from './WorkflowSandbox'
 
-const GITTER_GATE_MODULE = 'mod-01'
 const GUEST_TASK_STORAGE = 'devflow_guest_task_lessons'
 
 function loadGuestTaskIds(): string[] {
@@ -62,7 +60,6 @@ export default function LessonContent({ module: mod, lessons, lessonId, onAdvanc
   // mismatch means "still loading" without any synchronous setState.
   const loadKey = `${mod.id}:${isLoggedIn ? 'user' : 'guest'}`
   const [loaded, setLoaded] = useState<{ key: string; ids: string[] } | null>(null)
-  const [showGitterNotice, setShowGitterNotice] = useState(false)
 
   const isLoading = loaded?.key !== loadKey
   const completedLessonIds = loaded?.key === loadKey ? loaded.ids : []
@@ -98,10 +95,6 @@ export default function LessonContent({ module: mod, lessons, lessonId, onAdvanc
     const next = Array.from(new Set([...completedLessonIds, currentLesson.id]))
     setLoaded({ key: loadKey, ids: next })
 
-    if (moduleCompleted && mod.id === GITTER_GATE_MODULE && !hasGitterAiActivated()) {
-      setShowGitterNotice(true)
-      return
-    }
     if (moduleCompleted) toggleModuleComplete(mod.id)
 
     onAdvance(lessons[lessonIndex + 1]?.id, moduleCompleted)
@@ -135,15 +128,6 @@ export default function LessonContent({ module: mod, lessons, lessonId, onAdvanc
         finishLesson={finishLesson}
       />
 
-      {showGitterNotice && (
-        <div className="cur-card mt-4 flex items-start gap-2 rounded-xl px-4 py-3">
-          <Sparkles className="w-4 h-4 flex-shrink-0 mt-0.5 cur-link" />
-          <p className="text-sm cur-text-soft">
-            Activate Gitter AI first — open the Gitter chat in the bottom-right corner and add a free API key.
-            This is required before completing Module 1.
-          </p>
-        </div>
-      )}
     </div>
   )
 }

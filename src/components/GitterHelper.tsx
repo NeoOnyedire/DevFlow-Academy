@@ -425,9 +425,9 @@ export default function GitterHelper() {
                     </button>
                   </div>
                   <p className="text-xs text-white/60 leading-relaxed">
-                    Gitter Lite is free forever with no signup. If you'd like real conversational AI, add your own
-                    key from Gemini, Groq, or Anthropic — it stays in your browser, and any usage cost is on your
-                    own account, not ours.
+                    You never need to pay to use the course or Gitter Lite. AI chat is optional. If you connect a
+                    provider key, it stays in your browser, but that provider may charge for API usage under its
+                    own terms.
                   </p>
 
                   {/* Provider tabs */}

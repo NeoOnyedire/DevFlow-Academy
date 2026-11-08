@@ -3,12 +3,9 @@
  * ReviewModal.tsx
  * ============================================================================
  *
- * Review modal — users must leave a review before they can "complete" the
- * course. Requires Gitter AI to be activated (a BYOK key set — see
- * lib/gitterKeys.ts), and runs the review through /api/moderate-review
- * using that same key before the real submission to /api/reviews goes
- * through. The AI's short reply is shown directly to the reviewer,
- * whether approving or asking them to revise.
+ * Review modal — users may leave a public review before completing the
+ * course. Gitter AI review moderation is optional; without an API key the
+ * review is submitted directly, with server-side validation still applied.
  * ============================================================================
  */
 
@@ -42,12 +39,26 @@ export default function ReviewModal() {
       setError('Please write at least 10 characters')
       return
     }
+
+    setIsSubmitting(true)
+
+    const publishReview = async () => {
+      const result = await submitReview(rating, comment)
+      if (!result.ok) {
+        setIsSubmitting(false)
+        setInfoMessage('')
+        setError(result.message)
+        return
+      }
+      setRating(0)
+      setComment('')
+    }
+
     if (!credentials) {
-      setError('Activate Gitter AI with a free API key first — see the Gitter chat in the bottom-right corner.')
+      await publishReview()
       return
     }
 
-    setIsSubmitting(true)
     setIsModerating(true)
 
     try {
@@ -80,16 +91,13 @@ export default function ReviewModal() {
       // Approved — show the AI's reply briefly, then submit for real.
       setInfoMessage(modData.reply || 'Thanks for your feedback!')
       setTimeout(async () => {
-        const result = await submitReview(rating, comment)
-        if (!result.ok) {
+        try {
+          await publishReview()
+        } catch {
           setIsSubmitting(false)
           setInfoMessage('')
-          setError(result.message)
-          return
+          setError('Could not submit your review. Please try again.')
         }
-        setRating(0)
-        setComment('')
-        // submitReview closes the modal itself on success.
       }, 1400)
     } catch {
       setIsModerating(false)
@@ -126,14 +134,18 @@ export default function ReviewModal() {
           </p>
         </div>
 
+        <div className="mb-4 flex items-start gap-2 rounded-xl bg-[#F7B731]/15 border border-[#F7B731]/30 px-4 py-3">
+          <Sparkles className="w-4 h-4 text-[#F7B731] flex-shrink-0 mt-0.5" />
+          <p className="text-white/80 text-sm">
+            No payment is required to take the course or submit a review. Gitter Lite is free; AI review checking
+            is optional and may use a provider key that can have its own costs.
+          </p>
+        </div>
+
         {!credentials && (
-          <div className="mb-4 flex items-start gap-2 rounded-xl bg-[#F7B731]/15 border border-[#F7B731]/30 px-4 py-3">
-            <Sparkles className="w-4 h-4 text-[#F7B731] flex-shrink-0 mt-0.5" />
-            <p className="text-white/80 text-sm">
-              Reviews are checked by Gitter AI before publishing, using your own free API key. Open the Gitter
-              chat in the bottom-right corner and add one, then come back here.
-            </p>
-          </div>
+          <p className="mb-4 text-white/40 text-xs text-center">
+            No AI key is connected, so your review will be submitted without the optional AI check.
+          </p>
         )}
 
         {credentials && (
@@ -191,7 +203,7 @@ export default function ReviewModal() {
 
         <button
           onClick={handleSubmit}
-          disabled={isSubmitting || !credentials}
+          disabled={isSubmitting}
           className="w-full bg-rose-punch text-white font-display font-semibold py-3.5 rounded-xl
             hover:bg-[#ff3d5d] disabled:opacity-60 transition-all duration-200 flex items-center justify-center gap-2"
         >

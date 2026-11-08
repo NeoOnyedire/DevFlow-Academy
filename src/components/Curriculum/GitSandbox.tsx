@@ -104,9 +104,15 @@ interface Props {
 }
 
 export default function GitSandbox({ task, onSolved }: Props) {
-  const [repo, setRepo] = useState<RepoState>(() =>
+  const [repo, setRepoState] = useState<RepoState>(() =>
     task.scenario === 'merge-conflict' ? MERGE_CONFLICT_STATE : INITIAL_STATE
   )
+  const repoRef = useRef(repo)
+  const updateRepo = (updater: (prev: RepoState) => RepoState) => {
+    const next = updater(repoRef.current)
+    repoRef.current = next
+    setRepoState(next)
+  }
   const [history, setHistory] = useState<{ cmd: string; output: string[] }[]>([])
   const [input, setInput] = useState('')
   const [newFileName, setNewFileName] = useState('')
@@ -148,17 +154,17 @@ export default function GitSandbox({ task, onSolved }: Props) {
       : task.expectedCommands.some(expected =>
         entries.some(entry => succeeded(entry) && commandMatches(entry.cmd, expected))
       )
-    const hasRequiredFiles = (task.requiredFiles ?? []).every(name => name in repo.files)
+    const hasRequiredFiles = (task.requiredFiles ?? []).every(name => name in repoRef.current.files)
     if (isMatch && hasRequiredFiles) {
       setSolved(true)
       onSolved()
     }
-  }, [history, task, onSolved, repo.files])
+  }, [history, task, onSolved])
 
   const addNewFile = () => {
     const name = newFileName.trim()
     if (!name) return
-    setRepo(prev => ({
+    updateRepo(prev => ({
       ...prev,
       files: { ...prev.files, [name]: { staged: false, committed: false } },
     }))
@@ -169,14 +175,14 @@ export default function GitSandbox({ task, onSolved }: Props) {
   const runCommand = (raw: string) => {
     const cmd = raw.trim()
     if (!cmd) return
-    const output = interpret(cmd, repo, setRepo, task.scenario)
+    const output = interpret(cmd, repo, updateRepo, task.scenario)
     setHistory(prev => [...prev, { cmd, output }])
     checkSolved(cmd, output)
     setInput('')
   }
 
   const resolveConflict = (version: 'main' | 'feature') => {
-    setRepo(prev => ({
+    updateRepo(prev => ({
       ...prev,
       mergeConflict: false,
       files: { ...prev.files, 'README.md': { staged: true, committed: false } },

@@ -23,6 +23,9 @@ DevFlow Academy combines **bite-sized lessons** with **interactive, real-world e
 - **Community Challenges** — Learn together with others
 - **100% Free Forever** — No paywalls, no premium tiers
 
+**No payment or AI API key is required to take the course or complete lessons.** Gitter Lite is free to use.
+Gitter's optional AI mode uses a provider key and may be subject to that provider's own limits or charges.
+
 ## Why We Built This
 
 After seeing friends graduate with CompSci degrees yet still struggle with Git, I decided to take action. Having learned Git hands-on from day one at **WeThinkCode**, I knew the value of practical, work-simulated training.
