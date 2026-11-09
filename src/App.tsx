@@ -30,9 +30,8 @@
  *   *                       404 — real not-found page, not a silent LandingPage fallback
  */
 
+import { lazy, Suspense } from 'react'
 import { Routes, Route } from 'react-router-dom'
-import { gsap } from 'gsap'
-import { ScrollTrigger } from 'gsap/ScrollTrigger'
 
 // Context providers
 import { ThemeProvider } from './context/ThemeContext'
@@ -47,27 +46,24 @@ import GitterHelper   from './components/GitterHelper'
 import GittoHelper    from './components/GittoHelper'
 import ErrorBoundary  from './components/ErrorBoundary'
 
-// Pages
-import LandingPage        from './pages/LandingPage'
-import LearnPage          from './pages/LearnPage'
-import PracticePage       from './pages/PracticePage'
-import TroubleshootPage   from './pages/TroubleshootPage'
-import ChallengePage      from './pages/ChallengePage'
-import DashboardPage      from './pages/DashboardPage'
-import ReviewsPage        from './pages/ReviewsPage'
-import SettingsPage       from './pages/SettingsPage'
-import AboutPage          from './pages/AboutPage'
-import GitHistoryPage     from './pages/GitHistoryPage'
-import PrivacyPage        from './pages/PrivacyPage'
-import TermsPage          from './pages/TermsPage'
-import SupportPage        from './pages/SupportPage'
-import AdminPage          from './pages/AdminPage'
-import GitHubCallbackPage from './pages/GitHubCallbackPage'
-import VerifyEmailPage    from './pages/VerifyEmailPage'
-import ResetPasswordPage  from './pages/ResetPasswordPage'
-import NotFoundPage       from './pages/NotFoundPage'
-
-gsap.registerPlugin(ScrollTrigger)
+const LandingPage = lazy(() => import('./pages/LandingPage'))
+const LearnPage = lazy(() => import('./pages/LearnPage'))
+const PracticePage = lazy(() => import('./pages/PracticePage'))
+const TroubleshootPage = lazy(() => import('./pages/TroubleshootPage'))
+const ChallengePage = lazy(() => import('./pages/ChallengePage'))
+const DashboardPage = lazy(() => import('./pages/DashboardPage'))
+const ReviewsPage = lazy(() => import('./pages/ReviewsPage'))
+const SettingsPage = lazy(() => import('./pages/SettingsPage'))
+const AboutPage = lazy(() => import('./pages/AboutPage'))
+const GitHistoryPage = lazy(() => import('./pages/GitHistoryPage'))
+const PrivacyPage = lazy(() => import('./pages/PrivacyPage'))
+const TermsPage = lazy(() => import('./pages/TermsPage'))
+const SupportPage = lazy(() => import('./pages/SupportPage'))
+const AdminPage = lazy(() => import('./pages/AdminPage'))
+const GitHubCallbackPage = lazy(() => import('./pages/GitHubCallbackPage'))
+const VerifyEmailPage = lazy(() => import('./pages/VerifyEmailPage'))
+const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'))
+const NotFoundPage = lazy(() => import('./pages/NotFoundPage'))
 
 function AppInner() {
   return (
@@ -82,29 +78,31 @@ function AppInner() {
 
       {/* Page routes — isolated so a crash here doesn't take the overlays with it */}
       <ErrorBoundary label="page" variant="page">
-        <Routes>
-          <Route path="/"                     element={<LandingPage />} />
-          <Route path="/learn"                element={<LearnPage />} />
-          <Route path="/learn/:moduleId"              element={<LearnPage />} />
-          <Route path="/learn/:moduleId/:lessonId"    element={<LearnPage />} />
-          <Route path="/practice"             element={<PracticePage />} />
-          <Route path="/troubleshoot"         element={<TroubleshootPage />} />
-          <Route path="/challenge"            element={<ChallengePage />} />
-          <Route path="/dashboard"            element={<DashboardPage />} />
-          <Route path="/reviews"              element={<ReviewsPage />} />
-          <Route path="/settings"             element={<SettingsPage />} />
-          <Route path="/about"                element={<AboutPage />} />
-          <Route path="/git-history"          element={<GitHistoryPage />} />
-          <Route path="/privacy"              element={<PrivacyPage />} />
-          <Route path="/terms"                element={<TermsPage />} />
-          <Route path="/support"              element={<SupportPage />} />
-          <Route path="/admin"                element={<AdminPage />} />
-          <Route path="/auth/github/callback" element={<GitHubCallbackPage />} />
-          <Route path="/verify-email"         element={<VerifyEmailPage />} />
-          <Route path="/reset-password"       element={<ResetPasswordPage />} />
-          {/* Fallback — real 404, not a silent LandingPage render */}
-          <Route path="*"                     element={<NotFoundPage />} />
-        </Routes>
+        <Suspense fallback={<div role="status" className="min-h-screen flex items-center justify-center bg-espresso text-white">Loading page…</div>}>
+          <Routes>
+            <Route path="/"                     element={<LandingPage />} />
+            <Route path="/learn"                element={<LearnPage />} />
+            <Route path="/learn/:moduleId"      element={<LearnPage />} />
+            <Route path="/learn/:moduleId/:lessonId" element={<LearnPage />} />
+            <Route path="/practice"             element={<PracticePage />} />
+            <Route path="/troubleshoot"         element={<TroubleshootPage />} />
+            <Route path="/challenge"            element={<ChallengePage />} />
+            <Route path="/dashboard"            element={<DashboardPage />} />
+            <Route path="/reviews"              element={<ReviewsPage />} />
+            <Route path="/settings"             element={<SettingsPage />} />
+            <Route path="/about"                element={<AboutPage />} />
+            <Route path="/git-history"          element={<GitHistoryPage />} />
+            <Route path="/privacy"              element={<PrivacyPage />} />
+            <Route path="/terms"                element={<TermsPage />} />
+            <Route path="/support"              element={<SupportPage />} />
+            <Route path="/admin"                element={<AdminPage />} />
+            <Route path="/auth/github/callback" element={<GitHubCallbackPage />} />
+            <Route path="/verify-email"         element={<VerifyEmailPage />} />
+            <Route path="/reset-password"       element={<ResetPasswordPage />} />
+            {/* Fallback — real 404, not a silent LandingPage render */}
+            <Route path="*"                     element={<NotFoundPage />} />
+          </Routes>
+        </Suspense>
       </ErrorBoundary>
     </>
   )

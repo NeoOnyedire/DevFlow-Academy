@@ -2,6 +2,7 @@ import { expect, test, type Page } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
 
 async function expectAccessible(page: Page) {
+  await expect(page.locator('main')).toBeVisible()
   const results = await new AxeBuilder({ page })
     .include('main')
     .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'best-practice'])
@@ -14,6 +15,19 @@ async function expectAccessible(page: Page) {
   }))
 
   expect(violations, JSON.stringify(violations, null, 2)).toEqual([])
+}
+
+async function gotoLearnerPage(page: Page, path: string) {
+  await page.goto(path, { waitUntil: 'domcontentloaded' })
+  await expect(page.locator('main')).toBeVisible()
+}
+
+async function tabTo(page: Page, target: ReturnType<Page['getByRole']>, maxTabs = 40) {
+  for (let i = 0; i < maxTabs; i++) {
+    await page.keyboard.press('Tab')
+    if (await target.evaluate(element => element === element.ownerDocument.activeElement)) return
+  }
+  throw new Error(`Could not reach ${await target.getAttribute('aria-label') ?? 'the requested control'} with Tab`)
 }
 
 const testUser = {
@@ -65,7 +79,7 @@ async function mockAppApi(page: Page, signedIn = false, completedLessonIds: stri
 test.describe('guest learning journey', () => {
   test('completes the account setup preview and keeps it completed after reload', async ({ page }) => {
     await mockAppApi(page)
-    await page.goto('/learn', { waitUntil: 'domcontentloaded' })
+    await gotoLearnerPage(page, '/learn')
     await expectAccessible(page)
 
     await page.getByRole('button', { name: /GitHub Account Setup A quick, free preview/ }).click()
@@ -78,13 +92,13 @@ test.describe('guest learning journey', () => {
     const setupModule = page.getByRole('button', { name: /GitHub Account Setup A quick, free preview/ })
     await expect(setupModule.getByText('Done', { exact: true })).toBeVisible()
 
-    await page.reload({ waitUntil: 'domcontentloaded' })
+    await page.reload({ waitUntil: 'commit' })
     await expect(page.getByRole('button', { name: /GitHub Account Setup A quick, free preview/ }).getByText('Done', { exact: true })).toBeVisible()
   })
 
   test('keeps full modules locked until the learner signs in', async ({ page }) => {
     await mockAppApi(page)
-    await page.goto('/learn/mod-01', { waitUntil: 'domcontentloaded' })
+    await gotoLearnerPage(page, '/learn/mod-01')
 
     await expect(page.getByRole('heading', { name: 'This module is locked' })).toBeVisible()
     await expectAccessible(page)
@@ -99,8 +113,30 @@ test.describe('signed-in learning journey', () => {
     await mockAppApi(page, true)
   })
 
+  test('supports keyboard-only navigation through a quiz retry', async ({ page }) => {
+    await gotoLearnerPage(page, '/learn/mod-01/mod-01-lesson-01')
+    const continueButton = page.getByRole('button', { name: /Continue to quiz/ })
+    await expect(continueButton).toBeEnabled()
+    await tabTo(page, continueButton)
+    await page.keyboard.press('Enter')
+
+    const incorrectAnswer = page.getByRole('button', { name: 'A website for hosting code' })
+    await tabTo(page, incorrectAnswer)
+    await page.keyboard.press('Enter')
+    await expect(page.getByText('Not quite.', { exact: false })).toBeVisible()
+
+    const retryButton = page.getByRole('button', { name: 'Try again' })
+    await tabTo(page, retryButton)
+    await page.keyboard.press('Enter')
+
+    const correctAnswer = page.getByRole('button', { name: 'A version control system that tracks changes to files over time' })
+    await tabTo(page, correctAnswer)
+    await page.keyboard.press('Enter')
+    await expect(correctAnswer).toBeDisabled()
+  })
+
   test('offers quiz feedback and lets a learner retry before completing the Git sandbox', async ({ page }) => {
-    await page.goto('/learn/mod-01/mod-01-lesson-01', { waitUntil: 'domcontentloaded' })
+    await gotoLearnerPage(page, '/learn/mod-01/mod-01-lesson-01')
     await expect(page.getByRole('button', { name: /Continue to quiz/ })).toBeEnabled()
     await page.getByRole('button', { name: /Continue to quiz/ }).click()
 
@@ -142,7 +178,7 @@ test.describe('signed-in learning journey', () => {
       'mod-01-lesson-05',
       'mod-01-lesson-06',
     ])
-    await page.goto('/learn/mod-01/mod-01-lesson-07', { waitUntil: 'domcontentloaded' })
+    await gotoLearnerPage(page, '/learn/mod-01/mod-01-lesson-07')
     await page.getByRole('button', { name: /Continue to quiz/ }).click()
     await page.getByRole('button', { name: 'main' }).click()
     await page.getByRole('button', { name: /Continue to sandbox/ }).click()
@@ -167,7 +203,7 @@ test.describe('signed-in learning journey', () => {
   })
 
   test('explains workflow validation failures and accepts a corrected CI workflow', async ({ page }) => {
-    await page.goto('/learn/mod-08/mod-08-lesson-02', { waitUntil: 'domcontentloaded' })
+    await gotoLearnerPage(page, '/learn/mod-08/mod-08-lesson-02')
     await page.getByRole('button', { name: /Continue to quiz/ }).click()
     await page.getByRole('button', { name: '.github/workflows/' }).click()
     await page.getByRole('button', { name: /Continue to sandbox/ }).click()
