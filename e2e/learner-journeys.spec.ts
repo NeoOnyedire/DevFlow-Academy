@@ -1,4 +1,20 @@
 import { expect, test, type Page } from '@playwright/test'
+import AxeBuilder from '@axe-core/playwright'
+
+async function expectAccessible(page: Page) {
+  const results = await new AxeBuilder({ page })
+    .include('main')
+    .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'best-practice'])
+    .analyze()
+  const violations = results.violations.map(({ id, impact, help, nodes }) => ({
+    id,
+    impact,
+    help,
+    elements: nodes.map(({ target, failureSummary }) => ({ target, failureSummary })),
+  }))
+
+  expect(violations, JSON.stringify(violations, null, 2)).toEqual([])
+}
 
 const testUser = {
   id: 'e2e-learner',
@@ -50,10 +66,12 @@ test.describe('guest learning journey', () => {
   test('completes the account setup preview and keeps it completed after reload', async ({ page }) => {
     await mockAppApi(page)
     await page.goto('/learn', { waitUntil: 'domcontentloaded' })
+    await expectAccessible(page)
 
     await page.getByRole('button', { name: /GitHub Account Setup A quick, free preview/ }).click()
     await expect(page).toHaveURL(/\/learn\/mod-00\/lesson-00-account$/)
     await expect(page.getByRole('heading', { name: 'Create your GitHub account' })).toBeVisible()
+    await expectAccessible(page)
 
     await page.getByRole('button', { name: 'Mark as done (this browser only)' }).click()
     await expect(page).toHaveURL('/learn')
@@ -69,8 +87,10 @@ test.describe('guest learning journey', () => {
     await page.goto('/learn/mod-01', { waitUntil: 'domcontentloaded' })
 
     await expect(page.getByRole('heading', { name: 'This module is locked' })).toBeVisible()
+    await expectAccessible(page)
     await page.getByRole('button', { name: /Join Free/ }).click()
     await expect(page.getByRole('heading', { name: /Join DevFlow Academy|Welcome Back/ })).toBeVisible()
+    await expectAccessible(page)
   })
 })
 
@@ -87,12 +107,14 @@ test.describe('signed-in learning journey', () => {
     await page.getByRole('button', { name: 'A website for hosting code' }).click()
     await expect(page.getByText('Not quite.', { exact: false })).toBeVisible()
     await expect(page.getByText(/Retry hint:/)).toBeVisible()
+    await expectAccessible(page)
     await page.getByRole('button', { name: 'Try again' }).click()
 
     await page.getByRole('button', { name: 'A version control system that tracks changes to files over time' }).click()
     await page.getByRole('button', { name: 'Next question' }).click()
     await page.getByRole('button', { name: 'A cloud-hosting service for repositories that use Git underneath' }).click()
     await page.getByRole('button', { name: /Continue to sandbox/ }).click()
+    await expectAccessible(page)
 
     const commandInput = page.getByPlaceholder('git status')
     await commandInput.fill('git status')
@@ -124,6 +146,7 @@ test.describe('signed-in learning journey', () => {
     await page.getByRole('button', { name: /Continue to quiz/ }).click()
     await page.getByRole('button', { name: 'main' }).click()
     await page.getByRole('button', { name: /Continue to sandbox/ }).click()
+    await expectAccessible(page)
 
     await page.getByRole('textbox', { name: 'README.md' }).fill('README.md')
     await page.getByRole('button', { name: 'Create file' }).click()
@@ -152,6 +175,7 @@ test.describe('signed-in learning journey', () => {
     await page.getByRole('button', { name: 'Validate workflow' }).click()
     await expect(page.getByText(/Save the workflow at \.github\/workflows\/ci\.yml/)).toBeVisible()
     await expect(page.getByText(/Why it matters:/)).toBeVisible()
+    await expectAccessible(page)
 
     await page.getByLabel('Workflow file path').fill('.github/workflows/ci.yml')
     await page.getByLabel('GitHub Actions workflow YAML').fill(`name: CI

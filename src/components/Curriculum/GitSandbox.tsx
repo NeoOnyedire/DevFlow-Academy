@@ -209,7 +209,7 @@ export default function GitSandbox({ task, onSolved }: Props) {
         )}
       </div>
 
-      <h4 className="font-display font-bold text-xl mb-2 cur-text">Your turn</h4>
+      <h2 className="font-display font-bold text-xl mb-2 cur-text">Your turn</h2>
       <p className="text-sm mb-4 cur-text-soft">{task.prompt}</p>
 
       <div className="grid gap-4 lg:grid-cols-[1.3fr_1fr]">

@@ -59,7 +59,7 @@ export default function WorkflowSandbox({ task, onSolved }: Props) {
         )}
       </div>
 
-      <h4 className="font-display font-bold text-xl mb-2 cur-text">Your turn</h4>
+      <h2 className="font-display font-bold text-xl mb-2 cur-text">Your turn</h2>
       <p className="text-sm mb-4 cur-text-soft">{task.prompt}</p>
 
       {task.workflowRequirements?.path && (
@@ -117,7 +117,7 @@ export default function WorkflowSandbox({ task, onSolved }: Props) {
       {!solved && (
         <button
           onClick={handleValidateWorkflow}
-          className="bg-rose-punch text-[#ffffff] font-display font-semibold px-5 py-2.5 rounded-xl hover:opacity-90 transition-opacity"
+          className="bg-rose-punch text-[#1F1F1F] font-display font-semibold px-5 py-2.5 rounded-xl hover:opacity-90 transition-opacity"
         >
           Validate workflow
         </button>

@@ -54,7 +54,7 @@ export default function LessonPlayer({ lesson, onContinue }: Props) {
         />
       </div>
 
-      <h4 className="font-display font-bold text-xl mb-2 cur-text">{lesson.title}</h4>
+      <h2 className="font-display font-bold text-xl mb-2 cur-text">{lesson.title}</h2>
       <p className="text-sm mb-5 cur-text-soft">
         This is a short clip from a longer lesson — just the part covering this idea. Watch it, then answer a
         couple of quick questions.
@@ -63,7 +63,7 @@ export default function LessonPlayer({ lesson, onContinue }: Props) {
       <button
         onClick={onContinue}
         disabled={!hasWatched}
-        className="flex items-center gap-2 bg-rose-punch text-[#ffffff] font-display font-semibold px-5 py-2.5 rounded-xl
+        className="flex items-center gap-2 bg-rose-punch text-[#1F1F1F] font-display font-semibold px-5 py-2.5 rounded-xl
           hover:bg-[#ff3d5d] disabled:opacity-50 transition-all"
       >
         Continue to quiz <ArrowRight className="w-4 h-4" />

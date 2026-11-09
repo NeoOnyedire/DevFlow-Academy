@@ -132,7 +132,7 @@ export default function LearnPage() {
               You've completed the free preview. Create a free account to unlock all {modules.length} modules.
             </p>
             <button onClick={() => openAuthModal('register')}
-              className="bg-rose-punch text-[#ffffff] font-display font-semibold px-6 py-3 rounded-xl hover:scale-105 transition-all flex items-center gap-2">
+              className="bg-rose-punch text-[#1F1F1F] font-display font-semibold px-6 py-3 rounded-xl hover:scale-105 transition-all flex items-center gap-2">
               Join Free — it takes 30 seconds <ChevronRight className="w-4 h-4" />
             </button>
           </div>
@@ -224,7 +224,7 @@ function ModuleGrid({ modules, completedModules, onSelect }: {
                 </span>
               )}
             </div>
-            <h3 className="font-display font-bold text-lg mb-1 cur-text">{mod.title}</h3>
+            <p className="font-display font-bold text-lg mb-1 cur-text">{mod.title}</p>
             <p className="text-sm line-clamp-2 cur-text-soft">{mod.description}</p>
             <p className="text-xs mt-3 cur-text-faint">
               {mod.id === GUEST_PREVIEW_MODULE ? 'Free preview · ' : ''}{mod.duration} · {mod.difficulty}

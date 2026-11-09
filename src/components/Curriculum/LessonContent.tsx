@@ -162,7 +162,7 @@ function LessonStepView({ lesson, isLessonDone, isLoggedIn, finishLesson }: Step
         )}
         <button onClick={finishLesson} disabled={isLessonDone}
           className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-display font-semibold text-sm transition-all
-            ${isLessonDone ? 'cur-correct cur-success-text' : 'bg-rose-punch text-[#ffffff] hover:bg-[#ff3d5d]'}`}>
+            ${isLessonDone ? 'cur-correct cur-success-text' : 'bg-rose-punch text-[#1F1F1F] hover:bg-[#ff3d5d]'}`}>
           <CheckCircle2 className="w-4 h-4" />
           {isLessonDone ? 'Completed' : isLoggedIn ? 'Mark lesson complete' : 'Mark as done (this browser only)'}
         </button>
@@ -199,7 +199,7 @@ function LessonStepView({ lesson, isLessonDone, isLoggedIn, finishLesson }: Step
       </p>
       {!isLessonDone && (
         <button onClick={finishLesson}
-          className="bg-rose-punch text-[#ffffff] font-display font-semibold px-5 py-2.5 rounded-xl hover:bg-[#ff3d5d] transition-all">
+          className="bg-rose-punch text-[#1F1F1F] font-display font-semibold px-5 py-2.5 rounded-xl hover:bg-[#ff3d5d] transition-all">
           Mark lesson complete
         </button>
       )}

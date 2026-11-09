@@ -50,9 +50,9 @@ export default function QuizStep({ questions, onComplete }: Props) {
         </span>
       </div>
 
-      <h4 className="font-display font-bold text-xl mb-5 cur-text">
+      <h2 className="font-display font-bold text-xl mb-5 cur-text">
         {question.question}
-      </h4>
+      </h2>
 
       <div className="space-y-2.5 mb-5">
         {question.options.map((option, i) => {
@@ -117,7 +117,7 @@ export default function QuizStep({ questions, onComplete }: Props) {
         (isCorrect ? (
           <button
             onClick={handleNext}
-            className="flex items-center gap-2 bg-rose-punch text-[#ffffff] font-display font-semibold px-5 py-2.5 rounded-xl hover:bg-[#ff3d5d] transition-all"
+            className="flex items-center gap-2 bg-rose-punch text-[#1F1F1F] font-display font-semibold px-5 py-2.5 rounded-xl hover:bg-[#ff3d5d] transition-all"
           >
             {isLast ? 'Continue to sandbox' : 'Next question'} <ArrowRight className="w-4 h-4" />
           </button>

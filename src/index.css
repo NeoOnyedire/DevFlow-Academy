@@ -242,7 +242,7 @@
   .term-bar    { border-color: rgba(255, 255, 255, 0.12); }
   .term-prompt { color: #F7B731; }
   .term-out    { color: rgba(255, 255, 255, 0.78); }
-  .term-dim    { color: rgba(255, 255, 255, 0.4); }
+  .term-dim    { color: rgba(255, 255, 255, 0.68); }
   .term-input  { color: #F3F4F8; }
 
   /* Work Tree slide-over */
@@ -383,8 +383,8 @@ html::-webkit-scrollbar-thumb:hover {
   /* ---- Curriculum palette: Original ---- */
   --cur-bg: #F7B731;
   --cur-text: #2A2A2A;
-  --cur-text-soft: rgba(42, 42, 42, 0.7);
-  --cur-text-faint: rgba(42, 42, 42, 0.48);
+  --cur-text-soft: rgba(42, 42, 42, 0.82);
+  --cur-text-faint: rgba(42, 42, 42, 0.78);
   --cur-border: rgba(42, 42, 42, 0.18);
   --cur-surface: rgba(255, 255, 255, 0.55);
   --cur-surface-hover: rgba(255, 255, 255, 0.8);
@@ -420,8 +420,8 @@ html::-webkit-scrollbar-thumb:hover {
 
   --cur-bg: #F8F9FA;
   --cur-text: #212529;
-  --cur-text-soft: rgba(33, 37, 41, 0.7);
-  --cur-text-faint: rgba(33, 37, 41, 0.48);
+  --cur-text-soft: rgba(33, 37, 41, 0.82);
+  --cur-text-faint: rgba(33, 37, 41, 0.72);
   --cur-border: rgba(33, 37, 41, 0.14);
   --cur-surface: #FFFFFF;
   --cur-surface-hover: #F1F3F5;
@@ -459,8 +459,8 @@ html::-webkit-scrollbar-thumb:hover {
 
   --cur-bg: #0A0B10;
   --cur-text: #F3F4F8;
-  --cur-text-soft: rgba(243, 244, 248, 0.7);
-  --cur-text-faint: rgba(243, 244, 248, 0.45);
+  --cur-text-soft: rgba(243, 244, 248, 0.82);
+  --cur-text-faint: rgba(243, 244, 248, 0.75);
   --cur-border: rgba(243, 244, 248, 0.14);
   --cur-surface: #14161F;
   --cur-surface-hover: #1B1E2A;
