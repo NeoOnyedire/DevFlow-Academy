@@ -153,6 +153,32 @@ describe('auth API route', () => {
     expect(response.headers['Set-Cookie']).toContain('HttpOnly')
     expect(response.body).toEqual({ user: expect.not.objectContaining({ passwordHash: expect.anything() }) })
   })
+
+  it('rejects invalid credentials without creating a session', async () => {
+    mocks.verifyPassword.mockReturnValueOnce(false)
+    const response = createResponse()
+    await authHandler(
+      createRequest('POST', 'login', { email: 'ada@example.com', password: 'wrong-password' }),
+      response as unknown as VercelResponse,
+    )
+
+    expect(response.statusCode).toBe(401)
+    expect(response.body).toEqual({ error: 'Invalid email or password. Try registering first!' })
+    expect(response.headers['Set-Cookie']).toBeUndefined()
+  })
+
+  it('returns a clear error if account storage is unavailable during login', async () => {
+    mocks.getUserByEmail.mockRejectedValueOnce(new Error('storage unavailable'))
+    const response = createResponse()
+    await authHandler(
+      createRequest('POST', 'login', { email: 'ada@example.com', password: 'password123' }),
+      response as unknown as VercelResponse,
+    )
+
+    expect(response.statusCode).toBe(500)
+    expect(response.body).toEqual({ error: 'Could not reach account storage. Please try again.' })
+    expect(response.headers['Set-Cookie']).toBeUndefined()
+  })
 })
 
 describe('admin API route', () => {

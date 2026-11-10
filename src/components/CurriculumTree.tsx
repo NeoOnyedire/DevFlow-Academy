@@ -49,8 +49,10 @@ export default function CurriculumTree({ isOpen, onClose, activeModuleId, active
   const { modules, completedModules } = useApp()
 
   const loadKey = `${activeModuleId ?? ''}:${isLoggedIn ? 'user' : 'guest'}`
-  const [loaded, setLoaded] = useState<{ key: string; ids: string[] } | null>(null)
+  const [loaded, setLoaded] = useState<{ key: string; ids: string[]; error: string | null } | null>(null)
+  const [loadAttempt, setLoadAttempt] = useState(0)
   const completedLessonIds = activeModuleId && loaded?.key === loadKey ? loaded.ids : []
+  const progressLoadError = loaded?.key === loadKey ? loaded.error : null
 
   const canWatchModule = (id: string) => isLoggedIn || id === GUEST_PREVIEW_MODULE
 
@@ -59,12 +61,12 @@ export default function CurriculumTree({ isOpen, onClose, activeModuleId, active
     let cancelled = false
     const idsPromise = isLoggedIn
       ? fetchCompletedLessonIds(activeModuleId)
-      : Promise.resolve(loadGuestTaskIds())
-    idsPromise.then(ids => {
-      if (!cancelled) setLoaded({ key: loadKey, ids })
+      : Promise.resolve({ ids: loadGuestTaskIds(), error: null })
+    idsPromise.then(result => {
+      if (!cancelled) setLoaded({ key: loadKey, ...result })
     })
     return () => { cancelled = true }
-  }, [activeModuleId, isLoggedIn, loadKey])
+  }, [activeModuleId, isLoggedIn, loadAttempt, loadKey])
 
   const go = (moduleId: string, lessonId?: string) => {
     navigate(lessonId ? `/learn/${moduleId}/${lessonId}` : `/learn/${moduleId}`)
@@ -125,6 +127,14 @@ export default function CurriculumTree({ isOpen, onClose, activeModuleId, active
 
                 {isActive && moduleLessons.length > 1 && (
                   <div className="tree-border ml-9 mt-1 mb-2 space-y-0.5 border-l pl-3">
+                    {progressLoadError && (
+                      <p role="alert" className="px-2 py-1 text-xs text-rose-600">
+                        {progressLoadError}
+                        <button className="ml-1 underline" onClick={() => setLoadAttempt(attempt => attempt + 1)}>
+                          Retry
+                        </button>
+                      </p>
+                    )}
                     {moduleLessons.map(l => (
                       <button key={l.id} onClick={() => go(mod.id, l.id)}
                         className={`w-full text-left flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs transition-colors tree-hover

@@ -175,6 +175,75 @@ test.describe('signed-in learning journey', () => {
     await expect(correctAnswer).toBeDisabled()
   })
 
+  test('shows a retryable error instead of completing a lesson when progress save fails', async ({ page }) => {
+    let saveAttempts = 0
+    await page.route('**/api/lesson-progress', async route => {
+      if (route.request().method() === 'GET') {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ completedLessonIds: [] }),
+        })
+        return
+      }
+
+      saveAttempts += 1
+      await route.fulfill({
+        status: saveAttempts === 1 ? 502 : 200,
+        contentType: 'application/json',
+        body: JSON.stringify(saveAttempts === 1
+          ? { error: 'Could not save your lesson progress right now.' }
+          : { ok: true, moduleCompleted: false }),
+      })
+    })
+
+    await gotoLearnerPage(page, '/learn/mod-00/lesson-00-account')
+    await page.getByRole('button', { name: 'Mark lesson complete' }).click()
+    await expect(page.getByRole('alert')).toHaveText('Could not save your lesson progress right now.')
+    await expect(page).toHaveURL('/learn/mod-00/lesson-00-account')
+
+    await page.getByRole('button', { name: 'Retry saving lesson' }).click()
+    await expect(page).toHaveURL('/learn')
+    expect(saveAttempts).toBe(2)
+  })
+
+  test('shows a retryable error instead of assuming no lessons are complete when progress load fails', async ({ page }) => {
+    await page.route('**/api/lesson-progress**', async route => {
+      await route.fulfill({
+        status: 502,
+        contentType: 'application/json',
+        body: JSON.stringify({ error: 'Could not load your lesson progress right now.' }),
+      })
+    })
+
+    await gotoLearnerPage(page, '/learn/mod-01')
+    await expect(page.getByRole('alert')).toHaveText('Could not load your lesson progress right now.')
+    await expect(page).toHaveURL('/learn/mod-01')
+    await expect(page.getByRole('button', { name: 'Retry loading progress' })).toBeVisible()
+  })
+
+  test('distinguishes a leaderboard service failure from an empty leaderboard', async ({ page }) => {
+    await page.route('**/api/leaderboard**', async route => {
+      if (new URL(route.request().url()).searchParams.has('mine')) {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ challengeIds: [] }),
+        })
+        return
+      }
+      await route.fulfill({
+        status: 502,
+        contentType: 'application/json',
+        body: JSON.stringify({ error: 'Could not load the leaderboard right now.' }),
+      })
+    })
+
+    await gotoLearnerPage(page, '/')
+    await expect(page.getByRole('alert')).toHaveText('Could not load the leaderboard right now.')
+    await expect(page.getByText('No scores yet this week — be the first to complete the challenge.')).toHaveCount(0)
+  })
+
   test('offers quiz feedback and lets a learner retry before completing the Git sandbox', async ({ page }) => {
     await gotoLearnerPage(page, '/learn/mod-01/mod-01-lesson-01')
     await expect(page.getByRole('button', { name: /Continue to quiz/ })).toBeEnabled()

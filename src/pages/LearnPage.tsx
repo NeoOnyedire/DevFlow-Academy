@@ -48,6 +48,8 @@ export default function LearnPage() {
 
   const [isTreeOpen, setIsTreeOpen] = useState(false)
   const [rolePickerDismissed, setRolePickerDismissed] = useState(false)
+  const [progressLoadAttempt, setProgressLoadAttempt] = useState(0)
+  const [progressLoadError, setProgressLoadError] = useState<string | null>(null)
 
   useEffect(() => {
     window.scrollTo(0, 0)
@@ -73,16 +75,23 @@ export default function LearnPage() {
     const resolve = async () => {
       const moduleLessons = getLessonsForModule(activeModule.id)
       if (moduleLessons.length === 0) return
-      const ids = isLoggedIn ? await fetchCompletedLessonIds(activeModule.id) : loadGuestTaskIds()
+      const result = isLoggedIn
+        ? await fetchCompletedLessonIds(activeModule.id)
+        : { ids: loadGuestTaskIds(), error: null }
       if (cancelled) return
-      const firstIncomplete = moduleLessons.findIndex(l => !ids.includes(l.id))
+      if (result.error) {
+        setProgressLoadError(result.error)
+        return
+      }
+      setProgressLoadError(null)
+      const firstIncomplete = moduleLessons.findIndex(l => !result.ids.includes(l.id))
       const target = moduleLessons[firstIncomplete === -1 ? 0 : firstIncomplete]
       navigate(`/learn/${activeModule.id}/${target.id}`, { replace: true })
     }
     resolve()
     return () => { cancelled = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeModule?.id, lessonId, isLoggedIn])
+  }, [activeModule?.id, lessonId, isLoggedIn, progressLoadAttempt])
 
   const shouldShowRolePicker = isLoggedIn && !rolePickerDismissed && completedModules.length === 0 && !moduleId
 
@@ -118,6 +127,16 @@ export default function LearnPage() {
           ) : (
             <ModuleGrid modules={displayedModules} completedModules={completedModules} onSelect={id => navigate(`/learn/${id}`)} />
           )
+        )}
+
+        {progressLoadError && !lessonId && (
+          <div className="max-w-2xl mx-auto">
+            <p role="alert" className="text-sm text-rose-600 mb-3">{progressLoadError}</p>
+            <button onClick={() => setProgressLoadAttempt(attempt => attempt + 1)}
+              className="bg-rose-punch text-[#1F1F1F] font-display font-semibold px-4 py-2 rounded-xl">
+              Retry loading progress
+            </button>
+          </div>
         )}
 
         {activeModule && !canWatchModule(activeModule.id) && (

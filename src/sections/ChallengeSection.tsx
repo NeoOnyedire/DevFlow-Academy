@@ -29,7 +29,7 @@ export default function ChallengeSection({ className = '' }: Props) {
   const { isLoggedIn, openAuthModal } = useAuth()
   const {
     openCurriculum, weeklyChallenge, hasCompletedWeeklyChallenge, completeWeeklyChallenge,
-    rolePath, githubProfile, leaderboard, isLoadingLeaderboard,
+    rolePath, githubProfile, leaderboard, isLoadingLeaderboard, leaderboardError, challengeCompletionError,
   } = useApp()
 
   const sectionRef  = useRef<HTMLDivElement>(null)
@@ -129,6 +129,10 @@ export default function ChallengeSection({ className = '' }: Props) {
             </button>
           </div>
 
+          {challengeCompletionError && (
+            <p role="alert" className="text-sm text-rose-300 mb-5">{challengeCompletionError}</p>
+          )}
+
           {githubProfile && (
             <p className="mb-5 text-sm text-white/50">
               Connected to @{githubProfile.username}. Add your solution to a public repo for Career Mode credit.
@@ -141,9 +145,13 @@ export default function ChallengeSection({ className = '' }: Props) {
           </p>
 
           {!isLoadingLeaderboard && leaderboard.length === 0 && (
-            <p className="text-white/40 text-sm mb-2">
+            !leaderboardError && <p className="text-white/40 text-sm mb-2">
               No scores yet this week — be the first to complete the challenge.
             </p>
+          )}
+
+          {!isLoadingLeaderboard && leaderboardError && (
+            <p role="alert" className="text-sm text-rose-300 mb-2">{leaderboardError}</p>
           )}
 
           {leaderboard.map((entry, i) => {

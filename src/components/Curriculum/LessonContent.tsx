@@ -59,10 +59,13 @@ export default function LessonContent({ module: mod, lessons, lessonId, onAdvanc
   // Completed ids are stored with the key they were loaded for; a key
   // mismatch means "still loading" without any synchronous setState.
   const loadKey = `${mod.id}:${isLoggedIn ? 'user' : 'guest'}`
-  const [loaded, setLoaded] = useState<{ key: string; ids: string[] } | null>(null)
+  const [loaded, setLoaded] = useState<{ key: string; ids: string[]; error: string | null } | null>(null)
+  const [loadAttempt, setLoadAttempt] = useState(0)
+  const [saveError, setSaveError] = useState<string | null>(null)
 
   const isLoading = loaded?.key !== loadKey
   const completedLessonIds = loaded?.key === loadKey ? loaded.ids : []
+  const loadError = loaded?.key === loadKey ? loaded.error : null
 
   const lessonIndex = lessons.findIndex(l => l.id === lessonId)
   const currentLesson = lessons[lessonIndex]
@@ -71,20 +74,25 @@ export default function LessonContent({ module: mod, lessons, lessonId, onAdvanc
     let cancelled = false
     const idsPromise = isLoggedIn
       ? fetchCompletedLessonIds(mod.id)
-      : Promise.resolve(loadGuestTaskIds())
-    idsPromise.then(ids => {
-      if (!cancelled) setLoaded({ key: loadKey, ids })
+      : Promise.resolve({ ids: loadGuestTaskIds(), error: null })
+    idsPromise.then(result => {
+      if (!cancelled) setLoaded({ key: loadKey, ...result })
     })
     return () => { cancelled = true }
-  }, [loadKey, mod.id, isLoggedIn])
+  }, [loadAttempt, loadKey, mod.id, isLoggedIn])
 
   const finishLesson = async () => {
     if (!currentLesson) return
+    setSaveError(null)
     if (isLoggedIn) {
       // saveLessonStep signature is (lessonId, moduleId, step, allLessonIdsInModule).
       // This call previously passed (moduleId, lessonId) with no step, which the
       // API rejected with a 400 — so server-side lesson progress never saved.
-      await saveLessonStep(currentLesson.id, mod.id, 'complete', lessons.map(l => l.id))
+      const result = await saveLessonStep(currentLesson.id, mod.id, 'complete', lessons.map(l => l.id))
+      if (!result.ok) {
+        setSaveError(result.error || 'Could not save your lesson progress. Please try again.')
+        return
+      }
     } else {
       const next = Array.from(new Set([...loadGuestTaskIds(), currentLesson.id]))
       localStorage.setItem(GUEST_TASK_STORAGE, JSON.stringify(next))
@@ -93,7 +101,7 @@ export default function LessonContent({ module: mod, lessons, lessonId, onAdvanc
       l.id === currentLesson.id || completedLessonIds.includes(l.id)
     )
     const next = Array.from(new Set([...completedLessonIds, currentLesson.id]))
-    setLoaded({ key: loadKey, ids: next })
+    setLoaded({ key: loadKey, ids: next, error: null })
 
     if (moduleCompleted) toggleModuleComplete(mod.id)
 
@@ -102,6 +110,17 @@ export default function LessonContent({ module: mod, lessons, lessonId, onAdvanc
 
   if (isLoading) return <p className="text-sm cur-text-soft">Loading lessons…</p>
   if (!currentLesson) return <p className="text-sm cur-text-soft">Lesson not found in this module.</p>
+  if (loadError) {
+    return (
+      <div className="max-w-2xl">
+        <p role="alert" className="text-sm text-rose-600 mb-3">{loadError}</p>
+        <button onClick={() => setLoadAttempt(attempt => attempt + 1)}
+          className="bg-rose-punch text-[#1F1F1F] font-display font-semibold px-4 py-2 rounded-xl">
+          Retry loading progress
+        </button>
+      </div>
+    )
+  }
 
   const isLessonDone = completedLessonIds.includes(currentLesson.id)
 
@@ -127,6 +146,15 @@ export default function LessonContent({ module: mod, lessons, lessonId, onAdvanc
         isLoggedIn={isLoggedIn}
         finishLesson={finishLesson}
       />
+      {saveError && (
+        <div className="mt-4">
+          <p role="alert" className="text-sm text-rose-600 mb-2">{saveError}</p>
+          <button onClick={finishLesson}
+            className="bg-rose-punch text-[#1F1F1F] font-display font-semibold px-4 py-2 rounded-xl">
+            Retry saving lesson
+          </button>
+        </div>
+      )}
 
     </div>
   )

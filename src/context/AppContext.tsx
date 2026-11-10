@@ -148,10 +148,12 @@ interface AppContextValue {
   weeklyChallenge: WeeklyChallenge
   hasCompletedWeeklyChallenge: boolean
   completeWeeklyChallenge: () => Promise<void>
+  challengeCompletionError: string | null
 
   // Leaderboard — real data, shared across everyone, via /api/leaderboard
   leaderboard: LeaderboardEntry[]
   isLoadingLeaderboard: boolean
+  leaderboardError: string | null
   refreshLeaderboard: () => Promise<void>
 
   // Curriculum data
@@ -210,14 +212,23 @@ async function requestReviews(): Promise<{ reviews: PublicReview[] | null; error
   }
 }
 
-/** Resolves to the ranked rows, or null if the request failed (keep whatever was shown). */
-async function requestLeaderboard(): Promise<LeaderboardEntry[] | null> {
+/** Resolves to ranked rows or an actionable error, preserving rows on failure. */
+async function requestLeaderboard(): Promise<{ entries: LeaderboardEntry[] | null; error: string | null }> {
   try {
     const response = await fetch(`/api/leaderboard?week=${encodeURIComponent(getCurrentWeekKey())}`)
     const data = await response.json()
-    return Array.isArray(data.entries) ? data.entries : []
+    if (!response.ok) {
+      return {
+        entries: null,
+        error: typeof data.error === 'string' ? data.error : 'Could not load the leaderboard. Please try again.',
+      }
+    }
+    if (!Array.isArray(data.entries)) {
+      return { entries: null, error: 'Unexpected response while loading the leaderboard. Please try again.' }
+    }
+    return { entries: data.entries, error: null }
   } catch {
-    return null
+    return { entries: null, error: 'Could not reach the server to load the leaderboard. Please try again.' }
   }
 }
 
@@ -380,12 +391,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
   // doesn't fit the flat key-value shape everything else in this app uses.
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([])
   const [isLoadingLeaderboard, setIsLoadingLeaderboard] = useState(true)
+  const [leaderboardError, setLeaderboardError] = useState<string | null>(null)
 
   /** Manual refresh (event handlers). A failed request leaves the last good rows in place. */
   const refreshLeaderboard = useCallback(async () => {
     setIsLoadingLeaderboard(true)
-    const entries = await requestLeaderboard()
-    if (entries) setLeaderboard(entries)
+    const result = await requestLeaderboard()
+    if (result.entries) setLeaderboard(result.entries)
+    setLeaderboardError(result.error)
     setIsLoadingLeaderboard(false)
   }, [])
 
@@ -394,7 +407,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     let cancelled = false
     requestLeaderboard().then(entries => {
       if (cancelled) return
-      if (entries) setLeaderboard(entries)
+      if (entries.entries) setLeaderboard(entries.entries)
+      setLeaderboardError(entries.error)
       setIsLoadingLeaderboard(false)
     })
     return () => { cancelled = true }
@@ -468,6 +482,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const weeklyChallenge = useMemo(() => buildWeeklyChallenge(role), [role])
 
   const hasCompletedWeeklyChallenge = completedChallengeIds.includes(weeklyChallenge.id)
+  const [challengeCompletionError, setChallengeCompletionError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!userId) return
@@ -630,12 +645,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const completeWeeklyChallenge = useCallback(async () => {
     if (completedChallengeIds.includes(weeklyChallenge.id)) return
 
+    setChallengeCompletionError(null)
     setCompletedChallengeIds(prev =>
       prev.includes(weeklyChallenge.id) ? prev : [...prev, weeklyChallenge.id]
     )
 
     try {
-      await fetch('/api/leaderboard', {
+      const response = await fetch('/api/leaderboard', {
         method: 'POST',
         credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json' },
@@ -644,11 +660,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
           challengeId: weeklyChallenge.id,
         }),
       })
-      refreshLeaderboard()
+      const data = await response.json()
+      if (!response.ok) {
+        setCompletedChallengeIds(prev => prev.filter(id => id !== weeklyChallenge.id))
+        setChallengeCompletionError(typeof data.error === 'string'
+          ? data.error
+          : 'Could not save your challenge completion. Please try again.')
+        return
+      }
+      await refreshLeaderboard()
     } catch {
-      // Points/leaderboard sync failed — the optimistic "completed"
-      // state above may not match the server yet, but it'll reconcile
-      // on the next fetch of /api/leaderboard?mine=1.
+      setCompletedChallengeIds(prev => prev.filter(id => id !== weeklyChallenge.id))
+      setChallengeCompletionError('Could not reach the server to save your challenge completion. Please try again.')
     }
   }, [completedChallengeIds, weeklyChallenge, refreshLeaderboard])
 
@@ -685,8 +708,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       weeklyChallenge,
       hasCompletedWeeklyChallenge,
       completeWeeklyChallenge,
+      challengeCompletionError,
       leaderboard,
       isLoadingLeaderboard,
+      leaderboardError,
       refreshLeaderboard,
       modules,
     }}>
