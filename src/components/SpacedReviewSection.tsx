@@ -75,12 +75,12 @@ export default function SpacedReviewSection() {
       <div className="mx-auto max-w-6xl rounded-2xl bg-white/10 p-6 md:p-8 card-outline">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="font-accent text-xs uppercase tracking-[0.14em] text-white/80">Remember what you learn</p>
+          <p className="font-accent text-xs uppercase tracking-[0.14em] text-white/90">Remember what you learn</p>
           <h2 className="mt-1 font-display text-3xl font-bold text-white">Spaced practice</h2>
           <p className="mt-2 max-w-2xl text-sm text-white/90">
             Missed quiz questions return here. Correct answers are scheduled further apart over time; missed reviews come back sooner.
           </p>
-          <p className="mt-2 text-xs text-white/80">
+          <p className="mt-2 text-xs text-white/90">
             Saved only in this browser. You can practice early or wait until a card is due.
           </p>
         </div>
@@ -92,7 +92,7 @@ export default function SpacedReviewSection() {
 
       {currentCard ? (
         <div className="mt-6 max-w-3xl rounded-xl bg-black/20 p-5">
-          <p className="text-xs uppercase tracking-wider text-white/80">
+          <p className="text-xs uppercase tracking-wider text-white/90">
             Review {sessionIndex + 1} of {sessionCards.length} · {currentCard.moduleTitle} · {currentCard.lessonTitle}
           </p>
           <h3 className="mt-3 font-display text-xl font-bold text-white">{currentCard.question.question}</h3>
@@ -155,7 +155,7 @@ export default function SpacedReviewSection() {
             <RotateCcw className="h-4 w-4" /> {dueCount ? `Review ${dueCount} due ${dueCount === 1 ? 'question' : 'questions'}` : 'Practice saved questions'}
           </button>
           {dueCount === 0 && (
-            <p className="text-sm text-white/80">Nothing is due yet, but you can practice these questions early.</p>
+            <p className="text-sm text-white/90">Nothing is due yet, but you can practice these questions early.</p>
           )}
         </div>
       )}
