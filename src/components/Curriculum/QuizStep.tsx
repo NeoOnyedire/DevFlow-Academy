@@ -8,18 +8,24 @@
  */
 import { useState } from 'react'
 import { Check, X, ArrowRight, MessageCircle } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import type { QuizQuestion } from '../../content/lessons'
 import { requestGitterHelp } from '../../lib/gitterSupport'
+import { recordMissedQuestion } from '../../lib/spacedRepetition'
 
 interface Props {
   questions: QuizQuestion[]
+  lessonId: string
+  lessonTitle: string
+  moduleTitle: string
   onComplete: () => void
 }
 
-export default function QuizStep({ questions, onComplete }: Props) {
+export default function QuizStep({ questions, lessonId, lessonTitle, moduleTitle, onComplete }: Props) {
   const [index, setIndex] = useState(0)
   const [selected, setSelected] = useState<number | null>(null)
   const [correctCount, setCorrectCount] = useState(0)
+  const [reviewSaveError, setReviewSaveError] = useState<string | null>(null)
 
   const question = questions[index]
   const isLast = index === questions.length - 1
@@ -28,7 +34,18 @@ export default function QuizStep({ questions, onComplete }: Props) {
   const handleSelect = (optionIndex: number) => {
     if (selected !== null) return
     setSelected(optionIndex)
-    if (optionIndex === question.correctIndex) setCorrectCount(c => c + 1)
+    if (optionIndex === question.correctIndex) {
+      setCorrectCount(c => c + 1)
+      setReviewSaveError(null)
+    } else {
+      const result = recordMissedQuestion({
+        lessonId,
+        lessonTitle,
+        moduleTitle,
+        question,
+      })
+      setReviewSaveError(result.error)
+    }
   }
 
   const handleNext = () => {
@@ -100,6 +117,18 @@ export default function QuizStep({ questions, onComplete }: Props) {
               <p className="text-sm mt-2 cur-text-soft">
                 Retry hint: {question.retryHint ?? `Keep this idea in mind: ${question.explanation}`}
               </p>
+              {reviewSaveError ? (
+                <p role="alert" className="mt-2 text-sm cur-danger-text">
+                  {reviewSaveError}
+                </p>
+              ) : (
+                <p role="status" className="mt-2 text-sm cur-text-soft">
+                  Added to spaced practice. Review is scheduled for tomorrow.{' '}
+                  <Link to="/practice#spaced-review" className="font-semibold cur-link underline">
+                    Practice this question now
+                  </Link>
+                </p>
+              )}
               <button
                 onClick={() => requestGitterHelp(
                   `I'm answering this Git curriculum quiz question: "${question.question}". I chose "${question.options[selected]}". The correct answer is "${question.options[question.correctIndex]}". Please explain why my choice is wrong and give me a short retry hint.`
