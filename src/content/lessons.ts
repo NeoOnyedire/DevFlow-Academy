@@ -42,6 +42,7 @@ export interface SandboxTask {
   expectedCommandSequences?: string[][]
   requiredFiles?: string[]
   scenario?: 'merge-conflict'
+  pullRequestScenario?: boolean
   workflowRequirements?: WorkflowRequirements
   hint: string
 }
@@ -635,6 +636,36 @@ export const MOD_04_LESSONS: Lesson[] = [
       ]],
       requiredFiles: ['README.md'],
       hint: 'Initialize, create README.md, commit it on feature/pr-practice, switch to main, then merge the feature branch.',
+    },
+  },
+  {
+    id: 'mod-04-lesson-04',
+    moduleId: 'mod-04',
+    type: 'video-quiz-sandbox',
+    title: 'Practice a pull request review',
+    estimatedMinutes: 8,
+    youtubeId: 'tRZGeaHPoaw',
+    startSeconds: 1080,
+    endSeconds: 1260,
+    quiz: [
+      {
+        id: 'q1',
+        question: 'A reviewer requests a change. What is the best next step?',
+        options: [
+          'Merge the PR immediately to clear the request',
+          'Discuss the feedback, make a focused commit, and ask for another review',
+          'Delete the feature branch and start over',
+          'Ignore the comment if CI passes',
+        ],
+        correctIndex: 1,
+        explanation: 'A PR is a collaboration loop: respond to feedback, update the branch, then request another review.',
+      },
+    ],
+    sandbox: {
+      prompt: 'Take a feature from a new branch through commits, a pull request, reviewer feedback, passing checks, approval, and merge.',
+      expectedCommands: [],
+      pullRequestScenario: true,
+      hint: 'Keep commits focused, explain the change in the PR, address the reviewer comment, and merge only after approval and CI pass.',
     },
   },
 ]
