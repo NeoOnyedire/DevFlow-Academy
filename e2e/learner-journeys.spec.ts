@@ -175,6 +175,26 @@ test.describe('signed-in learning journey', () => {
     await expect(correctAnswer).toBeDisabled()
   })
 
+  test('saves missed quiz questions for spaced practice and schedules correct recall', async ({ page }) => {
+    await gotoLearnerPage(page, '/learn/mod-01/mod-01-lesson-01')
+    await page.getByRole('button', { name: /Continue to quiz/ }).click()
+    await page.getByRole('button', { name: 'A website for hosting code' }).click()
+
+    await expect(page.getByRole('status')).toContainText('Added to spaced practice')
+    await expect(page.getByRole('link', { name: 'Practice this question now' })).toBeVisible()
+    await page.getByRole('link', { name: 'Practice this question now' }).click()
+    await expect(page).toHaveURL(/\/practice#spaced-review$/)
+    await expect(page.getByRole('heading', { name: 'Spaced practice' })).toBeVisible()
+    await expectAccessible(page)
+
+    await page.getByRole('button', { name: 'Practice saved questions' }).click()
+    await expect(page.getByRole('heading', { name: 'What is Git, in one sentence?' })).toBeVisible()
+    await page.getByRole('button', { name: 'A version control system that tracks changes to files over time' }).click()
+    await expect(page.getByRole('status')).toContainText('scheduled again in 1 day')
+    await page.getByRole('button', { name: 'Finish review' }).click()
+    await expect(page.getByRole('status')).toContainText('Review session complete')
+  })
+
   test('shows a retryable error instead of completing a lesson when progress save fails', async ({ page }) => {
     let saveAttempts = 0
     await page.route('**/api/lesson-progress', async route => {
