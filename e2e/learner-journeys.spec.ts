@@ -203,7 +203,7 @@ test.describe('signed-in learning journey', () => {
     await expect(page).toHaveURL('/learn/mod-00/lesson-00-account')
 
     await page.getByRole('button', { name: 'Retry saving lesson' }).click()
-    await expect(page).toHaveURL('/learn')
+    await expect(page).toHaveURL(/\/learn\/mod-01\//)
     expect(saveAttempts).toBe(2)
   })
 
@@ -217,7 +217,7 @@ test.describe('signed-in learning journey', () => {
     })
 
     await gotoLearnerPage(page, '/learn/mod-01')
-    await expect(page.getByRole('alert')).toHaveText('Could not load your lesson progress right now.')
+    await expect(page.getByText('Could not load your lesson progress right now.', { exact: true })).toBeVisible()
     await expect(page).toHaveURL('/learn/mod-01')
     await expect(page.getByRole('button', { name: 'Retry loading progress' })).toBeVisible()
   })
@@ -239,9 +239,36 @@ test.describe('signed-in learning journey', () => {
       })
     })
 
-    await gotoLearnerPage(page, '/')
+    await gotoLearnerPage(page, '/challenge')
     await expect(page.getByRole('alert')).toHaveText('Could not load the leaderboard right now.')
     await expect(page.getByText('No scores yet this week — be the first to complete the challenge.')).toHaveCount(0)
+  })
+
+  test('does not leave a challenge marked complete when recording points fails', async ({ page }) => {
+    await page.route('**/api/leaderboard**', async route => {
+      const request = route.request()
+      if (request.method() === 'POST') {
+        await route.fulfill({
+          status: 502,
+          contentType: 'application/json',
+          body: JSON.stringify({ error: 'Could not save your challenge points right now.' }),
+        })
+        return
+      }
+
+      const isPersonalHistory = new URL(request.url()).searchParams.has('mine')
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(isPersonalHistory ? { challengeIds: [] } : { entries: [] }),
+      })
+    })
+
+    await gotoLearnerPage(page, '/challenge')
+    const completeButton = page.getByRole('button', { name: /Mark Complete/ })
+    await completeButton.click()
+    await expect(page.getByRole('alert')).toHaveText('Could not save your challenge points right now.')
+    await expect(page.getByRole('button', { name: /Mark Complete/ })).toBeVisible()
   })
 
   test('offers quiz feedback and lets a learner retry before completing the Git sandbox', async ({ page }) => {
