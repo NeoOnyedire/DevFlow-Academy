@@ -338,6 +338,46 @@ test.describe('signed-in learning journey', () => {
     await expect(page).toHaveURL(/\/learn\/mod-02\//)
   })
 
+  test('simulates a reviewed pull request from feature branch to merge', async ({ page }) => {
+    await gotoLearnerPage(page, '/learn/mod-04/mod-04-lesson-04')
+    await page.getByRole('button', { name: /Continue to quiz/ }).click()
+    await page.getByRole('button', { name: 'Discuss the feedback, make a focused commit, and ask for another review' }).click()
+    await page.getByRole('button', { name: /Continue to sandbox/ }).click()
+    await expectAccessible(page)
+
+    await page.getByRole('button', { name: 'Create feature branch' }).click()
+    for (const [message, summary] of [
+      ['Add project setup form', 'Create the initial setup form and clear labels.'],
+      ['Validate project name', 'Reject a project name that contains only spaces.'],
+    ]) {
+      await page.getByLabel('Commit message').fill(message)
+      await page.getByLabel('What changed?').fill(summary)
+      await page.getByRole('button', { name: 'Add commit' }).click()
+    }
+
+    await page.getByLabel('Pull request title').fill('Validate project setup input')
+    await page.getByLabel('Description: what changed and why?').fill('Adds a setup form and validates the project name.')
+    await page.getByRole('button', { name: 'Open pull request' }).click()
+    await expect(page.getByText('Changes requested')).toBeVisible()
+    await expect(page.getByText(/Please add a test for an empty project name/)).toBeVisible()
+
+    await page.getByLabel('Reply to reviewer').fill('Good catch. I will cover the empty-name case with a test.')
+    await page.getByLabel('Follow-up commit message').fill('Test empty project name')
+    await page.getByLabel('How does the commit address the comment?').fill('Adds a regression test for whitespace-only names.')
+    await page.getByRole('button', { name: 'Reply and push follow-up commit' }).click()
+    const mergeButton = page.getByRole('button', { name: 'Merge pull request' })
+    await expect(mergeButton).toBeDisabled()
+
+    await page.getByRole('button', { name: 'Run required checks' }).click()
+    await page.getByRole('button', { name: 'Send update for re-review' }).click()
+    await expect(page.getByText('Approved', { exact: true })).toBeVisible()
+    await expect(mergeButton).toBeEnabled()
+    await mergeButton.click()
+
+    await expect(page).toHaveURL('/learn')
+    await expect(page.getByRole('button', { name: /Practice a pull request review/ }).getByText('Done', { exact: true })).toBeVisible()
+  })
+
   test('explains workflow validation failures and accepts a corrected CI workflow', async ({ page }) => {
     await gotoLearnerPage(page, '/learn/mod-08/mod-08-lesson-02')
     await page.getByRole('button', { name: /Continue to quiz/ }).click()

@@ -25,8 +25,11 @@ describe('curriculum access and practice', () => {
   it('provides interactive merge-conflict and workflow exercises', () => {
     const conflictLesson = getLessonsForModule('mod-07').find(item => item.id === 'mod-07-lesson-03')
     const workflowLesson = getLessonsForModule('mod-08').find(item => item.id === 'mod-08-lesson-02')
+    const pullRequestLesson = getLessonsForModule('mod-04').find(item => item.id === 'mod-04-lesson-04')
 
     expect(conflictLesson?.sandbox?.scenario).toBe('merge-conflict')
+    expect(pullRequestLesson?.sandbox?.pullRequestScenario).toBe(true)
+    expect(pullRequestLesson?.quiz?.[0].question).toContain('reviewer requests a change')
     expect(workflowLesson?.sandbox?.workflowRequirements).toEqual({
       event: 'pull_request',
       commands: ['npm ci', 'npm test'],
