@@ -27,6 +27,7 @@ import type { Lesson } from '../../content/lessons'
 import LessonPlayer from './LessonPlayer'
 import QuizStep from './QuizStep'
 import GitSandbox from './GitSandbox'
+import PullRequestSimulator from './PullRequestSimulator'
 import WorkflowSandbox from './WorkflowSandbox'
 
 const GUEST_TASK_STORAGE = 'devflow_guest_task_lessons'
@@ -213,6 +214,9 @@ function LessonStepView({ lesson, isLessonDone, isLoggedIn, finishLesson }: Step
   }
 
   if (step === 'sandbox' && lesson.sandbox) {
+    if (lesson.sandbox.pullRequestScenario) {
+      return <PullRequestSimulator prompt={lesson.sandbox.prompt} onSolved={finishLesson} />
+    }
     if (lesson.sandbox.workflowRequirements) {
       return <WorkflowSandbox task={lesson.sandbox} onSolved={finishLesson} />
     }
