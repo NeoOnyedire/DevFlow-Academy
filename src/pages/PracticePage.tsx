@@ -9,6 +9,7 @@ import { useEffect } from 'react'
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import PageWrapper          from '../components/PageWrapper'
+import SpacedReviewSection  from '../components/SpacedReviewSection'
 import CommitScenesSection  from '../sections/CommitScenesSection'
 import ScenarioPlaySection  from '../sections/ScenarioPlaySection'
 
@@ -23,6 +24,7 @@ export default function PracticePage() {
 
   return (
     <PageWrapper bg="bg-sun-yellow">
+      <SpacedReviewSection />
       <CommitScenesSection className="bg-sun-yellow" />
       <ScenarioPlaySection className="bg-sun-yellow" />
     </PageWrapper>
