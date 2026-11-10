@@ -189,8 +189,10 @@ test.describe('signed-in learning journey', () => {
 
     await page.getByRole('button', { name: 'Practice saved questions' }).click()
     await expect(page.getByRole('heading', { name: 'What is Git, in one sentence?' })).toBeVisible()
+    await expectAccessible(page, '#spaced-review')
     await page.getByRole('button', { name: 'A version control system that tracks changes to files over time' }).click()
     await expect(page.getByRole('status')).toContainText('scheduled again in 1 day')
+    await expectAccessible(page, '#spaced-review')
     const finishReview = page.getByRole('button', { name: 'Finish review' })
     await finishReview.focus()
     await page.keyboard.press('Enter')

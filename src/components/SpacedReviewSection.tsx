@@ -2,14 +2,15 @@ import { useState } from 'react'
 import { ArrowRight, CheckCircle2, RotateCcw } from 'lucide-react'
 import {
   getDueReviewCards,
-  getReviewCards,
   getReviewIntervalLabel,
+  loadReviewCards,
   recordReviewAnswer,
   type ReviewCard,
 } from '../lib/spacedRepetition'
 
 export default function SpacedReviewSection() {
-  const [cards, setCards] = useState<ReviewCard[]>(() => getReviewCards())
+  const [queue, setQueue] = useState(() => loadReviewCards())
+  const cards = queue.cards
   const dueIds = new Set(getDueReviewCards().map(card => card.id))
   const [sessionIds, setSessionIds] = useState<string[] | null>(null)
   const [sessionIndex, setSessionIndex] = useState(0)
@@ -47,9 +48,14 @@ export default function SpacedReviewSection() {
       return
     }
 
-    const updatedCards = getReviewCards()
+    const updatedQueue = loadReviewCards()
+    if (updatedQueue.error) {
+      setSaveError(updatedQueue.error)
+      return
+    }
+    const updatedCards = updatedQueue.cards
     const updatedCard = updatedCards.find(card => card.id === currentCard.id)
-    setCards(updatedCards)
+    setQueue(updatedQueue)
     setSelected(optionIndex)
     setLastResult({
       correct,
@@ -117,7 +123,7 @@ export default function SpacedReviewSection() {
                   ? 'bg-emerald-500/20 text-white'
                   : isSelected
                     ? 'bg-rose-500/20 text-white'
-                    : 'bg-white/5 text-white/60'
+                    : 'bg-white/5 text-white/90'
               return (
                 <button key={option} disabled={selected !== null} onClick={() => answerQuestion(index)}
                   className={`flex w-full items-center justify-between gap-3 rounded-lg p-3 text-left text-sm ${stateClass}`}>
@@ -134,7 +140,7 @@ export default function SpacedReviewSection() {
                 {lastResult.correct ? 'Correct — nice recall.' : 'Not quite. Review the key idea, then try it again next time.'}
               </p>
               <p className="mt-1">{currentCard.question.explanation}</p>
-              <p className="mt-2 text-xs text-white/60">
+              <p className="mt-2 text-xs text-white/90">
                 This card is scheduled again in {getReviewIntervalLabel(lastResult.intervalDays)}.
               </p>
               <button onClick={nextQuestion}
@@ -146,8 +152,10 @@ export default function SpacedReviewSection() {
           )}
           {saveError && <p role="alert" className="mt-3 text-sm text-rose-300">{saveError}</p>}
         </div>
+      ) : queue.error ? (
+        <p role="alert" className="mt-6 rounded-xl bg-black/20 p-5 text-sm text-rose-200">{queue.error}</p>
       ) : cards.length === 0 ? (
-        <p className="mt-6 rounded-xl bg-black/20 p-5 text-sm text-white/70">
+        <p className="mt-6 rounded-xl bg-black/20 p-5 text-sm text-white/90">
           No review cards yet. Miss a quiz question and it will be added here, with a retry hint in the lesson.
         </p>
       ) : (
