@@ -51,6 +51,7 @@ function isReviewCard(value: unknown): value is ReviewCard {
     && typeof question.question === 'string'
     && Array.isArray(question.options)
     && question.options.every(option => typeof option === 'string')
+    && typeof question.correctIndex === 'number'
     && Number.isInteger(question.correctIndex)
     && question.correctIndex >= 0
     && question.correctIndex < question.options.length
