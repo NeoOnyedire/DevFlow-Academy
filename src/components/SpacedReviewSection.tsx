@@ -75,16 +75,16 @@ export default function SpacedReviewSection() {
       <div className="mx-auto max-w-6xl rounded-2xl bg-white/10 p-6 md:p-8 card-outline">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="font-accent text-xs uppercase tracking-[0.14em] text-white/50">Remember what you learn</p>
+          <p className="font-accent text-xs uppercase tracking-[0.14em] text-white/80">Remember what you learn</p>
           <h2 className="mt-1 font-display text-3xl font-bold text-white">Spaced practice</h2>
-          <p className="mt-2 max-w-2xl text-sm text-white/70">
+          <p className="mt-2 max-w-2xl text-sm text-white/90">
             Missed quiz questions return here. Correct answers are scheduled further apart over time; missed reviews come back sooner.
           </p>
-          <p className="mt-2 text-xs text-white/50">
+          <p className="mt-2 text-xs text-white/80">
             Saved only in this browser. You can practice early or wait until a card is due.
           </p>
         </div>
-        <div className="rounded-xl bg-black/20 px-4 py-3 text-sm text-white/80">
+        <div className="rounded-xl bg-black/20 px-4 py-3 text-sm text-white/90">
           <span className="font-semibold text-[#F7B731]">{dueCount}</span> due ·{' '}
           <span className="font-semibold text-white">{cards.length}</span> saved
         </div>
@@ -92,7 +92,7 @@ export default function SpacedReviewSection() {
 
       {currentCard ? (
         <div className="mt-6 max-w-3xl rounded-xl bg-black/20 p-5">
-          <p className="text-xs uppercase tracking-wider text-white/50">
+          <p className="text-xs uppercase tracking-wider text-white/80">
             Review {sessionIndex + 1} of {sessionCards.length} · {currentCard.moduleTitle} · {currentCard.lessonTitle}
           </p>
           <h3 className="mt-3 font-display text-xl font-bold text-white">{currentCard.question.question}</h3>
@@ -118,7 +118,7 @@ export default function SpacedReviewSection() {
           </div>
 
           {selected !== null && lastResult && (
-            <div role="status" className="mt-4 rounded-lg bg-white/10 p-4 text-sm text-white/80">
+            <div role="status" className="mt-4 rounded-lg bg-white/10 p-4 text-sm text-white/90">
               <p className="font-semibold text-white">
                 {lastResult.correct ? 'Correct — nice recall.' : 'Not quite. Review the key idea, then try it again next time.'}
               </p>
@@ -138,7 +138,7 @@ export default function SpacedReviewSection() {
       ) : sessionIds ? (
         <div className="mt-6 rounded-xl bg-black/20 p-5 text-white">
           <p role="status" className="font-semibold">Review session complete.</p>
-          <p className="mt-1 text-sm text-white/70">Your next reviews are scheduled based on how you answered.</p>
+          <p className="mt-1 text-sm text-white/90">Your next reviews are scheduled based on how you answered.</p>
           <button onClick={startSession}
             className="mt-4 inline-flex items-center gap-2 rounded-lg border border-white/30 px-4 py-2 text-sm font-semibold hover:bg-white/10">
             <RotateCcw className="h-4 w-4" /> Practice again
@@ -155,7 +155,7 @@ export default function SpacedReviewSection() {
             <RotateCcw className="h-4 w-4" /> {dueCount ? `Review ${dueCount} due ${dueCount === 1 ? 'question' : 'questions'}` : 'Practice saved questions'}
           </button>
           {dueCount === 0 && (
-            <p className="text-sm text-white/60">Nothing is due yet, but you can practice these questions early.</p>
+            <p className="text-sm text-white/80">Nothing is due yet, but you can practice these questions early.</p>
           )}
         </div>
       )}

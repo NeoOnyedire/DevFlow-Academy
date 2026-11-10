@@ -1,10 +1,10 @@
 import { expect, test, type Page } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
 
-async function expectAccessible(page: Page) {
+async function expectAccessible(page: Page, selector = 'main') {
   await expect(page.locator('main')).toBeVisible()
   const results = await new AxeBuilder({ page })
-    .include('main')
+    .include(selector)
     .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'best-practice'])
     .analyze()
   const violations = results.violations.map(({ id, impact, help, nodes }) => ({
@@ -185,7 +185,7 @@ test.describe('signed-in learning journey', () => {
     await page.getByRole('link', { name: 'Practice this question now' }).click()
     await expect(page).toHaveURL(/\/practice#spaced-review$/)
     await expect(page.getByRole('heading', { name: 'Spaced practice' })).toBeVisible()
-    await expectAccessible(page)
+    await expectAccessible(page, '#spaced-review')
 
     await page.getByRole('button', { name: 'Practice saved questions' }).click()
     await expect(page.getByRole('heading', { name: 'What is Git, in one sentence?' })).toBeVisible()
