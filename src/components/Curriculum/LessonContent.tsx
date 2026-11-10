@@ -143,6 +143,7 @@ export default function LessonContent({ module: mod, lessons, lessonId, onAdvanc
       <LessonStepView
         key={currentLesson.id}
         lesson={currentLesson}
+        moduleTitle={mod.title}
         isLessonDone={isLessonDone}
         isLoggedIn={isLoggedIn}
         finishLesson={finishLesson}
@@ -163,13 +164,14 @@ export default function LessonContent({ module: mod, lessons, lessonId, onAdvanc
 
 interface StepViewProps {
   lesson: Lesson
+  moduleTitle: string
   isLessonDone: boolean
   isLoggedIn: boolean
   finishLesson: () => void
 }
 
 /** Holds the per-lesson step. Remounted (via key) whenever the lesson changes. */
-function LessonStepView({ lesson, isLessonDone, isLoggedIn, finishLesson }: StepViewProps) {
+function LessonStepView({ lesson, moduleTitle, isLessonDone, isLoggedIn, finishLesson }: StepViewProps) {
   const [step, setStep] = useState<Step>(lesson.type === 'task' ? 'task' : 'video')
 
   if (lesson.type === 'task') {
@@ -208,7 +210,11 @@ function LessonStepView({ lesson, isLessonDone, isLoggedIn, finishLesson }: Step
 
   if (step === 'quiz' && lesson.quiz) {
     return (
-      <QuizStep questions={lesson.quiz}
+      <QuizStep
+        questions={lesson.quiz}
+        lessonId={lesson.id}
+        lessonTitle={lesson.title}
+        moduleTitle={moduleTitle}
         onComplete={() => (lesson.sandbox ? setStep('sandbox') : finishLesson())} />
     )
   }
