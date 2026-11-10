@@ -34,15 +34,27 @@ export interface ReviewStorageResult {
   error: string | null
 }
 
+export interface ReviewQueueResult {
+  cards: ReviewCard[]
+  error: string | null
+}
+
 function isReviewCard(value: unknown): value is ReviewCard {
   if (typeof value !== 'object' || value === null) return false
   const card = value as Partial<ReviewCard>
+  const question = card.question as Partial<QuizQuestion> | undefined
   return typeof card.id === 'string'
     && typeof card.lessonId === 'string'
     && typeof card.lessonTitle === 'string'
     && typeof card.moduleTitle === 'string'
-    && typeof card.question === 'object'
-    && card.question !== null
+    && typeof question?.id === 'string'
+    && typeof question.question === 'string'
+    && Array.isArray(question.options)
+    && question.options.every(option => typeof option === 'string')
+    && Number.isInteger(question.correctIndex)
+    && question.correctIndex >= 0
+    && question.correctIndex < question.options.length
+    && typeof question.explanation === 'string'
     && typeof card.repetitions === 'number'
     && typeof card.intervalDays === 'number'
     && typeof card.dueAt === 'number'
@@ -66,26 +78,33 @@ function writeCards(storage: ReviewStorage, cards: ReviewCard[]): ReviewStorageR
   }
 }
 
-export function getReviewCards(storage: ReviewStorage = window.localStorage): ReviewCard[] {
+export function loadReviewCards(storage?: ReviewStorage): ReviewQueueResult {
   try {
-    return readCards(storage).sort((a, b) => a.dueAt - b.dueAt)
+    const target = storage ?? window.localStorage
+    return { cards: readCards(target).sort((a, b) => a.dueAt - b.dueAt), error: null }
   } catch {
-    return []
+    return { cards: [], error: 'Could not load your review queue in this browser.' }
   }
 }
 
-export function getDueReviewCards(now = Date.now(), storage: ReviewStorage = window.localStorage): ReviewCard[] {
-  return getReviewCards(storage).filter(card => card.dueAt <= now)
+export function getReviewCards(storage?: ReviewStorage): ReviewCard[] {
+  return loadReviewCards(storage).cards
+}
+
+export function getDueReviewCards(now = Date.now(), storage?: ReviewStorage): ReviewCard[] {
+  return loadReviewCards(storage).cards.filter(card => card.dueAt <= now)
 }
 
 export function recordMissedQuestion(
   input: ReviewCardInput,
   now = Date.now(),
-  storage: ReviewStorage = window.localStorage,
+  storage?: ReviewStorage,
 ): ReviewStorageResult {
   let cards: ReviewCard[]
+  let target: ReviewStorage
   try {
-    cards = readCards(storage)
+    target = storage ?? window.localStorage
+    cards = readCards(target)
   } catch {
     return { ok: false, error: 'Could not read your review queue in this browser.' }
   }
@@ -104,18 +123,20 @@ export function recordMissedQuestion(
   const nextCards = existing
     ? cards.map(card => card.id === id ? nextCard : card)
     : [...cards, nextCard]
-  return writeCards(storage, nextCards)
+  return writeCards(target, nextCards)
 }
 
 export function recordReviewAnswer(
   id: string,
   correct: boolean,
   now = Date.now(),
-  storage: ReviewStorage = window.localStorage,
+  storage?: ReviewStorage,
 ): ReviewStorageResult {
   let cards: ReviewCard[]
+  let target: ReviewStorage
   try {
-    cards = readCards(storage)
+    target = storage ?? window.localStorage
+    cards = readCards(target)
   } catch {
     return { ok: false, error: 'Could not read your review queue in this browser.' }
   }
@@ -135,7 +156,7 @@ export function recordReviewAnswer(
     lastReviewedAt: now,
     missedCount: correct ? card.missedCount : card.missedCount + 1,
   }
-  return writeCards(storage, cards.map(item => item.id === id ? updated : item))
+  return writeCards(target, cards.map(item => item.id === id ? updated : item))
 }
 
 export function getReviewIntervalLabel(intervalDays: number): string {
