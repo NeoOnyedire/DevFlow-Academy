@@ -15,7 +15,7 @@
 // Provider-calling logic lives in api/_lib/aiProviders.ts, shared with
 // api/moderate-review.ts (the review-check endpoint).
 
-import type { VercelRequest, VercelResponse } from '@vercel/node'
+import type { VercelRequest, VercelResponse } from './_lib/vercel'
 import { callProvider, type AiProvider } from './_lib/aiProviders.js'
 
 const SYSTEM_PROMPT = `You are Gitter, a friendly and encouraging Git & GitHub learning assistant for DevFlow Academy. You help developers learn Git workflows, understand version control concepts, and build career confidence.

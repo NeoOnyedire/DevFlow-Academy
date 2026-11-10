@@ -5,7 +5,7 @@
 // enforced server-side by re-reading the session cookie -> real user
 // record on every request — there's no client-side way to fake it.
 
-import type { VercelRequest } from '@vercel/node'
+import type { VercelRequest } from './vercel'
 import { getUserIdFromRequest } from './session.js'
 import { getUserById, type StoredUser } from './users.js'
 

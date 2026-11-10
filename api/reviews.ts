@@ -30,7 +30,7 @@
 //      and Preview). Locally: add them to .env.local (never commit that
 //      file). You'll also need SESSION_SECRET set — see api/_lib/session.ts.
 
-import type { VercelRequest, VercelResponse } from '@vercel/node'
+import type { VercelRequest, VercelResponse } from './_lib/vercel'
 import { randomUUID } from 'crypto'
 import { getUpstashConfig } from './_lib/upstash.js'
 import { getUserIdFromRequest } from './_lib/session.js'

@@ -19,7 +19,7 @@
 // standalone file — only the export shape changed (named function +
 // dispatch, instead of a default export per file).
 
-import type { VercelRequest, VercelResponse } from '@vercel/node'
+import type { VercelRequest, VercelResponse } from '../_lib/vercel'
 import {
   createPasswordUser, toSafeUser, getUserByEmail, verifyPassword,
   getUserById, saveUser, hashPassword, upsertGithubUser,

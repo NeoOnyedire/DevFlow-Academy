@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll } from 'vitest'
-import type { VercelRequest } from '@vercel/node'
+import type { VercelRequest } from '../api/_lib/vercel'
 import { createHmac } from 'crypto'
 import {
   createSessionCookie,

@@ -42,7 +42,7 @@
  * about who can actually use the page.
  */
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { NavLink } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useApp } from '../context/AppContext'
@@ -60,8 +60,21 @@ export default function Navigation() {
   const { user, isLoggedIn, logout, openAuthModal } = useAuth()
   const { openCurriculum, modules, completedModules } = useApp()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const mobileMenuButtonRef = useRef<HTMLButtonElement>(null)
 
   const closeMobileMenu = useCallback(() => setMobileMenuOpen(false), [])
+
+  useEffect(() => {
+    if (!mobileMenuOpen) return
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        closeMobileMenu()
+        mobileMenuButtonRef.current?.focus()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [mobileMenuOpen, closeMobileMenu])
 
   const handleOpenNextLesson = useCallback(() => {
     const nextModule = modules.find(m => !completedModules.includes(m.id))
@@ -182,9 +195,12 @@ export default function Navigation() {
 
         {/* Mobile hamburger */}
         <button
+          ref={mobileMenuButtonRef}
           onClick={() => setMobileMenuOpen(v => !v)}
           className="md:hidden text-white/70 hover:text-white transition-colors p-2 flex-shrink-0"
           aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+          aria-expanded={mobileMenuOpen}
+          aria-controls="mobile-navigation"
         >
           {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
         </button>
@@ -195,6 +211,8 @@ export default function Navigation() {
         <>
           <div className="fixed inset-0 z-[145] md:hidden" onClick={closeMobileMenu} aria-hidden="true" />
           <div
+            id="mobile-navigation"
+            aria-label="Mobile navigation"
             className="fixed top-[52px] left-0 right-0 z-[150] md:hidden
             border-t border-white/10 p-4 flex flex-col gap-1 shadow-2xl animate-[fadeIn_0.15s_ease-out]"
             style={{ backgroundColor: 'var(--nav-bg)' }}
@@ -267,7 +285,7 @@ export default function Navigation() {
                   </button>
                 </div>
               ) : (
-                <button onClick={() => { openAuthModal('login'); closeMobileMenu() }}
+                <button onClick={() => openAuthModal('login')}
                   className="w-full flex items-center justify-center gap-2 font-accent text-xs uppercase tracking-[0.14em]
                     bg-white/10 hover:bg-white/20 text-white px-4 py-3 rounded-lg transition-colors">
                   <LogIn className="w-3.5 h-3.5" /> Login / Join Free

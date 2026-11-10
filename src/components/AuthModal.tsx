@@ -51,20 +51,49 @@ function AuthModalBody() {
 
   const githubEnabled = isGitHubOAuthConfigured()
 
-  // Auto-focus the first input when the modal mounts
+  const dialogRef = useRef<HTMLDivElement>(null)
+  const closeButtonRef = useRef<HTMLButtonElement>(null)
   const firstInputRef = useRef<HTMLInputElement>(null)
   useEffect(() => {
-    const t = setTimeout(() => firstInputRef.current?.focus(), 100)
-    return () => clearTimeout(t)
-  }, [])
-
-  // Close modal on Escape key (this component only exists while open)
-  useEffect(() => {
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') closeAuthModal()
+    const previouslyFocused = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null
+    const focusInitial = () => {
+      const initialTarget = firstInputRef.current ?? closeButtonRef.current
+      initialTarget?.focus()
     }
-    window.addEventListener('keydown', handleKey)
-    return () => window.removeEventListener('keydown', handleKey)
+    const timeout = window.setTimeout(focusInitial, 0)
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        closeAuthModal()
+        return
+      }
+      if (event.key !== 'Tab') return
+
+      const focusable = dialogRef.current?.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      )
+      if (!focusable?.length) {
+        event.preventDefault()
+        dialogRef.current?.focus()
+        return
+      }
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first.focus()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => {
+      window.clearTimeout(timeout)
+      window.removeEventListener('keydown', handleKeyDown)
+      if (previouslyFocused?.isConnected) previouslyFocused.focus()
+    }
   }, [closeAuthModal])
 
   /** Kick off the GitHub OAuth redirect. */
@@ -144,12 +173,21 @@ function AuthModalBody() {
       <div
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
         onClick={closeAuthModal}
+        aria-hidden="true"
       />
 
       {/* Modal card */}
-      <div className="relative w-full max-w-md bg-[#4A2F2F] card-radius card-shadow p-6 md:p-8 animate-[fadeIn_0.2s_ease-out]">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="auth-modal-title"
+        tabIndex={-1}
+        className="relative w-full max-w-md bg-[#4A2F2F] card-radius card-shadow p-6 md:p-8 animate-[fadeIn_0.2s_ease-out]"
+      >
         {/* Close button */}
         <button
+          ref={closeButtonRef}
           onClick={closeAuthModal}
           className="absolute top-4 right-4 text-white/50 hover:text-white transition-colors"
           aria-label="Close"
@@ -165,7 +203,7 @@ function AuthModalBody() {
                 <KeyRound className="w-5 h-5 text-[#F7B731]" />
               </div>
               <div>
-                <h3 className="font-display font-bold text-white text-xl">Reset your password</h3>
+                <h3 id="auth-modal-title" className="font-display font-bold text-white text-xl">Reset your password</h3>
                 <p className="text-white/50 text-sm">We'll email you a link if that address has an account.</p>
               </div>
             </div>
@@ -226,7 +264,7 @@ function AuthModalBody() {
                 {isLogin ? <LogIn className="w-5 h-5 text-[#F7B731]" /> : <UserPlus className="w-5 h-5 text-[#F7B731]" />}
               </div>
               <div>
-                <h3 className="font-display font-bold text-white text-xl">
+                <h3 id="auth-modal-title" className="font-display font-bold text-white text-xl">
                   {isLogin ? 'Welcome Back' : 'Join DevFlow Academy'}
                 </h3>
                 <p className="text-white/50 text-sm">

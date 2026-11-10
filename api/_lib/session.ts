@@ -12,7 +12,7 @@
 // (they'll just need to log in again) — that's expected and safe.
 
 import { createHmac } from 'crypto'
-import type { VercelRequest } from '@vercel/node'
+import type { VercelRequest } from './vercel'
 
 const SESSION_COOKIE = 'devflow_session'
 const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 30 // 30 days

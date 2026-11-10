@@ -63,7 +63,7 @@ jobs:
       - run: npm run test:e2e
 
   dependency-audit:
-    name: Production dependency audit
+    name: Dependency audit
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -72,7 +72,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm audit --audit-level=critical
+      - run: npm audit --audit-level=high
       - run: npm audit --omit=dev --audit-level=high
 
   build:

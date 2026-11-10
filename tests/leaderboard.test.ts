@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { VercelRequest, VercelResponse } from '@vercel/node'
+import type { VercelRequest, VercelResponse } from '../api/_lib/vercel'
 import { getCurrentWeekKey, getWeeklyChallenge } from '../shared/weeklyChallenge.js'
 
 const mocks = vi.hoisted(() => ({

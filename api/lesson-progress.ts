@@ -16,7 +16,7 @@
 // POST { lessonId, moduleId, step, allLessonIdsInModule } -> upserts progress,
 //   and rolls the module up to complete in user_progress if this finishes it.
 
-import type { VercelRequest, VercelResponse } from '@vercel/node'
+import type { VercelRequest, VercelResponse } from './_lib/vercel'
 import { sql } from './_lib/db.js'
 import { getUserIdFromRequest } from './_lib/session.js'
 

@@ -19,7 +19,7 @@
 // POST /api/admin/delete-leaderboard-entry { id }
 // POST /api/admin/reset-week               { weekKey }
 
-import type { VercelRequest, VercelResponse } from '@vercel/node'
+import type { VercelRequest, VercelResponse } from '../_lib/vercel'
 import { requireAdmin } from '../_lib/admin.js'
 import { sql } from '../_lib/db.js'
 import { getAllUsers, getUserById, saveUser, deleteUser, backfillAllUsersSet } from '../_lib/users.js'

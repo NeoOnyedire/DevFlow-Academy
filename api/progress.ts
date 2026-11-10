@@ -12,7 +12,7 @@
 // GET  -> { completedModules: string[] }  all completed module ids for this account
 // POST { moduleId, completed } -> marks or unmarks one module
 
-import type { VercelRequest, VercelResponse } from '@vercel/node'
+import type { VercelRequest, VercelResponse } from './_lib/vercel'
 import { sql } from './_lib/db.js'
 import { getUserIdFromRequest } from './_lib/session.js'
 

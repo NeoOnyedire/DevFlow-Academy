@@ -11,7 +11,7 @@
  * through) rather than blocking a real learner over a formatting issue.
  */
 
-import type { VercelRequest, VercelResponse } from '@vercel/node'
+import type { VercelRequest, VercelResponse } from './_lib/vercel'
 import { getUserIdFromRequest } from './_lib/session.js'
 import { callProvider, type AiProvider } from './_lib/aiProviders.js'
 import { isRateLimited } from './_lib/rateLimit.js'

@@ -19,7 +19,7 @@
 //   server-defined challenge and awards its server-defined points.
 //   ON CONFLICT DO NOTHING prevents duplicate completions.
 
-import type { VercelRequest, VercelResponse } from '@vercel/node'
+import type { VercelRequest, VercelResponse } from './_lib/vercel'
 import { sql } from './_lib/db.js'
 import { getUserIdFromRequest } from './_lib/session.js'
 import { getUserById } from './_lib/users.js'

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { VercelRequest, VercelResponse } from '@vercel/node'
+import type { VercelRequest, VercelResponse } from '../api/_lib/vercel'
 
 const mocks = vi.hoisted(() => ({
   createPasswordUser: vi.fn(),

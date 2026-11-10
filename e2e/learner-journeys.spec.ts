@@ -77,6 +77,46 @@ async function mockAppApi(page: Page, signedIn = false, completedLessonIds: stri
 }
 
 test.describe('guest learning journey', () => {
+  test('supports keyboard navigation and Escape in the mobile menu', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 })
+    await gotoLearnerPage(page, '/learn')
+
+    const menuToggle = page.locator('button[aria-controls="mobile-navigation"]')
+    await tabTo(page, menuToggle)
+    await page.keyboard.press('Enter')
+    await expect(menuToggle).toHaveAttribute('aria-expanded', 'true')
+
+    await page.keyboard.press('Escape')
+    await expect(menuToggle).toHaveAttribute('aria-expanded', 'false')
+    await expect(menuToggle).toBeFocused()
+
+    await page.keyboard.press('Enter')
+    const practiceLink = page.getByRole('link', { name: /Practice/ })
+    await tabTo(page, practiceLink)
+    await page.keyboard.press('Enter')
+    await expect(page).toHaveURL(/\/practice$/)
+    await expect(menuToggle).toHaveAttribute('aria-expanded', 'false')
+  })
+
+  test('keeps keyboard focus inside the auth dialog and restores it on close', async ({ page }) => {
+    await mockAppApi(page)
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await gotoLearnerPage(page, '/learn')
+    const loginButton = page.locator('button[title="Login"]')
+    await loginButton.click()
+
+    const dialog = page.getByRole('dialog', { name: 'Welcome Back' })
+    await expect(dialog).toBeVisible()
+    await expect(dialog.locator(':focus')).toHaveCount(1)
+
+    await page.keyboard.press('Shift+Tab')
+    await expect(dialog.locator(':focus')).toHaveCount(1)
+
+    await page.keyboard.press('Escape')
+    await expect(dialog).toBeHidden()
+    await expect(loginButton).toBeFocused()
+  })
+
   test('completes the account setup preview and keeps it completed after reload', async ({ page }) => {
     await mockAppApi(page)
     await gotoLearnerPage(page, '/learn')
