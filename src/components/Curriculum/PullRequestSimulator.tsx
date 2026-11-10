@@ -88,6 +88,7 @@ export default function PullRequestSimulator({ prompt, onSolved }: Props) {
         Training simulation only. It does not connect to GitHub or publish code.
       </div>
 
+      <h2 className="font-display text-xl font-bold cur-text">Pull request simulator</h2>
       <p className="text-sm cur-text-soft">{prompt}</p>
 
       <ol aria-label="Pull request workflow" className="grid gap-2 sm:grid-cols-3">
