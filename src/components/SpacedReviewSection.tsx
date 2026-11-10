@@ -13,6 +13,7 @@ export default function SpacedReviewSection() {
   const dueIds = new Set(getDueReviewCards().map(card => card.id))
   const [sessionIds, setSessionIds] = useState<string[] | null>(null)
   const [sessionIndex, setSessionIndex] = useState(0)
+  const [sessionComplete, setSessionComplete] = useState(false)
   const [selected, setSelected] = useState<number | null>(null)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [lastResult, setLastResult] = useState<{ correct: boolean; intervalDays: number } | null>(null)
@@ -31,6 +32,7 @@ export default function SpacedReviewSection() {
     })
     setSessionIds(ordered.map(card => card.id))
     setSessionIndex(0)
+    setSessionComplete(false)
     setSelected(null)
     setLastResult(null)
     setSaveError(null)
@@ -59,7 +61,7 @@ export default function SpacedReviewSection() {
   const nextQuestion = () => {
     if (!currentCard) return
     if (sessionIndex + 1 >= sessionCards.length) {
-      setSessionIds(null)
+      setSessionComplete(true)
       setSelected(null)
       setLastResult(null)
       return
@@ -90,7 +92,16 @@ export default function SpacedReviewSection() {
         </div>
       </div>
 
-      {currentCard ? (
+      {sessionComplete ? (
+        <div className="mt-6 rounded-xl bg-black/20 p-5 text-white">
+          <p role="status" className="font-semibold">Review session complete.</p>
+          <p className="mt-1 text-sm text-white/90">Your next reviews are scheduled based on how you answered.</p>
+          <button onClick={startSession}
+            className="mt-4 inline-flex items-center gap-2 rounded-lg border border-white/30 px-4 py-2 text-sm font-semibold hover:bg-white/10">
+            <RotateCcw className="h-4 w-4" /> Practice again
+          </button>
+        </div>
+      ) : currentCard ? (
         <div className="mt-6 max-w-3xl rounded-xl bg-black/20 p-5">
           <p className="text-xs uppercase tracking-wider text-white/90">
             Review {sessionIndex + 1} of {sessionCards.length} · {currentCard.moduleTitle} · {currentCard.lessonTitle}
@@ -134,15 +145,6 @@ export default function SpacedReviewSection() {
             </div>
           )}
           {saveError && <p role="alert" className="mt-3 text-sm text-rose-300">{saveError}</p>}
-        </div>
-      ) : sessionIds ? (
-        <div className="mt-6 rounded-xl bg-black/20 p-5 text-white">
-          <p role="status" className="font-semibold">Review session complete.</p>
-          <p className="mt-1 text-sm text-white/90">Your next reviews are scheduled based on how you answered.</p>
-          <button onClick={startSession}
-            className="mt-4 inline-flex items-center gap-2 rounded-lg border border-white/30 px-4 py-2 text-sm font-semibold hover:bg-white/10">
-            <RotateCcw className="h-4 w-4" /> Practice again
-          </button>
         </div>
       ) : cards.length === 0 ? (
         <p className="mt-6 rounded-xl bg-black/20 p-5 text-sm text-white/70">
