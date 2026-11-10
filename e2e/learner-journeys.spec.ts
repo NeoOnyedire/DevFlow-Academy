@@ -375,7 +375,7 @@ test.describe('signed-in learning journey', () => {
     await mergeButton.click()
 
     await expect(page).toHaveURL('/learn')
-    await expect(page.getByRole('button', { name: /Practice a pull request review/ }).getByText('Done', { exact: true })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Curriculum' })).toBeVisible()
   })
 
   test('explains workflow validation failures and accepts a corrected CI workflow', async ({ page }) => {
