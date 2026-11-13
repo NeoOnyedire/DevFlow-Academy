@@ -43,6 +43,7 @@ import { Terminal, FilePlus, CheckCircle2, GitBranch as BranchIcon, MessageCircl
 import type { SandboxTask } from '../../content/lessons'
 import { createMergeCommit, getCommitHistory, getMergeDisposition, type BranchRefs, type GitCommit } from '../../lib/gitGraph'
 import { explainCommandFailure, getSequenceProgress } from '../../lib/learningFeedback'
+import { parseCommitMessage } from '../../lib/gitCommand'
 import { requestGitterHelp } from '../../lib/gitterSupport'
 
 type Commit = GitCommit
@@ -407,9 +408,8 @@ function interpret(
     if (repo.mergeConflict) return ['fatal: cannot commit because you have unmerged files']
     const staged = Object.entries(repo.files).filter(([, f]) => f.staged).map(([n]) => n)
     if (staged.length === 0) return ['nothing to commit, working tree clean']
-    const messageMatch = cmd.match(/-m\s+"([^"]+)"/)
-    const message = messageMatch ? messageMatch[1] : '(no message provided — use -m "message")'
-    if (!messageMatch) return ['error: switch `m` requires a value — try: git commit -m "your message"']
+    const message = parseCommitMessage(cmd)
+    if (!message) return ['error: switch `m` requires a value — try: git commit -m "your message"']
     const hash = shortHash()
     setRepo(prev => {
       const files = { ...prev.files }
