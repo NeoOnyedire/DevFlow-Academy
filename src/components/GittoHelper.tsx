@@ -27,6 +27,7 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { ChevronDown, CircleHelp, Send, Trash2 } from 'lucide-react'
+import { useAuth } from '../context/AuthContext'
 import { answerWithGittoLite } from '../lib/gittoLite'
 
 const QUICK_PROMPTS = [
@@ -43,6 +44,7 @@ const GITTO_AVATAR1 = '/gittowave.png'
 interface Message {
   role: 'gitto' | 'user'
   text: string
+  action?: 'request-password-reset'
 }
 
 function loadStoredMessages(): Message[] {
@@ -55,6 +57,7 @@ function loadStoredMessages(): Message[] {
 }
 
 export default function GittoHelper() {
+  const { openAuthModal } = useAuth()
   const [isOpen, setIsOpen] = useState(false)
   const [question, setQuestion] = useState('')
   const [messages, setMessages] = useState<Message[]>(loadStoredMessages)
@@ -113,10 +116,16 @@ export default function GittoHelper() {
     setIsTyping(true)
 
     setTimeout(() => {
-      setMessages(prev => [...prev, { role: 'gitto', text: answerWithGittoLite(cleaned) }])
+      const answer = answerWithGittoLite(cleaned)
+      setMessages(prev => [...prev, { role: 'gitto', ...answer }])
       setIsTyping(false)
     }, 450)
   }, [question, isTyping])
+
+  const openPasswordReset = () => {
+    setIsOpen(false)
+    openAuthModal('forgot-password')
+  }
 
   return (
     <div className="fixed bottom-4 left-4 z-[140]" style={{ width: 'min(calc(100vw - 2rem), 320px)' }}>
@@ -170,6 +179,15 @@ export default function GittoHelper() {
                     : 'bg-black/30 text-white/85 rounded-2xl rounded-bl-sm'
                 }`}>
                   {msg.text}
+                  {msg.action === 'request-password-reset' && (
+                    <button
+                      onClick={openPasswordReset}
+                      className="mt-2 block rounded-lg bg-[#2FB8C6] px-3 py-2 text-xs font-semibold text-white
+                        hover:bg-[#259eaa] transition-colors"
+                    >
+                      Request password reset
+                    </button>
+                  )}
                 </div>
               </div>
             ))}

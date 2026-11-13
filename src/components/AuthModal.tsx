@@ -5,13 +5,8 @@
  *
  * Authentication modal.
  *
- * NOTE: Email/password login is temporarily paused (no custom domain
- * secured yet for OAuth callback stability isn't the reason — this is
- * simply a decision to launch with GitHub-only auth for now). Flip
- * EMAIL_LOGIN_ENABLED back to true whenever you're ready to bring back
- * email/password registration and login. The backend endpoints
- * (api/auth/login.ts, api/auth/register.ts, etc.) are untouched — this
- * only hides the UI path to them.
+ * NOTE: Email/password login and registration are temporarily paused.
+ * Password reset remains available for existing password accounts.
  *
  * LINT FIX (react-hooks/set-state-in-effect): the form used to reset its
  * fields from inside an effect whenever the modal opened or the mode
@@ -163,9 +158,7 @@ function AuthModalBody() {
   }
 
   const isLogin = authModalMode === 'login'
-  // Forgot-password is only reachable from a link inside the email form,
-  // so it's naturally unreachable while EMAIL_LOGIN_ENABLED is false.
-  const isForgotPassword = EMAIL_LOGIN_ENABLED && authModalMode === 'forgot-password'
+  const isForgotPassword = authModalMode === 'forgot-password'
 
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">

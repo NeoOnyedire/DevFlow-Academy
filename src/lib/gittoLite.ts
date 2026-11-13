@@ -14,6 +14,12 @@
 interface LiteEntry {
   keywords: string[]
   answer: string
+  action?: 'request-password-reset'
+}
+
+export interface GittoAnswer {
+  text: string
+  action?: LiteEntry['action']
 }
 
 const GITTO_KNOWLEDGE: LiteEntry[] = [
@@ -23,9 +29,10 @@ const GITTO_KNOWLEDGE: LiteEntry[] = [
       "Head to Settings (top nav, or /settings) and pick a card under Appearance — Original, Light, or Dark. It's saved to this browser, so it'll stick around on your next visit here.",
   },
   {
-    keywords: ['reset password', 'forgot password', 'change password', 'new password'],
+    keywords: ['reset my password', 'forgot my password', 'reset password', 'forgot password', 'change password', 'new password'],
     answer:
-      "Right now DevFlow Academy signs in through GitHub only — email/password login is paused while a custom domain gets sorted out. If you signed up with GitHub, there's no separate DevFlow password to reset; just use 'Continue with GitHub'.",
+      "If your DevFlow account uses a password, request a reset link and follow the instructions in your email. If you sign in with GitHub, there is no separate DevFlow password to reset — use GitHub's password recovery instead.",
+    action: 'request-password-reset',
   },
   {
     keywords: ['verify email', 'email verification', 'resend verification', 'confirm email', 'verified'],
@@ -72,7 +79,7 @@ const GITTO_KNOWLEDGE: LiteEntry[] = [
 const FALLBACK_ANSWER =
   "That's outside my lane — I only handle account and settings questions. For Git, GitHub, or career questions, try Gitter in the bottom-right corner instead."
 
-export function answerWithGittoLite(question: string): string {
+export function answerWithGittoLite(question: string): GittoAnswer {
   const q = question.toLowerCase()
   let best: { entry: LiteEntry; score: number } | null = null
 
@@ -83,5 +90,7 @@ export function answerWithGittoLite(question: string): string {
     }
   }
 
-  return best ? best.entry.answer : FALLBACK_ANSWER
+  return best
+    ? { text: best.entry.answer, action: best.entry.action }
+    : { text: FALLBACK_ANSWER }
 }
