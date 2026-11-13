@@ -347,8 +347,8 @@ html::-webkit-scrollbar-thumb:hover {
    Toggled via [data-theme] on <html> (see ThemeContext.tsx). Most surfaces
    already reference --espresso / --card-dark / --card-light through the
    bg-espresso / bg-card-dark / bg-card-light utility classes, so redefining
-   those variables per theme reskins the whole app. --rose-punch (Gitter) is
-   left untouched in every block on purpose, same for Gitto's teal.
+   those variables per theme reskins the whole app. Light mode uses Gitto's
+   teal as its tertiary accent; Original and Dark keep the yellow accent.
 
    --nav-bg follows the same pattern — it used to be hardcoded on
    Navigation.tsx as a literal rgba() matching the Original --espresso
@@ -376,6 +376,8 @@ html::-webkit-scrollbar-thumb:hover {
    ============================================================================ */
 
 :root {
+  --brand-tertiary-color: #F7B731;
+  --brand-tertiary-rgb: 247 183 49;
   --text-on-accent: #2A2A2A;
   --text-on-accent-soft: rgba(42, 42, 42, 0.65);
   --border-on-accent: rgba(42, 42, 42, 0.18);
@@ -412,6 +414,8 @@ html::-webkit-scrollbar-thumb:hover {
   --card-dark: #FFFFFF;
   --card-light: #F1F3F5;
   --sun-yellow: #F7B731;
+  --brand-tertiary-color: #2FB8C6;
+  --brand-tertiary-rgb: 47 184 198;
   --lime: #2FAE3C;
   --text-primary: #212529;
   --text-secondary: #6C757D;
@@ -426,9 +430,9 @@ html::-webkit-scrollbar-thumb:hover {
   --cur-surface: #FFFFFF;
   --cur-surface-hover: #F1F3F5;
   --cur-track: rgba(33, 37, 41, 0.12);
-  --cur-accent-bg: #F7B731;
-  --cur-accent-fg: #2A2A2A;
-  --cur-link: #9A6700;
+  --cur-accent-bg: var(--brand-tertiary-color);
+  --cur-accent-fg: #12363A;
+  --cur-link: #087985;
   --cur-success: #2FAE3C;
   --cur-danger: #D6264A;
   --cur-btn-bg: #212529;
@@ -448,6 +452,8 @@ html::-webkit-scrollbar-thumb:hover {
   --espresso: #0A0B10;
   --card-dark: #14161F;
   --sun-yellow: #FFC94D;
+  --brand-tertiary-color: #FFC94D;
+  --brand-tertiary-rgb: 255 201 77;
   --lime: #46E85B;
   --text-primary: #F3F4F8;
   --text-secondary: rgba(243, 244, 248, 0.62);
@@ -535,6 +541,18 @@ body {
 [data-theme="light"] .bg-white\/10,
 [data-theme="light"] .bg-white\/15     { background-color: rgba(33,37,41,0.045) !important; }
 [data-theme="light"] .grain-overlay    { opacity: 0.035; }
+[data-theme="light"] [class*="text-[#F7B731]"] {
+  color: rgb(var(--brand-tertiary-rgb) / var(--tw-text-opacity, 1)) !important;
+}
+[data-theme="light"] [class*="bg-[#F7B731]"] {
+  background-color: rgb(var(--brand-tertiary-rgb) / var(--tw-bg-opacity, 1)) !important;
+}
+[data-theme="light"] [class*="border-[#F7B731]"] {
+  border-color: rgb(var(--brand-tertiary-rgb) / var(--tw-border-opacity, 1)) !important;
+}
+[data-theme="light"] [class*="ring-[#F7B731]"] {
+  --tw-ring-color: rgb(var(--brand-tertiary-rgb) / var(--tw-ring-opacity, 1)) !important;
+}
 
 /* ---- Dark theme: the "impress me" treatment ---- */
 [data-theme="dark"] body::before {

@@ -29,7 +29,7 @@ const THEME_OPTIONS: { id: ThemeMode; label: string; tagline: string; icon: type
     label: 'Light Mode',
     tagline: 'Clean and bright — off-white surfaces, high-contrast text, same brand accents.',
     icon: Sun,
-    swatches: ['#F8F9FA', '#FFFFFF', '#F7B731', '#FF4D6D'],
+    swatches: ['#F8F9FA', '#FFFFFF', '#2FB8C6', '#FF4D6D'],
   },
   {
     id: 'dark',
