@@ -154,7 +154,7 @@ export default function LearnGridSection({ className = '' }: Props) {
                   <h3 className="font-display font-semibold text-[#2A2A2A] text-sm leading-tight mb-1">{lesson.title}</h3>
                   <p className="text-[#2A2A2A]/60 text-xs mb-2">{lesson.desc}</p>
                   <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-accent font-semibold uppercase tracking-wider"
-                    style={{ backgroundColor: 'var(--brand-tertiary-color)', color: '#12363A' }}>
+                    style={{ backgroundColor: 'var(--brand-tertiary-color)', color: 'var(--brand-tertiary-foreground)' }}>
                     {lesson.tag}
                   </span>
                 </div>
@@ -185,7 +185,7 @@ export default function LearnGridSection({ className = '' }: Props) {
                   </div>
                   <h3 className="font-display font-semibold text-[#2A2A2A] text-xs leading-tight mb-1">{lesson.title}</h3>
                   <span className="inline-block px-1.5 py-0.5 rounded-full text-[9px] font-accent font-semibold uppercase tracking-wider"
-                    style={{ backgroundColor: 'var(--brand-tertiary-color)', color: '#12363A' }}>
+                    style={{ backgroundColor: 'var(--brand-tertiary-color)', color: 'var(--brand-tertiary-foreground)' }}>
                     {lesson.tag}
                   </span>
                 </div>

@@ -378,6 +378,7 @@ html::-webkit-scrollbar-thumb:hover {
 :root {
   --brand-tertiary-color: #F7B731;
   --brand-tertiary-rgb: 247 183 49;
+  --brand-tertiary-foreground: #2A2A2A;
   --text-on-accent: #2A2A2A;
   --text-on-accent-soft: rgba(42, 42, 42, 0.65);
   --border-on-accent: rgba(42, 42, 42, 0.18);
@@ -416,6 +417,7 @@ html::-webkit-scrollbar-thumb:hover {
   --sun-yellow: #F7B731;
   --brand-tertiary-color: #2FB8C6;
   --brand-tertiary-rgb: 47 184 198;
+  --brand-tertiary-foreground: #12363A;
   --lime: #2FAE3C;
   --text-primary: #212529;
   --text-secondary: #6C757D;
