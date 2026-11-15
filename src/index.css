@@ -505,14 +505,13 @@ body {
 [data-theme="light"] .bg-\[\#4A2F2F\]\/60,
 [data-theme="dark"]  .bg-\[\#4A2F2F\]\/60 { background-color: var(--card-dark) !important; }
 
-/* Full-page yellow canvases (Practice, the guest Dashboard preview, the
-   closing footer CTA) become a real dark surface in dark mode instead
-   of just tinting the yellow — this is the actual fix for dark mode
-   barely looking different from Original. Small accent usages of yellow
-   (badges, buttons that reference var(--sun-yellow) inline) are
-   untouched, since those still read fine against dark text in every
-   theme. The curriculum (/learn) no longer relies on this rule — it uses
-   .bg-curriculum, driven by --cur-bg. */
+/* Full-page yellow canvases (Practice, the guest Dashboard preview, and
+   the closing footer CTA) become theme surfaces in Light and Dark modes.
+   Yellow remains available for buttons, badges, and other accent details.
+   The curriculum (/learn) uses .bg-curriculum, driven by --cur-bg. */
+[data-theme="light"] .bg-sun-yellow {
+  background-color: var(--espresso) !important;
+}
 [data-theme="dark"] .bg-sun-yellow {
   background-color: var(--espresso) !important;
 }
