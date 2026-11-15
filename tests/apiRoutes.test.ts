@@ -33,6 +33,8 @@ const mocks = vi.hoisted(() => ({
   saveGitHubRepositoryToken: vi.fn(),
   disconnectGitHubRepositoryAccess: vi.fn(),
 }))
+let originalGithubClientId: string | undefined
+let originalGithubClientSecret: string | undefined
 
 vi.mock('../api/_lib/users.js', () => ({
   createPasswordUser: mocks.createPasswordUser,
@@ -112,6 +114,8 @@ function createResponse() {
 }
 
 beforeEach(() => {
+  originalGithubClientId = process.env.GITHUB_CLIENT_ID
+  originalGithubClientSecret = process.env.GITHUB_CLIENT_SECRET
   vi.clearAllMocks()
   mocks.sql.mockResolvedValue({ rows: [] })
   mocks.requireAdmin.mockResolvedValue({ id: 'admin-1', name: 'Admin' })
@@ -128,6 +132,10 @@ beforeEach(() => {
 
   afterEach(() => {
     vi.unstubAllGlobals()
+    if (originalGithubClientId === undefined) delete process.env.GITHUB_CLIENT_ID
+    else process.env.GITHUB_CLIENT_ID = originalGithubClientId
+    if (originalGithubClientSecret === undefined) delete process.env.GITHUB_CLIENT_SECRET
+    else process.env.GITHUB_CLIENT_SECRET = originalGithubClientSecret
   })
   mocks.toSafeUser.mockImplementation((user: { passwordHash?: string }) => {
     const { passwordHash: _passwordHash, ...safeUser } = user
@@ -147,8 +155,6 @@ beforeEach(() => {
 
 describe('auth API route', () => {
   it('stores repository OAuth access only after GitHub grants the repo scope', async () => {
-    const originalClientId = process.env.GITHUB_CLIENT_ID
-    const originalClientSecret = process.env.GITHUB_CLIENT_SECRET
     process.env.GITHUB_CLIENT_ID = 'test-client'
     process.env.GITHUB_CLIENT_SECRET = 'test-secret'
     vi.stubGlobal('fetch', vi.fn()
@@ -171,13 +177,9 @@ describe('auth API route', () => {
     expect(response.statusCode).toBe(200)
     expect(mocks.saveGitHubRepositoryToken).toHaveBeenCalledWith('user-1', 'gho-sensitive-token')
     expect(JSON.stringify(response.body)).not.toContain('gho-sensitive-token')
-    process.env.GITHUB_CLIENT_ID = originalClientId
-    process.env.GITHUB_CLIENT_SECRET = originalClientSecret
   })
 
   it('does not store a GitHub token when repo scope was not granted', async () => {
-    const originalClientId = process.env.GITHUB_CLIENT_ID
-    const originalClientSecret = process.env.GITHUB_CLIENT_SECRET
     process.env.GITHUB_CLIENT_ID = 'test-client'
     process.env.GITHUB_CLIENT_SECRET = 'test-secret'
     vi.stubGlobal('fetch', vi.fn()
@@ -199,8 +201,6 @@ describe('auth API route', () => {
 
     expect(response.statusCode).toBe(403)
     expect(mocks.saveGitHubRepositoryToken).not.toHaveBeenCalled()
-    process.env.GITHUB_CLIENT_ID = originalClientId
-    process.env.GITHUB_CLIENT_SECRET = originalClientSecret
   })
 
   it('rejects login requests without credentials', async () => {

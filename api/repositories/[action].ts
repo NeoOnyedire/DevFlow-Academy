@@ -171,6 +171,9 @@ async function handleRepositoryAction(req: VercelRequest, res: VercelResponse) {
       if (!token) return res.status(403).json({ error: 'Connect GitHub repository access first.' })
       const fullName = await getSelectedGitHubRepository(userId)
       if (!fullName) return res.status(200).json({ repository: null })
+      if (!isValidFullName(fullName)) {
+        return res.status(500).json({ error: 'Stored repository selection is invalid. Choose a repository again.' })
+      }
       return res.status(200).json({ repository: await analyzeRepository(fullName, token) })
     }
 
