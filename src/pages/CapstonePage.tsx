@@ -11,10 +11,17 @@ function loadGuestProgress(storageKey: string): { ids: string[]; error: string |
     const saved = localStorage.getItem(storageKey)
     if (!saved) return { ids: [], error: null }
     const parsed: unknown = JSON.parse(saved)
-    if (!Array.isArray(parsed) || parsed.some(id => typeof id !== 'string')) {
+    if (!Array.isArray(parsed)) {
       return { ids: [], error: 'Saved capstone progress is invalid. Clear this browser’s saved capstone data and try again.' }
     }
-    return { ids: parsed, error: null }
+    const ids: string[] = []
+    for (const id of parsed) {
+      if (typeof id !== 'string') {
+        return { ids: [], error: 'Saved capstone progress is invalid. Clear this browser’s saved capstone data and try again.' }
+      }
+      ids.push(id)
+    }
+    return { ids, error: null }
   } catch {
     return { ids: [], error: 'Could not read saved capstone progress from this browser.' }
   }
