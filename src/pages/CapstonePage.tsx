@@ -6,14 +6,17 @@ import { useApp } from '../context/AppContext'
 import { useAuth } from '../context/AuthContext'
 import { fetchCompletedLessonIds, saveLessonStep } from '../lib/lessonProgress'
 
-function loadGuestStepIds(storageKey: string): string[] {
+function loadGuestProgress(storageKey: string): { ids: string[]; error: string | null } {
   try {
     const saved = localStorage.getItem(storageKey)
-    if (!saved) return []
+    if (!saved) return { ids: [], error: null }
     const parsed: unknown = JSON.parse(saved)
-    return Array.isArray(parsed) ? parsed.filter((id): id is string => typeof id === 'string') : []
+    if (!Array.isArray(parsed) || parsed.some(id => typeof id !== 'string')) {
+      return { ids: [], error: 'Saved capstone progress is invalid. Clear this browser’s saved capstone data and try again.' }
+    }
+    return { ids: parsed, error: null }
   } catch {
-    return []
+    return { ids: [], error: 'Could not read saved capstone progress from this browser.' }
   }
 }
 
@@ -45,12 +48,12 @@ export default function CapstonePage() {
           .filter(id => id.startsWith(`${project.id}-`))
           .map(id => id.slice(project.id.length + 1)),
       }))
-      : Promise.resolve({ ids: loadGuestStepIds(storageKey), error: null })
+      : Promise.resolve(loadGuestProgress(storageKey))
     progress.then(result => {
       if (!cancelled) setLoaded({ key: loadKey, ...result })
     })
     return () => { cancelled = true }
-  }, [isLoggedIn, loadAttempt, loadKey, moduleId, storageKey])
+  }, [isLoggedIn, loadAttempt, loadKey, moduleId, project.id, storageKey])
 
   const toggleStep = async (stepId: string) => {
     if (isLoading || loadError || !loaded || loaded.key !== loadKey) return
@@ -70,7 +73,13 @@ export default function CapstonePage() {
         return
       }
     } else {
-      localStorage.setItem(storageKey, JSON.stringify(nextIds))
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(nextIds))
+      } catch {
+        setSaveError('Could not save capstone progress in this browser. Check your storage settings and try again.')
+        setSavingStepId(null)
+        return
+      }
     }
 
     setLoaded({ key: loadKey, ids: nextIds, error: null })
