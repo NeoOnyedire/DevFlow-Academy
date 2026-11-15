@@ -175,6 +175,17 @@ test.describe('signed-in learning journey', () => {
     await expect(correctAnswer).toBeDisabled()
   })
 
+  test('dismisses the optional Gitter AI setup when clicking outside it', async ({ page }) => {
+    await gotoLearnerPage(page, '/learn')
+    await page.getByRole('button', { name: 'Gitter', exact: true }).click()
+    await page.getByRole('button', { name: 'AI settings' }).click()
+    await expect(page.getByText('Get AI chat', { exact: true })).toBeVisible()
+
+    await page.getByRole('heading', { name: 'Curriculum' }).click()
+    await expect(page.getByText('Get AI chat', { exact: true })).toBeHidden()
+    await expect(page.getByText('Lite mode · free, no key')).toBeVisible()
+  })
+
   test('saves missed quiz questions for spaced practice and schedules correct recall', async ({ page }) => {
     await gotoLearnerPage(page, '/learn/mod-01/mod-01-lesson-01')
     await page.getByRole('button', { name: /Continue to quiz/ }).click()

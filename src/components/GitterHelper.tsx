@@ -118,6 +118,8 @@ export default function GitterHelper() {
   const prevIsLoggedInRef             = useRef(isLoggedIn)
   const messagesEndRef                = useRef<HTMLDivElement>(null)
   const inputRef                      = useRef<HTMLInputElement>(null)
+  const keySettingsRef                = useRef<HTMLDivElement>(null)
+  const keySettingsButtonRef          = useRef<HTMLButtonElement>(null)
 
   // ---- AI mode state (optional, BYOK) ----
   const [apiKey, setApiKey] = useState<string>(() => localStorage.getItem(API_KEY_STORAGE) || '')
@@ -208,6 +210,28 @@ export default function GitterHelper() {
       setTimeout(() => inputRef.current?.focus(), 150)
     }
   }, [isOpen])
+
+  // The optional AI setup should not obstruct learners who want to use Lite.
+  useEffect(() => {
+    if (!showKeySettings) return
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target
+      if (!(target instanceof Node)) return
+      if (keySettingsRef.current?.contains(target) || keySettingsButtonRef.current?.contains(target)) return
+      setShowKeySettings(false)
+    }
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setShowKeySettings(false)
+    }
+
+    document.addEventListener('pointerdown', handlePointerDown)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [showKeySettings])
 
   /** Shows the typing indicator, then Gitter's first message. Called from event handlers only. */
   const startGreeting = () => {
@@ -377,6 +401,7 @@ export default function GitterHelper() {
               )}
               {isLoggedIn && (
                 <button
+                  ref={keySettingsButtonRef}
                   onClick={() => setShowKeySettings(v => !v)}
                   className="rounded-lg p-1.5 text-white/50 hover:bg-white/10 hover:text-white transition-colors"
                   aria-label="AI settings"
@@ -395,7 +420,7 @@ export default function GitterHelper() {
 
           {/* AI / key settings panel */}
           {showKeySettings && (
-            <div className="flex-shrink-0 border-b border-white/10 bg-black/20 px-3 py-3 space-y-3">
+            <div ref={keySettingsRef} className="flex-shrink-0 border-b border-white/10 bg-black/20 px-3 py-3 space-y-3">
               {isAiMode ? (
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-xs text-[#3CCF4A]">

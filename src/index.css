@@ -577,6 +577,12 @@ body {
 [data-theme="light"] [class*="text-[#F7B731]"] {
   color: rgb(var(--brand-tertiary-rgb) / var(--tw-text-opacity, 1)) !important;
 }
+[data-theme="light"] [class*="text-[#3CCF4A]"] {
+  color: var(--lime) !important;
+}
+[data-theme="light"] [class*="text-[#FF4D6D]"] {
+  color: #C02648 !important;
+}
 [data-theme="light"] [class*="bg-[#F7B731]"] {
   background-color: rgb(var(--brand-tertiary-bg-rgb) / var(--tw-bg-opacity, 1)) !important;
 }
