@@ -33,9 +33,10 @@ import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { useAuth } from '../context/AuthContext'
 import { ROLE_PATHS, useApp, type LearningRole } from '../context/AppContext'
-import { BookOpen, Flame, Award, Trophy, Map, ArrowRight, Github, Briefcase, Target, CheckCircle } from 'lucide-react'
+import { BookOpen, Flame, Award, Trophy, Map, ArrowRight, Github, Briefcase, Target, CheckCircle, LockKeyhole } from 'lucide-react'
 import { buildGitHubAuthorizeUrl, isGitHubOAuthConfigured } from '../lib/githubOAuth'
 import { getRepositoryRecommendations } from '../lib/repositoryRecommendations'
+import { getAchievements } from '../lib/achievements'
 
 gsap.registerPlugin(ScrollTrigger)
 
@@ -91,6 +92,8 @@ export default function DashboardSection({ className = '' }: Props) {
   const {
     completedModules,
     modules,
+    isLoadingProgress,
+    progressError,
     openCurriculum,
     role,
     rolePath,
@@ -100,6 +103,9 @@ export default function DashboardSection({ className = '' }: Props) {
     disconnectGitHub,
     weeklyChallenge,
     hasCompletedWeeklyChallenge,
+    completedChallengeIds,
+    isLoadingChallengeHistory,
+    challengeHistoryError,
   } = useApp()
 
   const [githubUsername, setGitHubUsername] = useState('')
@@ -168,6 +174,16 @@ export default function DashboardSection({ className = '' }: Props) {
     (githubProfile ? 20 : 0) +
     (hasCompletedWeeklyChallenge ? 10 : 0)
   )
+
+  const achievements = useMemo(() => getAchievements({
+    completedModules: new Set(completedModules).size,
+    totalModules: modules.length,
+    completedChallenges: new Set(completedChallengeIds).size,
+    hasSubmittedReview: !!user?.hasReviewedCourse,
+  }), [completedChallengeIds, completedModules, modules.length, user?.hasReviewedCourse])
+  const earnedAchievementCount = achievements.filter(achievement => achievement.earned).length
+  const achievementDataUnavailable = !!progressError || !!challengeHistoryError
+  const achievementsLoading = isLoadingProgress || isLoadingChallengeHistory
 
   const portfolioTasks = [
     { label: 'Finish role path lessons', done: completedModules.length >= Math.ceil(modules.length * 0.6) },
@@ -451,7 +467,7 @@ export default function DashboardSection({ className = '' }: Props) {
           <p className="text-white/60 text-xs md:text-sm">days</p>
         </div>
 
-        {/* Badges Earned */}
+        {/* Achievements Earned */}
         <div
           ref={el => { cardsRef.current[2] = el }}
           className="col-span-1 md:col-span-3 bg-card-dark card-radius card-shadow p-4 md:p-5 hover:scale-[1.02] transition-transform duration-300"
@@ -460,9 +476,11 @@ export default function DashboardSection({ className = '' }: Props) {
             <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-purple-500/20 flex items-center justify-center">
               <Award className="w-4 h-4 md:w-5 md:h-5 text-purple-400" />
             </div>
-            <span className="font-accent text-[9px] md:text-[10px] uppercase tracking-[0.14em] text-white/50">Badges</span>
+            <span className="font-accent text-[9px] md:text-[10px] uppercase tracking-[0.14em] text-white/50">Achievements</span>
           </div>
-          <p className="font-display text-3xl md:text-4xl font-bold text-white mb-1">{Math.floor(completedModules.length / 2)}</p>
+          <p className="font-display text-3xl md:text-4xl font-bold text-white mb-1">
+            {achievementsLoading ? '…' : achievementDataUnavailable ? '—' : `${earnedAchievementCount}/${achievements.length}`}
+          </p>
           <p className="text-white/60 text-xs md:text-sm">Earned</p>
         </div>
 
@@ -479,6 +497,62 @@ export default function DashboardSection({ className = '' }: Props) {
           </div>
           <p className="font-display text-xl md:text-2xl font-bold text-white mb-1">Top {completedModules.length > 4 ? '8' : '25'}%</p>
           <p className="text-white/60 text-xs md:text-sm">this week</p>
+        </div>
+
+        {/* Achievement collection — each badge is earned from saved course activity */}
+        <div
+          ref={el => { cardsRef.current[8] = el }}
+          className="col-span-2 md:col-span-12 bg-card-dark card-radius card-shadow p-4 md:p-6"
+        >
+          <div className="mb-4 flex items-center gap-2">
+            <Award className="h-5 w-5 text-purple-400" />
+            <div>
+              <h3 className="font-accent text-[10px] uppercase tracking-[0.14em] text-white/70">Achievement Collection</h3>
+              <p className="mt-1 text-xs text-white/45">
+                {achievementsLoading
+                  ? 'Checking your saved learning activity…'
+                  : achievementDataUnavailable
+                    ? 'Your achievements could not be verified.'
+                    : `${earnedAchievementCount} of ${achievements.length} earned`}
+              </p>
+            </div>
+          </div>
+
+          {achievementDataUnavailable ? (
+            <p role="alert" className="text-sm text-rose-300">
+              {progressError || challengeHistoryError} Refresh the page to try again.
+            </p>
+          ) : achievementsLoading ? (
+            <p role="status" className="text-sm text-white/50">Loading achievements…</p>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              {achievements.map(achievement => (
+                <div
+                  key={achievement.id}
+                  className={`flex min-h-28 gap-3 rounded-lg border p-3 ${
+                    achievement.earned
+                      ? 'border-[#F7B731]/30 bg-[#F7B731]/10'
+                      : 'border-white/10 bg-white/[0.03]'
+                  }`}
+                >
+                  {achievement.earned
+                    ? <Award className="mt-0.5 h-5 w-5 shrink-0 text-[#F7B731]" aria-hidden="true" />
+                    : <LockKeyhole className="mt-0.5 h-5 w-5 shrink-0 text-white/30" aria-hidden="true" />}
+                  <div>
+                    <p className={`font-display text-sm font-bold ${achievement.earned ? 'text-white' : 'text-white/55'}`}>
+                      {achievement.title}
+                    </p>
+                    <p className="mt-1 text-xs leading-relaxed text-white/45">{achievement.description}</p>
+                    <p className={`mt-2 text-[10px] font-accent uppercase tracking-wider ${
+                      achievement.earned ? 'text-[#F7B731]' : 'text-white/30'
+                    }`}>
+                      {achievement.earned ? 'Earned' : 'Locked'}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Skill Map — bars driven by real completion data */}

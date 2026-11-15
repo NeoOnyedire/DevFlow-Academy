@@ -518,9 +518,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       })
       .then(data => {
         if (cancelled) return
-        setCompletedChallengeIds(Array.isArray(data.challengeIds)
+        const challengeIds = Array.isArray(data.challengeIds)
           ? data.challengeIds.filter((id: unknown): id is string => typeof id === 'string')
-          : [])
+          : []
+        setCompletedChallengeIds(current => [...new Set([...challengeIds, ...current])])
         setChallengeHistoryLoadedFor(userId)
         setChallengeHistoryError(null)
         setChallengeHistoryErrorFor(null)
@@ -700,15 +701,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
           : 'Could not save your challenge completion. Please try again.')
         return
       }
-      setChallengeHistoryLoadedFor(userId!)
-      setChallengeHistoryError(null)
-      setChallengeHistoryErrorFor(null)
+      if (userId) {
+        setChallengeHistoryLoadedFor(userId)
+        setChallengeHistoryError(null)
+        setChallengeHistoryErrorFor(null)
+      }
       await refreshLeaderboard()
     } catch {
       setCompletedChallengeIds(prev => prev.filter(id => id !== weeklyChallenge.id))
       setChallengeCompletionError('Could not reach the server to save your challenge completion. Please try again.')
     }
-  }, [completedChallengeIds, weeklyChallenge, refreshLeaderboard])
+  }, [completedChallengeIds, weeklyChallenge, refreshLeaderboard, userId])
 
   // Course is complete when ALL modules are done AND a review is submitted
   const allModulesDone = completedModules.length === CURRICULUM_MODULES.length
