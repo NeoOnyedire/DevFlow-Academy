@@ -50,8 +50,8 @@ describe('encrypted GitHub repository access', () => {
   it('rejects tampered encrypted token data', async () => {
     await saveGitHubRepositoryToken('user-123', 'gho-secret')
     const key = 'devflow:github-repo-token:user-123'
-    const record = JSON.parse(mocks.values.get(key) || '{}') as { data: string }
-    record.data = `${record.data.slice(0, -1)}${record.data.endsWith('A') ? 'B' : 'A'}`
+    const record = JSON.parse(mocks.values.get(key) || '{}') as { tag: string }
+    record.tag = `${record.tag.slice(0, -1)}${record.tag.endsWith('A') ? 'B' : 'A'}`
     mocks.values.set(key, JSON.stringify(record))
 
     await expect(getGitHubRepositoryToken('user-123')).rejects.toThrow()
