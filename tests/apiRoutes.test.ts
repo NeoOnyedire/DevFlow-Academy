@@ -272,7 +272,22 @@ describe('admin API route', () => {
     expect(response.statusCode).toBe(200)
     expect(mocks.sql).toHaveBeenCalledTimes(4)
     expect(mocks.deleteUser).toHaveBeenCalledWith('user-1')
+    expect(mocks.disconnectGitHubRepositoryAccess).toHaveBeenCalledWith('user-1')
     expect(response.body).toEqual({ ok: true })
+  })
+
+  it('does not delete an account if repository access could not be removed', async () => {
+    mocks.disconnectGitHubRepositoryAccess.mockResolvedValueOnce(false)
+    const response = createResponse()
+
+    await adminHandler(
+      createRequest('POST', 'delete-account', { userId: 'user-1' }),
+      response as unknown as VercelResponse,
+    )
+
+    expect(response.statusCode).toBe(502)
+    expect(mocks.sql).not.toHaveBeenCalled()
+    expect(mocks.deleteUser).not.toHaveBeenCalled()
   })
 
   it('allows a retry to clean database rows if the Redis account is already gone', async () => {

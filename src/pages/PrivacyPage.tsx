@@ -16,9 +16,10 @@ gsap.registerPlugin(ScrollTrigger)
 const SECTIONS = [
   {
     title: 'What we store, and where',
-    body: `Your account (name, email), your course progress — completed modules, scenario points, and
-    connected GitHub username — are stored in your browser's local storage. This data stays on your device
-    and is not sent to a DevFlow Academy database or shared with third parties.`,
+    body: `Your account information (name and email) and synced course progress are stored on our server so your
+    account and progress can be used across sessions and devices. Some preferences, cached progress, and your
+    connected public GitHub username may also be kept in your browser's local storage. We do not sell this data
+    or share it with advertisers.`,
   },
   {
     title: 'Optional GitHub repository access',
@@ -46,7 +47,8 @@ const SECTIONS = [
     If you submit a review while Gitter AI is connected, its rating and comment may also be sent to that provider
     for an optional moderation check. We don't store that key on our servers, and we don't use your chat messages
     or review text for anything beyond generating that reply or check. Separately, connecting your GitHub
-    username fetches your public profile info directly from the GitHub API.`,
+    username fetches your public profile info directly from the GitHub API. If you connect a repository, its
+    list and metadata are requested from GitHub by our server to generate project-specific lesson suggestions.`,
   },
   {
     title: 'Who pays for what',
