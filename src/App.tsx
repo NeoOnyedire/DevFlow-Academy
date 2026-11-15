@@ -12,6 +12,7 @@
  * Routes:
  *   /                      Landing page
  *   /learn                 Curriculum / lesson browser
+ *   /capstone              Role-specific guided capstone project
  *   /practice              Commit scenes + scenario play
  *   /troubleshoot           Git error search tool
  *   /challenge              Repo Royale weekly challenge
@@ -48,6 +49,7 @@ import ErrorBoundary  from './components/ErrorBoundary'
 
 const LandingPage = lazy(() => import('./pages/LandingPage'))
 const LearnPage = lazy(() => import('./pages/LearnPage'))
+const CapstonePage = lazy(() => import('./pages/CapstonePage'))
 const PracticePage = lazy(() => import('./pages/PracticePage'))
 const TroubleshootPage = lazy(() => import('./pages/TroubleshootPage'))
 const ChallengePage = lazy(() => import('./pages/ChallengePage'))
@@ -84,6 +86,7 @@ function AppInner() {
             <Route path="/learn"                element={<LearnPage />} />
             <Route path="/learn/:moduleId"      element={<LearnPage />} />
             <Route path="/learn/:moduleId/:lessonId" element={<LearnPage />} />
+            <Route path="/capstone"             element={<CapstonePage />} />
             <Route path="/practice"             element={<PracticePage />} />
             <Route path="/troubleshoot"         element={<TroubleshootPage />} />
             <Route path="/challenge"            element={<ChallengePage />} />

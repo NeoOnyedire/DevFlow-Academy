@@ -14,13 +14,14 @@
  * the global Light-theme overrides remap those and used to break contrast.
  */
 import { useEffect, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, Link } from 'react-router-dom'
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import PageWrapper from '../components/PageWrapper'
 import { useApp, ROLE_PATHS, type LearningRole } from '../context/AppContext'
 import { useAuth } from '../context/AuthContext'
 import { getLessonsForModule } from '../content/lessons'
+import { CAPSTONE_PROJECTS } from '../content/capstones'
 import { fetchCompletedLessonIds } from '../lib/lessonProgress'
 import CurriculumTree from '../components/CurriculumTree'
 import LessonContent from '../components/Curriculum/LessonContent'
@@ -125,7 +126,17 @@ export default function LearnPage() {
           shouldShowRolePicker ? (
             <RolePicker onChoose={handleRoleChoose} onSkip={() => setRolePickerDismissed(true)} />
           ) : (
-            <ModuleGrid modules={displayedModules} completedModules={completedModules} onSelect={id => navigate(`/learn/${id}`)} />
+            <>
+              <ModuleGrid modules={displayedModules} completedModules={completedModules} onSelect={id => navigate(`/learn/${id}`)} />
+              <Link to="/capstone" className="cur-card cur-card-hover mt-6 flex items-center justify-between gap-4 rounded-2xl p-5 md:p-6">
+                <div>
+                  <p className="font-accent text-xs uppercase tracking-[0.14em] cur-text-faint">Put your Git skills to work</p>
+                  <h2 className="mt-1 font-display text-xl font-bold cur-text">{CAPSTONE_PROJECTS[rolePath.id].title}</h2>
+                  <p className="mt-1 text-sm cur-text-soft">Open your {rolePath.label} capstone and follow its guided project steps.</p>
+                </div>
+                <ChevronRight className="h-5 w-5 shrink-0 cur-text-soft" aria-hidden="true" />
+              </Link>
+            </>
           )
         )}
 
