@@ -11,7 +11,7 @@ import { useEffect } from 'react'
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import PageWrapper from '../components/PageWrapper'
-import { LifeBuoy, Github, Globe, Linkedin, Star, ArrowUpRight, Mail } from 'lucide-react'
+import { LifeBuoy, GitBranch, Globe, BriefcaseBusiness, Star, ArrowUpRight, Mail } from 'lucide-react'
 
 gsap.registerPlugin(ScrollTrigger)
 
@@ -67,7 +67,7 @@ export default function SupportPage() {
             className="group bg-[#4A2F2F] card-radius card-outline p-5 flex flex-col gap-3 hover:bg-white/[0.06] transition-colors">
             <div className="flex items-center justify-between">
               <div className="w-11 h-11 rounded-full bg-[#F7B731]/20 flex items-center justify-center">
-                <Github className="w-5 h-5 text-[#F7B731]" />
+                <GitBranch className="w-5 h-5 text-[#F7B731]" />
               </div>
               <ArrowUpRight className="w-4 h-4 text-white/30 group-hover:text-white/60 transition-colors" />
             </div>
@@ -105,7 +105,7 @@ export default function SupportPage() {
             className="group bg-[#4A2F2F] card-radius card-outline p-5 flex flex-col gap-3 hover:bg-white/[0.06] transition-colors">
             <div className="flex items-center justify-between">
               <div className="w-11 h-11 rounded-full bg-[#4A90D9]/20 flex items-center justify-center">
-                <Linkedin className="w-5 h-5 text-[#4A90D9]" />
+                <BriefcaseBusiness className="w-5 h-5 text-[#4A90D9]" />
               </div>
               <ArrowUpRight className="w-4 h-4 text-white/30 group-hover:text-white/60 transition-colors" />
             </div>

@@ -33,7 +33,7 @@ import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { useAuth } from '../context/AuthContext'
 import { ROLE_PATHS, useApp, type LearningRole } from '../context/AppContext'
-import { BookOpen, Flame, Award, Trophy, Map, ArrowRight, Github, Briefcase, Target, CheckCircle, LockKeyhole } from 'lucide-react'
+import { BookOpen, Flame, Award, Trophy, Map, ArrowRight, GitBranch, Briefcase, Target, CheckCircle, LockKeyhole } from 'lucide-react'
 import { buildGitHubAuthorizeUrl, isGitHubOAuthConfigured } from '../lib/githubOAuth'
 import { getRepositoryRecommendations } from '../lib/repositoryRecommendations'
 import { getAchievements } from '../lib/achievements'
@@ -636,7 +636,7 @@ export default function DashboardSection({ className = '' }: Props) {
           className="col-span-2 md:col-span-6 bg-card-dark card-radius card-shadow p-4 md:p-6"
         >
           <div className="flex items-center gap-2 mb-4">
-            <Github className="w-5 h-5 text-white" />
+            <GitBranch className="w-5 h-5 text-white" />
             <span className="font-accent text-[10px] uppercase tracking-[0.14em] text-white/50">GitHub Proof</span>
           </div>
           {githubProfile ? (

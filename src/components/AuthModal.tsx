@@ -20,7 +20,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { X, LogIn, UserPlus, Eye, EyeOff, Github, KeyRound, Mail } from 'lucide-react'
+import { X, LogIn, UserPlus, Eye, EyeOff, CodeXml, KeyRound, Mail } from 'lucide-react'
 import { buildGitHubAuthorizeUrl, isGitHubOAuthConfigured } from '../lib/githubOAuth'
 
 // Flip this back to true whenever email/password auth should return.
@@ -282,7 +282,7 @@ function AuthModalBody() {
                   className="w-full flex items-center justify-center gap-2.5 bg-[#24292F] hover:bg-[#1b1f24]
                     text-white font-display font-semibold py-3.5 rounded-xl transition-colors mb-2"
                 >
-                  <Github className="w-4 h-4" />
+                  <CodeXml className="w-4 h-4" />
                   Continue with GitHub
                 </button>
                 <p className="text-white/35 text-xs text-center mb-5">

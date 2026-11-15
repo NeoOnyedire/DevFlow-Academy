@@ -12,7 +12,7 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import PageWrapper from '../components/PageWrapper'
 import { useAuth } from '../context/AuthContext'
 import { useTheme, type ThemeMode } from '../context/ThemeContext'
-import { Settings, User, Sun, Moon, Sparkles, Check, Github, Mail, LogIn } from 'lucide-react'
+import { Settings, User, Sun, Moon, Sparkles, Check, GitBranch, Mail, LogIn } from 'lucide-react'
 
 gsap.registerPlugin(ScrollTrigger)
 
@@ -93,7 +93,7 @@ export default function SettingsPage() {
                 </p>
                 {user.githubUsername && (
                   <p className="text-white/50 text-sm flex items-center gap-1.5 mt-0.5">
-                    <Github className="w-3.5 h-3.5" /> @{user.githubUsername}
+                    <GitBranch className="w-3.5 h-3.5" /> @{user.githubUsername}
                   </p>
                 )}
               </div>
