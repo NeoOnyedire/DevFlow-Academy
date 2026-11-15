@@ -411,43 +411,44 @@ html::-webkit-scrollbar-thumb:hover {
 }
 
 [data-theme="light"] {
-  --espresso: #F8F9FA;
+  --espresso: #F5F7FA;
   --card-dark: #FFFFFF;
-  --card-light: #F1F3F5;
+  --card-light: #EEF2F5;
   --sun-yellow: #F7B731;
   --brand-tertiary-color: #2FB8C6;
-  --brand-tertiary-rgb: 47 184 198;
+  --brand-tertiary-rgb: 8 121 133;
+  --brand-tertiary-bg-rgb: 47 184 198;
   --brand-tertiary-foreground: #12363A;
-  --lime: #2FAE3C;
-  --text-primary: #212529;
-  --text-secondary: #6C757D;
-  --border-soft: rgba(33, 37, 41, 0.1);
-  --nav-bg: rgba(255, 255, 255, 0.92);
+  --lime: #237A34;
+  --text-primary: #17212B;
+  --text-secondary: #536170;
+  --border-soft: rgba(23, 33, 43, 0.12);
+  --nav-bg: rgba(255, 255, 255, 0.94);
 
-  --cur-bg: #F8F9FA;
-  --cur-text: #212529;
-  --cur-text-soft: rgba(33, 37, 41, 0.82);
-  --cur-text-faint: rgba(33, 37, 41, 0.72);
-  --cur-border: rgba(33, 37, 41, 0.14);
+  --cur-bg: #F5F7FA;
+  --cur-text: #17212B;
+  --cur-text-soft: rgba(23, 33, 43, 0.82);
+  --cur-text-faint: rgba(23, 33, 43, 0.72);
+  --cur-border: rgba(23, 33, 43, 0.14);
   --cur-surface: #FFFFFF;
-  --cur-surface-hover: #F1F3F5;
-  --cur-track: rgba(33, 37, 41, 0.12);
+  --cur-surface-hover: #EEF2F5;
+  --cur-track: rgba(23, 33, 43, 0.12);
   --cur-accent-bg: var(--brand-tertiary-color);
   --cur-accent-fg: #12363A;
   --cur-link: #087985;
-  --cur-success: #2FAE3C;
+  --cur-success: #237A34;
   --cur-danger: #D6264A;
-  --cur-btn-bg: #212529;
+  --cur-btn-bg: #17212B;
   --cur-btn-fg: #FFFFFF;
   --cur-terminal-bg: #1E2127;
 
   --tree-bg: #FFFFFF;
-  --tree-text: #212529;
-  --tree-text-soft: rgba(33, 37, 41, 0.72);
-  --tree-text-faint: rgba(33, 37, 41, 0.45);
-  --tree-border: rgba(33, 37, 41, 0.12);
-  --tree-hover: rgba(33, 37, 41, 0.05);
-  --tree-active: rgba(33, 37, 41, 0.09);
+  --tree-text: #17212B;
+  --tree-text-soft: rgba(23, 33, 43, 0.72);
+  --tree-text-faint: rgba(23, 33, 43, 0.45);
+  --tree-border: rgba(23, 33, 43, 0.12);
+  --tree-hover: rgba(23, 33, 43, 0.05);
+  --tree-active: rgba(23, 33, 43, 0.09);
 }
 
 [data-theme="dark"] {
@@ -540,14 +541,44 @@ body {
 [data-theme="light"] .text-white\/90   { color: rgba(33,37,41,0.9)  !important; }
 [data-theme="light"] .border-white\/10 { border-color: var(--border-soft) !important; }
 [data-theme="light"] .bg-white\/5,
+[data-theme="light"] .bg-white\/8,
 [data-theme="light"] .bg-white\/10,
-[data-theme="light"] .bg-white\/15     { background-color: rgba(33,37,41,0.045) !important; }
+[data-theme="light"] .bg-white\/15,
+[data-theme="light"] .bg-white\/18,
+[data-theme="light"] .bg-white\/20,
+[data-theme="light"] .bg-white\/22,
+[data-theme="light"] [class*="bg-white/[0.04]"],
+[data-theme="light"] [class*="bg-white/[0.07]"],
+[data-theme="light"] [class*="bg-white/[0.08]"],
+[data-theme="light"] [class*="bg-white/[0.12]"] {
+  background-color: rgba(23, 33, 43, 0.045) !important;
+}
+[data-theme="light"] [class*="hover:bg-white/"]:hover {
+  background-color: rgba(8, 121, 133, 0.08) !important;
+}
+[data-theme="light"] [class*="border-white/"] {
+  border-color: var(--border-soft) !important;
+}
+[data-theme="light"] [class*="placeholder-white/"]::placeholder {
+  color: rgba(83, 97, 112, 0.72) !important;
+}
 [data-theme="light"] .grain-overlay    { opacity: 0.035; }
+[data-theme="light"] nav {
+  border-bottom: 1px solid var(--border-soft);
+  box-shadow: 0 4px 18px rgba(23, 33, 43, 0.045);
+}
+[data-theme="light"] .card-outline {
+  border: 1px solid var(--border-soft);
+  box-shadow: 0 1px 3px rgba(23, 33, 43, 0.04);
+}
+[data-theme="light"] .card-shadow {
+  box-shadow: 0 16px 38px rgba(23, 33, 43, 0.1);
+}
 [data-theme="light"] [class*="text-[#F7B731]"] {
   color: rgb(var(--brand-tertiary-rgb) / var(--tw-text-opacity, 1)) !important;
 }
 [data-theme="light"] [class*="bg-[#F7B731]"] {
-  background-color: rgb(var(--brand-tertiary-rgb) / var(--tw-bg-opacity, 1)) !important;
+  background-color: rgb(var(--brand-tertiary-bg-rgb) / var(--tw-bg-opacity, 1)) !important;
 }
 [data-theme="light"] [class*="border-[#F7B731]"] {
   border-color: rgb(var(--brand-tertiary-rgb) / var(--tw-border-opacity, 1)) !important;
