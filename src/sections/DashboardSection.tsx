@@ -4,7 +4,7 @@
  * ============================================================================
  *
  * "Your Progress" — a flowing (non-pinned) section that shows the user's
- * learning stats: lessons completed, streak, badges, leaderboard position,
+ * learning stats: lessons completed, streak, earned achievements, leaderboard position,
  * skill map with progress bars, and next lesson.
  *
  * SKILL BARS — dynamic, not hardcoded:
@@ -339,7 +339,7 @@ export default function DashboardSection({ className = '' }: Props) {
             {[
               { label: 'Lessons', value: '0 / 8' },
               { label: 'Streak',  value: '0 days' },
-              { label: 'Badges',  value: '0'      },
+              { label: 'Achievements', value: `0 / ${achievements.length}` },
               { label: 'Ranking', value: 'Top 25%'},
             ].map(stat => (
               <div key={stat.label} className="bg-[#4A2F2F]/60 card-radius p-4">

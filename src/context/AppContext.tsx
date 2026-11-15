@@ -12,11 +12,8 @@
  * - Active module/video tracking
  * - Video watch progress per user
  * - Review submission (required before course completion) — reviews are
- *   fetched from and posted to /api/reviews, a real shared backend, so
- *   they're visible to every visitor, not just the browser that wrote
- *   them. `hasSubmittedReview` itself stays a local, per-browser flag —
- *   it just gates this browser's own "have I already reviewed?" UI, the
- *   same way course progress does.
+ *   fetched from and posted to /api/reviews, while `hasSubmittedReview`
+ *   comes from the signed-in user's server-backed account record.
  * - Completed modules tracking — synced to Postgres via /api/progress
  *   for logged-in users (see db/schema.sql's user_progress table), so
  *   progress survives a cleared browser or a different device. Guests
@@ -701,17 +698,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
           : 'Could not save your challenge completion. Please try again.')
         return
       }
-      if (userId) {
-        setChallengeHistoryLoadedFor(userId)
-        setChallengeHistoryError(null)
-        setChallengeHistoryErrorFor(null)
-      }
       await refreshLeaderboard()
     } catch {
       setCompletedChallengeIds(prev => prev.filter(id => id !== weeklyChallenge.id))
       setChallengeCompletionError('Could not reach the server to save your challenge completion. Please try again.')
     }
-  }, [completedChallengeIds, weeklyChallenge, refreshLeaderboard, userId])
+  }, [completedChallengeIds, weeklyChallenge, refreshLeaderboard])
 
   // Course is complete when ALL modules are done AND a review is submitted
   const allModulesDone = completedModules.length === CURRICULUM_MODULES.length

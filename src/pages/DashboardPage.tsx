@@ -2,7 +2,7 @@
  * DashboardPage.tsx  —  /dashboard
  *
  * Full progress dashboard:
- * skill map, badges, streak, GitHub integration, career mode.
+ * skill map, achievements, streak, GitHub integration, career mode.
  * Guests see an aspirational preview with empty skill bars.
  */
 import { useEffect } from 'react'
