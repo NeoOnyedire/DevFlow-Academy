@@ -81,9 +81,8 @@ test.describe('guest learning journey', () => {
     await mockAppApi(page)
     await gotoLearnerPage(page, '/capstone')
 
-    const firstStep = page.getByRole('checkbox', { name: 'Mark complete: Fork and clone your starter' })
-    await firstStep.check()
-    await expect(firstStep).toBeChecked()
+    await page.getByRole('checkbox', { name: 'Mark complete: Fork and clone your starter' }).check()
+    await expect(page.getByRole('checkbox', { name: 'Mark incomplete: Fork and clone your starter' })).toBeChecked()
 
     await page.reload({ waitUntil: 'domcontentloaded' })
     await expect(page.getByRole('checkbox', { name: 'Mark incomplete: Fork and clone your starter' })).toBeChecked()
