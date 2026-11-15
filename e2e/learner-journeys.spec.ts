@@ -77,6 +77,19 @@ async function mockAppApi(page: Page, signedIn = false, completedLessonIds: stri
 }
 
 test.describe('guest learning journey', () => {
+  test('saves guest capstone steps across reloads', async ({ page }) => {
+    await mockAppApi(page)
+    await gotoLearnerPage(page, '/capstone')
+
+    const firstStep = page.getByRole('checkbox', { name: 'Mark complete: Fork and clone your starter' })
+    await firstStep.check()
+    await expect(firstStep).toBeChecked()
+
+    await page.reload({ waitUntil: 'domcontentloaded' })
+    await expect(page.getByRole('checkbox', { name: 'Mark incomplete: Fork and clone your starter' })).toBeChecked()
+    await expect(page.getByText('1/6 steps · 17%')).toBeVisible()
+  })
+
   test('supports keyboard navigation and Escape in the mobile menu', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 })
     await gotoLearnerPage(page, '/learn')
@@ -151,6 +164,15 @@ test.describe('guest learning journey', () => {
 test.describe('signed-in learning journey', () => {
   test.beforeEach(async ({ page }) => {
     await mockAppApi(page, true)
+  })
+
+  test('restores server-backed capstone progress using project step IDs', async ({ page }) => {
+    await page.unroute('**/api/**')
+    await mockAppApi(page, true, ['junior-dev-fork-and-clone'])
+    await gotoLearnerPage(page, '/capstone')
+
+    await expect(page.getByRole('checkbox', { name: 'Mark incomplete: Fork and clone your starter' })).toBeChecked()
+    await expect(page.getByRole('checkbox', { name: 'Mark complete: Plan the board in an issue' })).not.toBeChecked()
   })
 
   test('supports keyboard-only navigation through a quiz retry', async ({ page }) => {
