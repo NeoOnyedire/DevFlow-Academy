@@ -20,6 +20,7 @@
  */
 
 const STATE_STORAGE_KEY = 'devflow_github_oauth_state'
+export type GitHubOAuthIntent = 'sign-in' | 'repository-access'
 
 /** Where GitHub should redirect back to after the user approves access. */
 export function getGitHubRedirectUri(): string {
@@ -32,17 +33,17 @@ export function getGitHubRedirectUri(): string {
  * forged. Returns null if no client ID is configured (lets the UI hide
  * the GitHub button gracefully instead of sending users to a broken flow).
  */
-export function buildGitHubAuthorizeUrl(): string | null {
+export function buildGitHubAuthorizeUrl(intent: GitHubOAuthIntent = 'sign-in'): string | null {
   const clientId = import.meta.env.VITE_GITHUB_CLIENT_ID as string | undefined
   if (!clientId) return null
 
   const state = crypto.randomUUID()
-  sessionStorage.setItem(STATE_STORAGE_KEY, state)
+  sessionStorage.setItem(STATE_STORAGE_KEY, JSON.stringify({ state, intent }))
 
   const params = new URLSearchParams({
     client_id: clientId,
     redirect_uri: getGitHubRedirectUri(),
-    scope: 'read:user user:email',
+    scope: intent === 'repository-access' ? 'read:user user:email repo' : 'read:user user:email',
     state,
   })
 
@@ -54,10 +55,20 @@ export function buildGitHubAuthorizeUrl(): string | null {
  * stored before redirecting. Single-use — clears itself either way so a
  * captured URL can't be replayed.
  */
-export function consumeGitHubOAuthState(returnedState: string | null): boolean {
-  const expected = sessionStorage.getItem(STATE_STORAGE_KEY)
+export function consumeGitHubOAuthState(returnedState: string | null): GitHubOAuthIntent | null {
+  const storedState = sessionStorage.getItem(STATE_STORAGE_KEY)
   sessionStorage.removeItem(STATE_STORAGE_KEY)
-  return !!expected && !!returnedState && expected === returnedState
+  if (!storedState || !returnedState) return null
+
+  try {
+    const parsed = JSON.parse(storedState) as { state?: string; intent?: GitHubOAuthIntent }
+    if (parsed.state === returnedState && (parsed.intent === 'sign-in' || parsed.intent === 'repository-access')) {
+      return parsed.intent
+    }
+  } catch {
+    if (storedState === returnedState) return 'sign-in'
+  }
+  return null
 }
 
 /** Whether a GitHub client ID has been configured for this environment. */

@@ -3,8 +3,8 @@
  *
  * GitHub redirects here after the user approves (or denies) access.
  * This page has no real UI beyond a short status message — it verifies
- * the CSRF state, hands the `code` off to AuthContext.loginWithGitHub,
- * and then bounces to the dashboard (or back home on failure).
+ * the CSRF state, then either signs in or adds repository access to the
+ * existing session before returning to the dashboard.
  */
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -14,7 +14,7 @@ import { consumeGitHubOAuthState } from '../lib/githubOAuth'
 
 export default function GitHubCallbackPage() {
   const navigate = useNavigate()
-  const { loginWithGitHub } = useAuth()
+  const { loginWithGitHub, connectGitHubRepositoryAccess } = useAuth()
   const [error, setError] = useState('')
   const hasRun = useRef(false) // guards against React StrictMode double-invoke in dev
 
@@ -27,23 +27,26 @@ export default function GitHubCallbackPage() {
       const code = params.get('code')
       const state = params.get('state')
       const githubError = params.get('error')
+      const intent = consumeGitHubOAuthState(state)
 
       if (githubError) {
         setError('You cancelled GitHub sign-in, or access was denied.')
-        setTimeout(() => navigate('/', { replace: true }), 2500)
+        setTimeout(() => navigate(intent === 'repository-access' ? '/dashboard' : '/', { replace: true }), 2500)
         return
       }
 
-      if (!code || !consumeGitHubOAuthState(state)) {
+      if (!code || !intent) {
         setError('That sign-in link looks invalid or expired. Please try again.')
         setTimeout(() => navigate('/', { replace: true }), 2500)
         return
       }
 
-      const result = await loginWithGitHub(code)
+      const result = intent === 'repository-access'
+        ? await connectGitHubRepositoryAccess(code)
+        : await loginWithGitHub(code)
       if (!result.ok) {
         setError(result.message)
-        setTimeout(() => navigate('/', { replace: true }), 3000)
+        setTimeout(() => navigate(intent === 'repository-access' ? '/dashboard' : '/', { replace: true }), 3000)
         return
       }
 
@@ -51,7 +54,7 @@ export default function GitHubCallbackPage() {
     }
 
     run()
-  }, [navigate, loginWithGitHub])
+  }, [navigate, loginWithGitHub, connectGitHubRepositoryAccess])
 
   return (
     <div className="min-h-screen bg-espresso flex items-center justify-center px-6">

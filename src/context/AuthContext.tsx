@@ -67,6 +67,7 @@ interface AuthContextValue {
   login: (email: string, password: string) => Promise<AuthResult>
   register: (name: string, email: string, password: string) => Promise<AuthResult>
   loginWithGitHub: (code: string) => Promise<AuthResult>
+  connectGitHubRepositoryAccess: (code: string) => Promise<AuthResult>
   logout: () => Promise<void>
   refreshUser: () => Promise<void>
   requestPasswordReset: (email: string) => Promise<AuthResult>
@@ -177,6 +178,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  const connectGitHubRepositoryAccess = useCallback(async (code: string): Promise<AuthResult> => {
+    try {
+      const response = await fetch('/api/auth/github-repo-access', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code }),
+      })
+      const data = await parseJsonResponse<{ connected?: boolean; githubUsername?: string; error?: string }>(response)
+      if (!response.ok || !data.connected) {
+        return { ok: false, message: data.error || 'Could not connect GitHub repository access.' }
+      }
+      return { ok: true, message: `Connected GitHub repository access for @${data.githubUsername || 'your account'}.` }
+    } catch {
+      return { ok: false, message: 'Could not reach the server. Please try again.' }
+    }
+  }, [])
+
   const logout = useCallback(async () => {
     setUser(null)
     try {
@@ -278,6 +297,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       login,
       register,
       loginWithGitHub,
+      connectGitHubRepositoryAccess,
       logout,
       refreshUser,
       requestPasswordReset,
