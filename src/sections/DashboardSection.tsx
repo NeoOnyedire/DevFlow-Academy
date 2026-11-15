@@ -28,17 +28,50 @@
  * ============================================================================
  */
 
-import { useRef, useState, useLayoutEffect, useMemo } from 'react'
+import { useRef, useState, useLayoutEffect, useMemo, useEffect, useCallback } from 'react'
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { useAuth } from '../context/AuthContext'
 import { ROLE_PATHS, useApp, type LearningRole } from '../context/AppContext'
 import { BookOpen, Flame, Award, Trophy, Map, ArrowRight, Github, Briefcase, Target, CheckCircle } from 'lucide-react'
+import { buildGitHubAuthorizeUrl, isGitHubOAuthConfigured } from '../lib/githubOAuth'
+import { getRepositoryRecommendations } from '../lib/repositoryRecommendations'
 
 gsap.registerPlugin(ScrollTrigger)
 
 interface Props {
   className?: string
+}
+
+interface ImportedRepository {
+  fullName: string
+  name: string
+  htmlUrl: string
+  description: string | null
+  private: boolean
+  fork: boolean
+  forkParent: string | null
+  defaultBranch: string
+  language: string | null
+  topics: string[]
+  openIssuesCount: number
+  stars: number
+  updatedAt: string
+  languages: Record<string, number>
+  hasWorkflows: boolean
+}
+
+interface AvailableRepository {
+  fullName: string
+  private: boolean
+  description: string | null
+  language: string | null
+}
+
+async function readApiResponse<T>(response: Response): Promise<T> {
+  const data = await response.json() as T & { error?: string }
+  if (!response.ok) throw new Error(data.error || 'Could not load repository information.')
+  return data
 }
 
 /**
@@ -72,10 +105,51 @@ export default function DashboardSection({ className = '' }: Props) {
   const [githubUsername, setGitHubUsername] = useState('')
   const [githubMessage, setGitHubMessage] = useState('')
   const [isConnectingGitHub, setIsConnectingGitHub] = useState(false)
+  const [repositoryConnected, setRepositoryConnected] = useState(false)
+  const [repositoryLoading, setRepositoryLoading] = useState(false)
+  const [repositoryError, setRepositoryError] = useState('')
+  const [selectedRepository, setSelectedRepository] = useState<ImportedRepository | null>(null)
+  const [availableRepositories, setAvailableRepositories] = useState<AvailableRepository[]>([])
+  const [repositoryChoice, setRepositoryChoice] = useState('')
+  const [isChoosingRepository, setIsChoosingRepository] = useState(false)
+  const [isLoadingRepositoryList, setIsLoadingRepositoryList] = useState(false)
 
   const sectionRef = useRef<HTMLDivElement>(null)
   const headingRef = useRef<HTMLDivElement>(null)
   const cardsRef = useRef<(HTMLDivElement | null)[]>([])
+
+  const loadRepositoryConnection = useCallback(async () => {
+    setRepositoryLoading(true)
+    setRepositoryError('')
+    try {
+      const status = await readApiResponse<{ connected: boolean; selectedRepository: string | null }>(
+        await fetch('/api/repositories/status', { credentials: 'same-origin' }),
+      )
+      setRepositoryConnected(status.connected)
+      if (!status.connected || !status.selectedRepository) {
+        setSelectedRepository(null)
+        return
+      }
+      const data = await readApiResponse<{ repository: ImportedRepository | null }>(
+        await fetch('/api/repositories/selected', { credentials: 'same-origin' }),
+      )
+      setSelectedRepository(data.repository)
+    } catch (error) {
+      setRepositoryError(error instanceof Error ? error.message : 'Could not load repository access.')
+    } finally {
+      setRepositoryLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (isLoggedIn) {
+      void loadRepositoryConnection()
+    } else {
+      setRepositoryConnected(false)
+      setSelectedRepository(null)
+      setAvailableRepositories([])
+    }
+  }, [isLoggedIn, loadRepositoryConnection])
 
   /** Derive skill percentages from actual completed modules */
   const skills = useMemo(() => {
@@ -110,6 +184,79 @@ export default function DashboardSection({ className = '' }: Props) {
     if (result.ok) setGitHubUsername('')
     setIsConnectingGitHub(false)
   }
+
+  const handleAuthorizeRepositoryAccess = () => {
+    const url = buildGitHubAuthorizeUrl('repository-access')
+    if (!url) {
+      setRepositoryError('GitHub OAuth is not configured for this deployment.')
+      return
+    }
+    window.location.assign(url)
+  }
+
+  const handleChooseRepository = async () => {
+    setIsLoadingRepositoryList(true)
+    setRepositoryError('')
+    try {
+      const data = await readApiResponse<{ repositories: AvailableRepository[] }>(
+        await fetch('/api/repositories/list', { credentials: 'same-origin' }),
+      )
+      setAvailableRepositories(data.repositories)
+      setRepositoryChoice('')
+      setIsChoosingRepository(true)
+    } catch (error) {
+      setRepositoryError(error instanceof Error ? error.message : 'Could not list your GitHub repositories.')
+    } finally {
+      setIsLoadingRepositoryList(false)
+    }
+  }
+
+  const handleSelectRepository = async () => {
+    if (!repositoryChoice) return
+    setRepositoryLoading(true)
+    setRepositoryError('')
+    try {
+      const data = await readApiResponse<{ repository: ImportedRepository }>(
+        await fetch('/api/repositories/select', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fullName: repositoryChoice }),
+        }),
+      )
+      setSelectedRepository(data.repository)
+      setIsChoosingRepository(false)
+    } catch (error) {
+      setRepositoryError(error instanceof Error ? error.message : 'Could not import that repository.')
+    } finally {
+      setRepositoryLoading(false)
+    }
+  }
+
+  const handleDisconnectRepository = async () => {
+    setRepositoryLoading(true)
+    setRepositoryError('')
+    try {
+      await readApiResponse<{ connected: boolean }>(
+        await fetch('/api/repositories/disconnect', {
+          method: 'POST',
+          credentials: 'same-origin',
+        }),
+      )
+      setRepositoryConnected(false)
+      setSelectedRepository(null)
+      setAvailableRepositories([])
+      setIsChoosingRepository(false)
+    } catch (error) {
+      setRepositoryError(error instanceof Error ? error.message : 'Could not disconnect repository access.')
+    } finally {
+      setRepositoryLoading(false)
+    }
+  }
+
+  const repositoryRecommendations = useMemo(() => selectedRepository
+    ? getRepositoryRecommendations(selectedRepository, rolePath.recommendedModules, completedModules)
+    : [], [selectedRepository, rolePath.recommendedModules, completedModules])
 
   useLayoutEffect(() => {
     const section = sectionRef.current
@@ -457,6 +604,134 @@ export default function DashboardSection({ className = '' }: Props) {
               )}
             </div>
           )}
+
+          <div className="mt-5 border-t border-white/10 pt-5">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="font-display font-bold text-white">Repository recommendations</p>
+                <p className="mt-1 text-xs text-white/50">Connect a repository for project-specific lesson suggestions.</p>
+              </div>
+              {repositoryConnected && (
+                <button
+                  type="button"
+                  onClick={handleDisconnectRepository}
+                  disabled={repositoryLoading}
+                  className="shrink-0 rounded-lg bg-white/10 px-3 py-2 text-xs text-white/70 hover:bg-white/15 disabled:opacity-50"
+                >
+                  Disconnect
+                </button>
+              )}
+            </div>
+
+            {!isLoggedIn ? (
+              <p className="mt-3 text-sm text-white/60">Sign in to connect a GitHub repository.</p>
+            ) : repositoryLoading && !selectedRepository ? (
+              <p className="mt-3 text-sm text-white/60" role="status">Loading repository access…</p>
+            ) : !repositoryConnected ? (
+              <div className="mt-3">
+                <button
+                  type="button"
+                  onClick={handleAuthorizeRepositoryAccess}
+                  disabled={!isGitHubOAuthConfigured()}
+                  className="rounded-lg bg-[#F7B731] px-4 py-2 font-display font-semibold text-[#2A2A2A] disabled:opacity-50"
+                >
+                  Authorize GitHub repositories
+                </button>
+                <p className="mt-2 text-xs leading-relaxed text-white/45">
+                  GitHub asks for the repo permission to include private repositories. DevFlow only reads repository metadata,
+                  language statistics, and workflow presence; it never changes your repository.
+                </p>
+              </div>
+            ) : selectedRepository ? (
+              <div className="mt-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <a href={selectedRepository.htmlUrl} target="_blank" rel="noreferrer" className="font-display text-lg font-bold text-white hover:text-[#F7B731]">
+                      {selectedRepository.fullName}
+                    </a>
+                    <p className="mt-1 text-xs text-white/55">
+                      {selectedRepository.private ? 'Private' : 'Public'} · {selectedRepository.language || 'No primary language'}
+                      {selectedRepository.hasWorkflows ? ' · GitHub Actions detected' : ' · No GitHub Actions detected'}
+                    </p>
+                    {selectedRepository.description && (
+                      <p className="mt-2 text-sm text-white/65">{selectedRepository.description}</p>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleChooseRepository}
+                    disabled={isLoadingRepositoryList || repositoryLoading}
+                    className="rounded-lg bg-white/10 px-3 py-2 text-xs text-white/75 hover:bg-white/15 disabled:opacity-50"
+                  >
+                    {isLoadingRepositoryList ? 'Loading…' : 'Change repository'}
+                  </button>
+                </div>
+                <div className="mt-4 space-y-2">
+                  {repositoryRecommendations.map(recommendation => {
+                    const module = modules.find(item => item.id === recommendation.moduleId)
+                    if (!module) return null
+                    return (
+                      <button
+                        key={recommendation.moduleId}
+                        type="button"
+                        onClick={() => openCurriculum(recommendation.moduleId)}
+                        className="block w-full rounded-lg bg-white/5 p-3 text-left hover:bg-white/10"
+                      >
+                        <span className="block text-sm font-semibold text-white">{module.title}</span>
+                        <span className="mt-1 block text-xs text-white/55">{recommendation.reason}</span>
+                      </button>
+                    )
+                  })}
+                  {repositoryRecommendations.length === 0 && (
+                    <p className="text-sm text-white/60">You have completed every recommended module for this repository.</p>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="mt-3">
+                <button
+                  type="button"
+                  onClick={handleChooseRepository}
+                  disabled={isLoadingRepositoryList}
+                  className="rounded-lg bg-[#F7B731] px-4 py-2 font-display font-semibold text-[#2A2A2A] disabled:opacity-50"
+                >
+                  {isLoadingRepositoryList ? 'Loading repositories…' : 'Choose a repository'}
+                </button>
+              </div>
+            )}
+
+            {isChoosingRepository && (
+              <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                <select
+                  value={repositoryChoice}
+                  onChange={event => setRepositoryChoice(event.target.value)}
+                  className="min-w-0 flex-1 rounded-lg border border-white/10 bg-[#2A2A2A] px-3 py-2 text-sm text-white outline-none focus:border-[#F7B731]/60"
+                >
+                  <option value="">Select a repository</option>
+                  {availableRepositories.map(repository => (
+                    <option key={repository.fullName} value={repository.fullName}>
+                      {repository.fullName}{repository.private ? ' · Private' : ''}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={handleSelectRepository}
+                  disabled={!repositoryChoice || repositoryLoading}
+                  className="rounded-lg bg-[#F7B731] px-4 py-2 font-display font-semibold text-[#2A2A2A] disabled:opacity-50"
+                >
+                  {repositoryLoading ? 'Importing…' : 'Import'}
+                </button>
+              </div>
+            )}
+
+            {repositoryError && <p className="mt-3 text-xs text-[#FF8A9B]" role="alert">{repositoryError}</p>}
+            {repositoryConnected && (
+              <p className="mt-3 text-[11px] leading-relaxed text-white/40">
+                Disconnect removes the saved token and repository link from DevFlow. You can also revoke the OAuth grant in your GitHub settings.
+              </p>
+            )}
+          </div>
         </div>
 
         {/* Career Mode */}
