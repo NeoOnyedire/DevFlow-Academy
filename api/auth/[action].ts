@@ -28,6 +28,7 @@ import { createSessionCookie, clearSessionCookie, getUserIdFromRequest } from '.
 import { createVerificationToken, consumeVerificationToken, createResetToken, consumeResetToken } from '../_lib/tokens.js'
 import { sendEmail, buildVerificationEmail, buildPasswordResetEmail, buildGithubAccountNoticeEmail } from '../_lib/mail.js'
 import { isRateLimited } from '../_lib/rateLimit.js'
+import { saveGitHubRepositoryToken } from '../_lib/githubRepoAccess.js'
 
 function getBaseUrl(req: VercelRequest): string {
   const host = req.headers.host
@@ -127,6 +128,58 @@ async function handleRegister(req: VercelRequest, res: VercelResponse) {
 interface GitHubTokenResponse { access_token?: string; error?: string; error_description?: string }
 interface GitHubUser { id: number; login: string; name: string | null; avatar_url: string; email: string | null; html_url: string }
 interface GitHubEmail { email: string; primary: boolean; verified: boolean }
+
+async function handleGithubRepoAccess(req: VercelRequest, res: VercelResponse) {
+  res.setHeader('Cache-Control', 'no-store')
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
+
+  const userId = getUserIdFromRequest(req)
+  if (!userId) return res.status(401).json({ error: 'Sign in before connecting a repository.' })
+
+  const { code } = (req.body || {}) as { code?: string }
+  if (!code || typeof code !== 'string') return res.status(400).json({ error: 'Missing authorization code.' })
+
+  const clientId = process.env.GITHUB_CLIENT_ID
+  const clientSecret = process.env.GITHUB_CLIENT_SECRET
+  if (!clientId || !clientSecret) {
+    return res.status(500).json({ error: 'GitHub OAuth is not configured on the server.' })
+  }
+
+  try {
+    const tokenResponse = await fetch('https://github.com/login/oauth/access_token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ client_id: clientId, client_secret: clientSecret, code }),
+    })
+    const tokenData = (await tokenResponse.json()) as GitHubTokenResponse & { scope?: string }
+    if (!tokenResponse.ok || !tokenData.access_token) {
+      return res.status(401).json({
+        error: tokenData.error_description || 'GitHub rejected that authorization. Please try again.',
+      })
+    }
+
+    const accessToken = tokenData.access_token
+    const userResponse = await fetch('https://api.github.com/user', {
+      headers: { Authorization: `Bearer ${accessToken}`, Accept: 'application/vnd.github+json' },
+    })
+    if (!userResponse.ok) return res.status(502).json({ error: 'Could not verify the GitHub account.' })
+
+    const grantedScopes = [tokenData.scope || '', userResponse.headers.get('x-oauth-scopes') || '']
+      .flatMap(scope => scope.split(/[,\s]+/))
+      .filter(Boolean)
+    if (!grantedScopes.includes('repo')) {
+      return res.status(403).json({ error: 'Repository access was not approved in GitHub. Please try again and approve repo access.' })
+    }
+
+    const saved = await saveGitHubRepositoryToken(userId, accessToken)
+    if (!saved) return res.status(503).json({ error: 'Could not securely save GitHub access. Please try again later.' })
+
+    const githubUser = (await userResponse.json()) as GitHubUser
+    res.status(200).json({ connected: true, githubUsername: githubUser.login })
+  } catch {
+    res.status(502).json({ error: 'Could not connect repository access. Please try again.' })
+  }
+}
 
 async function handleGithub(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
@@ -316,6 +369,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     case 'me': return handleMe(req, res)
     case 'register': return handleRegister(req, res)
     case 'github': return handleGithub(req, res)
+    case 'github-repo-access': return handleGithubRepoAccess(req, res)
     case 'request-password-reset': return handleRequestPasswordReset(req, res)
     case 'resend-verification': return handleResendVerification(req, res)
     case 'reset-password': return handleResetPassword(req, res)
