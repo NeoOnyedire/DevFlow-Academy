@@ -24,6 +24,7 @@ import { requireAdmin } from '../_lib/admin.js'
 import { sql } from '../_lib/db.js'
 import { getAllUsers, getUserById, saveUser, deleteUser, backfillAllUsersSet } from '../_lib/users.js'
 import { getUpstashConfig, upstashLRem, upstashLLen } from '../_lib/upstash.js'
+import { disconnectGitHubRepositoryAccess } from '../_lib/githubRepoAccess.js'
 
 const REVIEWS_KEY = 'devflow:reviews'
 
@@ -203,6 +204,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (!userId) { res.status(400).json({ error: 'Missing userId.' }); return }
 
       const target = await getUserById(userId)
+
+      const repositoryAccessRemoved = await disconnectGitHubRepositoryAccess(userId)
+      if (!repositoryAccessRemoved) {
+        res.status(502).json({ error: 'Could not remove the account’s GitHub repository access.' })
+        return
+      }
 
       // These deletes are idempotent. Running them even when the Redis
       // account is already gone lets an administrator safely retry after

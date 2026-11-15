@@ -21,6 +21,14 @@ const SECTIONS = [
     and is not sent to a DevFlow Academy database or shared with third parties.`,
   },
   {
+    title: 'Optional GitHub repository access',
+    body: `If you choose to connect a repository, GitHub grants DevFlow repo access so private repositories can be included.
+    That OAuth permission may allow more than read access, but DevFlow only makes read requests for repository metadata,
+    language statistics, and whether GitHub Actions workflows exist. We do not read source files, push changes, or modify
+    repositories. The OAuth token is encrypted before it is stored on our server and is removed when you disconnect repository
+    access or delete your account. You can also revoke the OAuth grant in your GitHub settings.`,
+  },
+  {
     title: 'Reviews are genuinely public, and AI-checked before publishing',
     body: `Course reviews you submit are sent to and stored on our server (a small shared database), and are
     shown to every visitor on the homepage — that's the point of leaving one. A review includes your star
