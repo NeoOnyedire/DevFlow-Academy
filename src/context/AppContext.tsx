@@ -138,6 +138,7 @@ interface AppContextValue {
   toggleModuleComplete: (id: string) => void
   isCourseComplete: boolean
   isLoadingProgress: boolean
+  progressError: string | null
 
   // GitHub integration
   githubProfile: GitHubProfile | null
@@ -147,6 +148,9 @@ interface AppContextValue {
   // Weekly challenge
   weeklyChallenge: WeeklyChallenge
   hasCompletedWeeklyChallenge: boolean
+  completedChallengeIds: string[]
+  isLoadingChallengeHistory: boolean
+  challengeHistoryError: string | null
   completeWeeklyChallenge: () => Promise<void>
   challengeCompletionError: string | null
 
@@ -423,6 +427,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const saved = localStorage.getItem('devflow_progress_guest')
     return saved ? JSON.parse(saved) : []
   })
+  const [progressError, setProgressError] = useState<string | null>(null)
   // Which user's server progress has finished loading (null = none yet).
   const [progressLoadedFor, setProgressLoadedFor] = useState<string | null>(null)
   const isLoadingProgress = !!userId && progressLoadedFor !== userId
@@ -433,6 +438,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
   // leaderboard_entries already is proof of completion, so there's no
   // separate flag to keep in sync or lose when a browser is cleared.
   const [completedChallengeIds, setCompletedChallengeIds] = useState<string[]>([])
+  const [challengeHistoryLoadedFor, setChallengeHistoryLoadedFor] = useState<string | null>(null)
+  const [challengeHistoryError, setChallengeHistoryError] = useState<string | null>(null)
+  const [challengeHistoryErrorFor, setChallengeHistoryErrorFor] = useState<string | null>(null)
+  const isLoadingChallengeHistory = !!userId
+    && challengeHistoryLoadedFor !== userId
+    && challengeHistoryErrorFor !== userId
 
   // On logout, fall back to the guest's local progress and forget the
   // previous account's data. Done during render (not in an effect) using
@@ -440,6 +451,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [prevUserId, setPrevUserId] = useState<string | null>(null)
   if (prevUserId !== userId) {
     setPrevUserId(userId)
+    setCompletedChallengeIds([])
+    setChallengeHistoryLoadedFor(null)
+    setChallengeHistoryError(null)
+    setChallengeHistoryErrorFor(null)
+    setProgressError(null)
     if (prevUserId && !userId) {
       const saved = localStorage.getItem('devflow_progress_guest')
       setCompletedModules(saved ? JSON.parse(saved) : [])
@@ -454,14 +470,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (!userId) return
     let cancelled = false
     fetch('/api/progress', { credentials: 'same-origin' })
-      .then(res => res.json())
+      .then(async res => {
+        const data = await res.json()
+        if (!res.ok) throw new Error(data.error || 'Could not load your progress.')
+        return data
+      })
       .then(data => {
         if (cancelled) return
-        setCompletedModules(Array.isArray(data.completedModules) ? data.completedModules : [])
+        setCompletedModules(Array.isArray(data.completedModules)
+          ? data.completedModules.filter((id: unknown): id is string => typeof id === 'string')
+          : [])
+        setProgressError(null)
       })
-      .catch(() => {
-        // Network hiccup — leave whatever was already on screen (likely
-        // the guest list) rather than wiping progress out from under the user.
+      .catch(error => {
+        if (cancelled) return
+        setProgressError(error instanceof Error ? error.message : 'Could not load your progress.')
       })
       .finally(() => {
         if (!cancelled) setProgressLoadedFor(userId)
@@ -488,15 +511,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (!userId) return
     let cancelled = false
     fetch('/api/leaderboard?mine=1', { credentials: 'same-origin' })
-      .then(res => res.json())
+      .then(async res => {
+        const data = await res.json()
+        if (!res.ok) throw new Error(data.error || 'Could not load your challenge history.')
+        return data
+      })
       .then(data => {
         if (cancelled) return
-        setCompletedChallengeIds(Array.isArray(data.challengeIds) ? data.challengeIds : [])
+        setCompletedChallengeIds(Array.isArray(data.challengeIds)
+          ? data.challengeIds.filter((id: unknown): id is string => typeof id === 'string')
+          : [])
+        setChallengeHistoryLoadedFor(userId)
+        setChallengeHistoryError(null)
+        setChallengeHistoryErrorFor(null)
       })
-      .catch(() => {
-        // Leave whatever was already loaded — worst case, the "Mark
-        // Complete" button briefly shows the wrong state until the next
-        // successful fetch.
+      .catch(error => {
+        if (cancelled) return
+        setChallengeHistoryError(error instanceof Error ? error.message : 'Could not load your challenge history.')
+        setChallengeHistoryErrorFor(userId)
       })
     return () => { cancelled = true }
   }, [userId])
@@ -668,6 +700,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
           : 'Could not save your challenge completion. Please try again.')
         return
       }
+      setChallengeHistoryLoadedFor(userId!)
+      setChallengeHistoryError(null)
+      setChallengeHistoryErrorFor(null)
       await refreshLeaderboard()
     } catch {
       setCompletedChallengeIds(prev => prev.filter(id => id !== weeklyChallenge.id))
@@ -702,11 +737,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
       toggleModuleComplete,
       isCourseComplete,
       isLoadingProgress,
+      progressError,
       githubProfile,
       connectGitHub,
       disconnectGitHub,
       weeklyChallenge,
       hasCompletedWeeklyChallenge,
+      completedChallengeIds,
+      isLoadingChallengeHistory,
+      challengeHistoryError,
       completeWeeklyChallenge,
       challengeCompletionError,
       leaderboard,
