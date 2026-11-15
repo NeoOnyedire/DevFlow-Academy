@@ -171,7 +171,12 @@ async function handleGithubRepoAccess(req: VercelRequest, res: VercelResponse) {
       return res.status(403).json({ error: 'Repository access was not approved in GitHub. Please try again and approve repo access.' })
     }
 
-    const saved = await saveGitHubRepositoryToken(userId, accessToken)
+    let saved: boolean
+    try {
+      saved = await saveGitHubRepositoryToken(userId, accessToken)
+    } catch {
+      return res.status(503).json({ error: 'Could not securely save GitHub access. Check server storage configuration and try again.' })
+    }
     if (!saved) return res.status(503).json({ error: 'Could not securely save GitHub access. Please try again later.' })
 
     const githubUser = (await userResponse.json()) as GitHubUser

@@ -10,9 +10,9 @@ const mocks = vi.hoisted(() => {
       values.set(key, value)
       return true
     }),
-    upstashDel: vi.fn(async (key: string) => {
-      values.delete(key)
-      return true
+    upstashCommand: vi.fn(async (args: (string | number)[]) => {
+      if (args[0] !== 'DEL') return null
+      return args.slice(1).reduce((count, key) => count + Number(values.delete(String(key))), 0)
     }),
   }
 })
@@ -21,7 +21,7 @@ vi.mock('../api/_lib/upstash.js', () => ({
   getUpstashConfig: mocks.getUpstashConfig,
   upstashGet: mocks.upstashGet,
   upstashSet: mocks.upstashSet,
-  upstashDel: mocks.upstashDel,
+  upstashCommand: mocks.upstashCommand,
 }))
 
 import {

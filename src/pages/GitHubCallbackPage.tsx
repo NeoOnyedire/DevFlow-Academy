@@ -39,7 +39,7 @@ export default function GitHubCallbackPage() {
 
       if (!code || !intent) {
         setError('That sign-in link looks invalid or expired. Please try again.')
-        setTimeout(() => navigate('/', { replace: true }), 2500)
+        setTimeout(() => navigate(intent === 'repository-access' ? '/dashboard' : '/', { replace: true }), 2500)
         return
       }
 

@@ -703,26 +703,39 @@ export default function DashboardSection({ className = '' }: Props) {
             )}
 
             {isChoosingRepository && (
-              <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-                <select
-                  value={repositoryChoice}
-                  onChange={event => setRepositoryChoice(event.target.value)}
-                  className="min-w-0 flex-1 rounded-lg border border-white/10 bg-[#2A2A2A] px-3 py-2 text-sm text-white outline-none focus:border-[#F7B731]/60"
-                >
-                  <option value="">Select a repository</option>
-                  {availableRepositories.map(repository => (
-                    <option key={repository.fullName} value={repository.fullName}>
-                      {repository.fullName}{repository.private ? ' · Private' : ''}
-                    </option>
-                  ))}
-                </select>
+              <div>
+                {availableRepositories.length > 0 ? (
+                  <div className="flex flex-col gap-2 sm:flex-row">
+                    <select
+                      value={repositoryChoice}
+                      onChange={event => setRepositoryChoice(event.target.value)}
+                      className="min-w-0 flex-1 rounded-lg border border-white/10 bg-[#2A2A2A] px-3 py-2 text-sm text-white outline-none focus:border-[#F7B731]/60"
+                    >
+                      <option value="">Select a repository</option>
+                      {availableRepositories.map(repository => (
+                        <option key={repository.fullName} value={repository.fullName}>
+                          {repository.fullName}{repository.private ? ' · Private' : ''}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={handleSelectRepository}
+                      disabled={!repositoryChoice || repositoryLoading}
+                      className="rounded-lg bg-[#F7B731] px-4 py-2 font-display font-semibold text-[#2A2A2A] disabled:opacity-50"
+                    >
+                      {repositoryLoading ? 'Importing…' : 'Import'}
+                    </button>
+                  </div>
+                ) : (
+                  <p className="text-sm text-white/60">No repositories are available to this GitHub account.</p>
+                )}
                 <button
                   type="button"
-                  onClick={handleSelectRepository}
-                  disabled={!repositoryChoice || repositoryLoading}
-                  className="rounded-lg bg-[#F7B731] px-4 py-2 font-display font-semibold text-[#2A2A2A] disabled:opacity-50"
+                  onClick={() => setIsChoosingRepository(false)}
+                  className="mt-2 text-xs text-white/50 underline hover:text-white/80"
                 >
-                  {repositoryLoading ? 'Importing…' : 'Import'}
+                  Cancel
                 </button>
               </div>
             )}

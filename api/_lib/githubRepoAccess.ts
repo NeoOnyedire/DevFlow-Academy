@@ -1,5 +1,5 @@
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'crypto'
-import { getUpstashConfig, upstashDel, upstashGet, upstashSet } from './upstash.js'
+import { getUpstashConfig, upstashCommand, upstashGet, upstashSet } from './upstash.js'
 
 const TOKEN_KEY_PREFIX = 'devflow:github-repo-token:'
 const SELECTED_REPOSITORY_KEY_PREFIX = 'devflow:selected-github-repo:'
@@ -58,7 +58,10 @@ export async function saveSelectedGitHubRepository(userId: string, fullName: str
 
 export async function disconnectGitHubRepositoryAccess(userId: string): Promise<boolean> {
   requireStorage()
-  const tokenDeleted = await upstashDel(`${TOKEN_KEY_PREFIX}${userId}`)
-  const repositoryDeleted = await upstashDel(`${SELECTED_REPOSITORY_KEY_PREFIX}${userId}`)
-  return tokenDeleted && repositoryDeleted
+  const deleted = await upstashCommand([
+    'DEL',
+    `${TOKEN_KEY_PREFIX}${userId}`,
+    `${SELECTED_REPOSITORY_KEY_PREFIX}${userId}`,
+  ])
+  return typeof deleted === 'number'
 }
