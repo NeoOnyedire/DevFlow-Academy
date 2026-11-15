@@ -28,7 +28,7 @@
  * ============================================================================
  */
 
-import { useRef, useState, useLayoutEffect, useMemo, useEffect, useCallback } from 'react'
+import { useRef, useState, useLayoutEffect, useMemo, useEffect } from 'react'
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { useAuth } from '../context/AuthContext'
@@ -118,38 +118,40 @@ export default function DashboardSection({ className = '' }: Props) {
   const headingRef = useRef<HTMLDivElement>(null)
   const cardsRef = useRef<(HTMLDivElement | null)[]>([])
 
-  const loadRepositoryConnection = useCallback(async () => {
-    setRepositoryLoading(true)
-    setRepositoryError('')
-    try {
-      const status = await readApiResponse<{ connected: boolean; selectedRepository: string | null }>(
-        await fetch('/api/repositories/status', { credentials: 'same-origin' }),
-      )
-      setRepositoryConnected(status.connected)
-      if (!status.connected || !status.selectedRepository) {
-        setSelectedRepository(null)
-        return
-      }
-      const data = await readApiResponse<{ repository: ImportedRepository | null }>(
-        await fetch('/api/repositories/selected', { credentials: 'same-origin' }),
-      )
-      setSelectedRepository(data.repository)
-    } catch (error) {
-      setRepositoryError(error instanceof Error ? error.message : 'Could not load repository access.')
-    } finally {
-      setRepositoryLoading(false)
-    }
-  }, [])
-
   useEffect(() => {
-    if (isLoggedIn) {
-      void loadRepositoryConnection()
-    } else {
+    if (!isLoggedIn) return
+    let cancelled = false
+    const load = async () => {
+      await Promise.resolve()
+      if (cancelled) return
+      setRepositoryLoading(true)
+      setRepositoryError('')
       setRepositoryConnected(false)
       setSelectedRepository(null)
       setAvailableRepositories([])
+      try {
+        const status = await readApiResponse<{ connected: boolean; selectedRepository: string | null }>(
+          await fetch('/api/repositories/status', { credentials: 'same-origin' }),
+        )
+        if (cancelled) return
+        setRepositoryConnected(status.connected)
+        if (!status.connected || !status.selectedRepository) {
+          setSelectedRepository(null)
+          return
+        }
+        const data = await readApiResponse<{ repository: ImportedRepository | null }>(
+          await fetch('/api/repositories/selected', { credentials: 'same-origin' }),
+        )
+        if (!cancelled) setSelectedRepository(data.repository)
+      } catch (error) {
+        if (!cancelled) setRepositoryError(error instanceof Error ? error.message : 'Could not load repository access.')
+      } finally {
+        if (!cancelled) setRepositoryLoading(false)
+      }
     }
-  }, [isLoggedIn, loadRepositoryConnection])
+    void load()
+    return () => { cancelled = true }
+  }, [isLoggedIn])
 
   /** Derive skill percentages from actual completed modules */
   const skills = useMemo(() => {

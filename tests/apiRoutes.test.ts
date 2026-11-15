@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { VercelRequest, VercelResponse } from '../api/_lib/vercel'
 
 const mocks = vi.hoisted(() => ({
@@ -30,6 +30,8 @@ const mocks = vi.hoisted(() => ({
   getUpstashConfig: vi.fn(),
   upstashLRem: vi.fn(),
   upstashLLen: vi.fn(),
+  saveGitHubRepositoryToken: vi.fn(),
+  disconnectGitHubRepositoryAccess: vi.fn(),
 }))
 
 vi.mock('../api/_lib/users.js', () => ({
@@ -70,6 +72,10 @@ vi.mock('../api/_lib/upstash.js', () => ({
   upstashLRem: mocks.upstashLRem,
   upstashLLen: mocks.upstashLLen,
 }))
+vi.mock('../api/_lib/githubRepoAccess.js', () => ({
+  saveGitHubRepositoryToken: mocks.saveGitHubRepositoryToken,
+  disconnectGitHubRepositoryAccess: mocks.disconnectGitHubRepositoryAccess,
+}))
 
 import authHandler from '../api/auth/[action].js'
 import adminHandler from '../api/admin/[action].js'
@@ -109,12 +115,19 @@ beforeEach(() => {
   vi.clearAllMocks()
   mocks.sql.mockResolvedValue({ rows: [] })
   mocks.requireAdmin.mockResolvedValue({ id: 'admin-1', name: 'Admin' })
+  mocks.getUserIdFromRequest.mockReturnValue('user-1')
+  mocks.saveGitHubRepositoryToken.mockResolvedValue(true)
+  mocks.disconnectGitHubRepositoryAccess.mockResolvedValue(true)
   mocks.getUserById.mockResolvedValue({
     id: 'user-1',
     name: 'Ada',
     email: 'ada@example.com',
     passwordHash: 'secret-hash',
     provider: 'password',
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
   })
   mocks.toSafeUser.mockImplementation((user: { passwordHash?: string }) => {
     const { passwordHash: _passwordHash, ...safeUser } = user
@@ -133,6 +146,63 @@ beforeEach(() => {
 })
 
 describe('auth API route', () => {
+  it('stores repository OAuth access only after GitHub grants the repo scope', async () => {
+    const originalClientId = process.env.GITHUB_CLIENT_ID
+    const originalClientSecret = process.env.GITHUB_CLIENT_SECRET
+    process.env.GITHUB_CLIENT_ID = 'test-client'
+    process.env.GITHUB_CLIENT_SECRET = 'test-secret'
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ access_token: 'gho-sensitive-token', scope: 'repo,read:user' }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        headers: { get: () => 'repo,read:user' },
+        json: async () => ({ id: 123, login: 'ada' }),
+      }))
+    const response = createResponse()
+
+    await authHandler(
+      createRequest('POST', 'github-repo-access', { code: 'oauth-code' }),
+      response as unknown as VercelResponse,
+    )
+
+    expect(response.statusCode).toBe(200)
+    expect(mocks.saveGitHubRepositoryToken).toHaveBeenCalledWith('user-1', 'gho-sensitive-token')
+    expect(JSON.stringify(response.body)).not.toContain('gho-sensitive-token')
+    process.env.GITHUB_CLIENT_ID = originalClientId
+    process.env.GITHUB_CLIENT_SECRET = originalClientSecret
+  })
+
+  it('does not store a GitHub token when repo scope was not granted', async () => {
+    const originalClientId = process.env.GITHUB_CLIENT_ID
+    const originalClientSecret = process.env.GITHUB_CLIENT_SECRET
+    process.env.GITHUB_CLIENT_ID = 'test-client'
+    process.env.GITHUB_CLIENT_SECRET = 'test-secret'
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ access_token: 'gho-sensitive-token', scope: 'read:user' }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        headers: { get: () => 'read:user' },
+        json: async () => ({ id: 123, login: 'ada' }),
+      }))
+    const response = createResponse()
+
+    await authHandler(
+      createRequest('POST', 'github-repo-access', { code: 'oauth-code' }),
+      response as unknown as VercelResponse,
+    )
+
+    expect(response.statusCode).toBe(403)
+    expect(mocks.saveGitHubRepositoryToken).not.toHaveBeenCalled()
+    process.env.GITHUB_CLIENT_ID = originalClientId
+    process.env.GITHUB_CLIENT_SECRET = originalClientSecret
+  })
+
   it('rejects login requests without credentials', async () => {
     const response = createResponse()
     await authHandler(createRequest('POST', 'login', { email: '' }), response as unknown as VercelResponse)

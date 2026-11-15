@@ -30,7 +30,9 @@ export default function GitHubCallbackPage() {
       const intent = consumeGitHubOAuthState(state)
 
       if (githubError) {
-        setError('You cancelled GitHub sign-in, or access was denied.')
+        setError(intent === 'repository-access'
+          ? 'Repository access was not approved. Your current sign-in was not changed.'
+          : 'You cancelled GitHub sign-in, or access was denied.')
         setTimeout(() => navigate(intent === 'repository-access' ? '/dashboard' : '/', { replace: true }), 2500)
         return
       }
@@ -64,13 +66,13 @@ export default function GitHubCallbackPage() {
           <>
             <div className="flex items-center justify-center gap-2 text-[#FF4D6D] mb-2">
               <AlertTriangle className="w-4 h-4" />
-              <p className="font-display font-semibold">Sign-in didn't go through</p>
+              <p className="font-display font-semibold">GitHub connection didn't finish</p>
             </div>
             <p className="text-white/60 text-sm max-w-sm mx-auto">{error}</p>
             <p className="text-white/30 text-xs mt-3">Redirecting you back…</p>
           </>
         ) : (
-          <p className="text-white/70 font-display font-medium">Connecting your GitHub account…</p>
+          <p className="text-white/70 font-display font-medium">Connecting securely with GitHub…</p>
         )}
       </div>
     </div>

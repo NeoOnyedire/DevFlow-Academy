@@ -2,6 +2,7 @@ export interface RepositoryRecommendationSource {
   hasWorkflows: boolean
   openIssuesCount: number
   fork: boolean
+  forkParent?: string | null
   languages: Record<string, number>
 }
 
