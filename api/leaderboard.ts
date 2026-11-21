@@ -15,6 +15,9 @@
 //   (user_id, challengeId) already is proof that challenge was
 //   completed, so this reads that directly instead of relying on a
 //   separate "completed" flag stored anywhere else.
+// GET  ?standing=1       -> requires login, returns this account's real
+//   position for the current week: { weekKey, points, rank, participants }.
+//   rank is null until the account has earned points that week.
 // POST { weekKey, challengeId } -> requires login, validates the current
 //   server-defined challenge and awards its server-defined points.
 //   ON CONFLICT DO NOTHING prevents duplicate completions.
@@ -43,6 +46,41 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         res.status(200).json({ challengeIds: result.rows.map(row => row.challenge_id) })
       } catch {
         res.status(502).json({ error: 'Could not load your challenge history right now.' })
+      }
+      return
+    }
+
+    if (req.query.standing === '1' || req.query.standing === 'true') {
+      const userId = getUserIdFromRequest(req)
+      if (!userId) {
+        res.status(401).json({ error: 'You need to be logged in to see your ranking.' })
+        return
+      }
+      const currentWeek = getCurrentWeekKey()
+      try {
+        const result = await sql`
+          WITH totals AS (
+            SELECT user_id, SUM(points)::int AS pts
+            FROM leaderboard_entries
+            WHERE week_key = ${currentWeek}
+            GROUP BY user_id
+          )
+          SELECT
+            (SELECT pts FROM totals WHERE user_id = ${userId}) AS points,
+            (SELECT COUNT(*)::int FROM totals) AS participants,
+            (SELECT COUNT(*)::int + 1 FROM totals
+              WHERE pts > COALESCE((SELECT pts FROM totals WHERE user_id = ${userId}), 0)) AS rank
+        `
+        const row = result.rows[0] ?? {}
+        const points = Number(row.points ?? 0)
+        res.status(200).json({
+          weekKey: currentWeek,
+          points,
+          rank: points > 0 ? Number(row.rank) : null,
+          participants: Number(row.participants ?? 0),
+        })
+      } catch {
+        res.status(502).json({ error: 'Could not load your ranking right now.' })
       }
       return
     }

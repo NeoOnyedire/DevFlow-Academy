@@ -13,6 +13,11 @@
 //
 // GET  ?moduleId=<id>            -> { completedLessonIds: string[] } for that module
 // GET  (no moduleId)             -> { completedLessonIds: string[] } across ALL modules
+// GET  ?activity=1               -> { activityDates: string[] } ISO timestamps of this
+//   account's real learning activity (completed lessons + completed challenges)
+//   over the last year. The client turns these into a date-based streak.
+//   Note: completed_at is refreshed whenever a lesson row is re-saved, so a
+//   re-finished lesson counts as activity on the day it was re-finished.
 // POST { lessonId, moduleId, step, allLessonIdsInModule } -> upserts progress,
 //   and rolls the module up to complete in user_progress if this finishes it.
 
@@ -24,6 +29,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const userId = getUserIdFromRequest(req)
   if (!userId) {
     res.status(401).json({ error: 'You need to be logged in to sync lesson progress.' })
+    return
+  }
+
+  if (req.method === 'GET' && (req.query.activity === '1' || req.query.activity === 'true')) {
+    try {
+      const [lessons, challenges] = await Promise.all([
+        sql`
+          SELECT completed_at AS at FROM lesson_progress
+          WHERE user_id = ${userId} AND step = 'complete'
+            AND completed_at > now() - interval '365 days'
+        `,
+        sql`
+          SELECT created_at AS at FROM leaderboard_entries
+          WHERE user_id = ${userId}
+            AND created_at > now() - interval '365 days'
+        `,
+      ])
+      const activityDates = [...lessons.rows, ...challenges.rows]
+        .map(row => new Date(row.at))
+        .filter(date => !Number.isNaN(date.getTime()))
+        .sort((a, b) => b.getTime() - a.getTime())
+        .map(date => date.toISOString())
+      res.status(200).json({ activityDates })
+    } catch {
+      res.status(502).json({ error: 'Could not load your learning activity right now.' })
+    }
     return
   }
 
