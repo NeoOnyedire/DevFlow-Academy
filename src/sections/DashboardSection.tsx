@@ -37,6 +37,9 @@ import { BookOpen, Flame, Award, Trophy, Map, ArrowRight, GitBranch, Briefcase, 
 import { buildGitHubAuthorizeUrl, isGitHubOAuthConfigured } from '../lib/githubOAuth'
 import { getRepositoryRecommendations } from '../lib/repositoryRecommendations'
 import { getAchievements } from '../lib/achievements'
+import { fetchLearningActivity } from '../lib/lessonProgress'
+import { calculateStreak, type StreakSummary } from '../lib/streak'
+import { fetchWeeklyStanding, type WeeklyStanding } from '../lib/weeklyStanding'
 
 gsap.registerPlugin(ScrollTrigger)
 
@@ -119,6 +122,25 @@ export default function DashboardSection({ className = '' }: Props) {
   const [repositoryChoice, setRepositoryChoice] = useState('')
   const [isChoosingRepository, setIsChoosingRepository] = useState(false)
   const [isLoadingRepositoryList, setIsLoadingRepositoryList] = useState(false)
+
+  // Real streak + weekly rank, loaded from the account's saved activity.
+  // `undefined` = still loading, `null` = could not be loaded.
+  const [streak, setStreak] = useState<StreakSummary | null | undefined>(undefined)
+  const [standing, setStanding] = useState<WeeklyStanding | null | undefined>(undefined)
+
+  useEffect(() => {
+    if (!isLoggedIn) return
+    let cancelled = false
+    fetchLearningActivity().then(result => {
+      if (cancelled) return
+      setStreak(result.error ? null : calculateStreak(result.dates))
+    })
+    fetchWeeklyStanding().then(result => {
+      if (cancelled) return
+      setStanding(result.error ? null : result.standing)
+    })
+    return () => { cancelled = true }
+  }, [isLoggedIn, user?.id, completedModules.length, completedChallengeIds.length])
 
   const sectionRef = useRef<HTMLDivElement>(null)
   const headingRef = useRef<HTMLDivElement>(null)
@@ -337,10 +359,10 @@ export default function DashboardSection({ className = '' }: Props) {
           {/* Greyed-out stat cards */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4 opacity-40 pointer-events-none select-none">
             {[
-              { label: 'Lessons', value: '0 / 8' },
-              { label: 'Streak',  value: '0 days' },
+              { label: 'Lessons', value: `0 / ${modules.length}` },
+              { label: 'Streak',  value: '—' },
               { label: 'Achievements', value: `0 / ${achievements.length}` },
-              { label: 'Ranking', value: 'Top 25%'},
+              { label: 'Ranking', value: '—' },
             ].map(stat => (
               <div key={stat.label} className="bg-[#4A2F2F]/60 card-radius p-4">
                 <p className="font-display text-3xl font-bold text-white mb-1">{stat.value}</p>
@@ -463,8 +485,18 @@ export default function DashboardSection({ className = '' }: Props) {
             </div>
             <span className="font-accent text-[9px] md:text-[10px] uppercase tracking-[0.14em] text-white/50">Streak</span>
           </div>
-          <p className="font-display text-3xl md:text-4xl font-bold text-white mb-1">{completedModules.length > 0 ? '3' : '0'}</p>
-          <p className="text-white/60 text-xs md:text-sm">days</p>
+          <p className="font-display text-3xl md:text-4xl font-bold text-white mb-1">
+            {streak === undefined ? '…' : streak === null ? '—' : streak.current}
+          </p>
+          <p className="text-white/60 text-xs md:text-sm">
+            {streak === undefined
+              ? 'Checking your activity…'
+              : streak === null
+                ? 'Could not load your streak'
+                : streak.current === 0
+                  ? 'Finish a lesson to start one'
+                  : `${streak.current === 1 ? 'day' : 'days'}${streak.longest > streak.current ? ` · best ${streak.longest}` : ''}${streak.activeToday ? '' : ' · study today to keep it'}`}
+          </p>
         </div>
 
         {/* Achievements Earned */}
@@ -495,8 +527,18 @@ export default function DashboardSection({ className = '' }: Props) {
             </div>
             <span className="font-accent text-[9px] md:text-[10px] uppercase tracking-[0.14em] text-white/50">Ranking</span>
           </div>
-          <p className="font-display text-xl md:text-2xl font-bold text-white mb-1">Top {completedModules.length > 4 ? '8' : '25'}%</p>
-          <p className="text-white/60 text-xs md:text-sm">this week</p>
+          <p className="font-display text-3xl md:text-4xl font-bold text-white mb-1">
+            {standing === undefined ? '…' : standing === null || standing.rank === null ? '—' : `#${standing.rank}`}
+          </p>
+          <p className="text-white/60 text-xs md:text-sm">
+            {standing === undefined
+              ? 'Checking this week…'
+              : standing === null
+                ? 'Could not load your ranking'
+                : standing.rank === null
+                  ? "Complete this week's challenge to rank"
+                  : `of ${standing.participants} this week · ${standing.points} pts`}
+          </p>
         </div>
 
         {/* Achievement collection — each badge is earned from saved course activity */}
