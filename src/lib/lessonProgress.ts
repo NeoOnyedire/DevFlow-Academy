@@ -63,3 +63,28 @@ export async function saveLessonStep(
     }
   }
 }
+
+export interface LearningActivityResult {
+  dates: string[]
+  error: string | null
+}
+
+/** ISO timestamps of the signed-in learner's real activity, newest first. */
+export async function fetchLearningActivity(): Promise<LearningActivityResult> {
+  try {
+    const response = await fetch('/api/lesson-progress?activity=1', { credentials: 'same-origin' })
+    const data = await response.json()
+    if (!response.ok) {
+      return { dates: [], error: getErrorMessage(data, 'Could not load your learning activity.') }
+    }
+    if (!Array.isArray(data.activityDates)) {
+      return { dates: [], error: 'Unexpected response while loading your learning activity.' }
+    }
+    return {
+      dates: data.activityDates.filter((value: unknown): value is string => typeof value === 'string'),
+      error: null,
+    }
+  } catch {
+    return { dates: [], error: 'Could not reach the server to load your learning activity.' }
+  }
+}
