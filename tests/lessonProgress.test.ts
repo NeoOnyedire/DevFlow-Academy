@@ -106,4 +106,25 @@ describe('lesson progress API', () => {
     expect(response.body).toEqual({ ok: true, moduleCompleted: true })
     expect(mocks.sql).toHaveBeenCalledTimes(3)
   })
+
+  it('returns real activity timestamps, newest first, for the streak', async () => {
+    mocks.sql
+      .mockResolvedValueOnce({ rows: [{ at: new Date('2026-11-19T10:00:00Z') }, { at: new Date('2026-11-20T10:00:00Z') }] })
+      .mockResolvedValueOnce({ rows: [{ at: new Date('2026-11-21T07:00:00Z') }] })
+
+    const response = await request('GET', undefined, { activity: '1' })
+
+    expect(response.statusCode).toBe(200)
+    expect(response.body).toEqual({
+      activityDates: ['2026-11-21T07:00:00.000Z', '2026-11-20T10:00:00.000Z', '2026-11-19T10:00:00.000Z'],
+    })
+  })
+
+  it('returns a clear error when learning activity cannot be loaded', async () => {
+    mocks.sql.mockRejectedValue(new Error('database unavailable'))
+
+    const response = await request('GET', undefined, { activity: '1' })
+
+    expect(response.statusCode).toBe(502)
+  })
 })

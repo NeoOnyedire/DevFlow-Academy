@@ -120,4 +120,38 @@ describe('leaderboard challenge submissions', () => {
     expect(response.statusCode).toBe(502)
     expect(response.body).toEqual({ error: 'Could not save your challenge points right now.' })
   })
+
+  it('requires a signed-in user to read their weekly standing', async () => {
+    mocks.getUserIdFromRequest.mockReturnValue(null)
+
+    const response = await getLeaderboard({ standing: '1' })
+
+    expect(response.statusCode).toBe(401)
+    expect(mocks.sql).not.toHaveBeenCalled()
+  })
+
+  it('returns the real weekly rank for an account with points', async () => {
+    mocks.sql.mockResolvedValue({ rows: [{ points: 30, participants: 9, rank: 2 }] })
+
+    const response = await getLeaderboard({ standing: '1' })
+
+    expect(response.statusCode).toBe(200)
+    expect(response.body).toEqual({ weekKey: getCurrentWeekKey(), points: 30, rank: 2, participants: 9 })
+  })
+
+  it('reports no rank until the account has earned points this week', async () => {
+    mocks.sql.mockResolvedValue({ rows: [{ points: null, participants: 4, rank: 5 }] })
+
+    const response = await getLeaderboard({ standing: '1' })
+
+    expect(response.body).toEqual({ weekKey: getCurrentWeekKey(), points: 0, rank: null, participants: 4 })
+  })
+
+  it('returns a clear error when the weekly standing cannot be loaded', async () => {
+    mocks.sql.mockRejectedValue(new Error('database unavailable'))
+
+    const response = await getLeaderboard({ standing: '1' })
+
+    expect(response.statusCode).toBe(502)
+  })
 })
