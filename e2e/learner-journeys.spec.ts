@@ -81,11 +81,11 @@ test.describe('guest learning journey', () => {
     await mockAppApi(page)
     await gotoLearnerPage(page, '/capstone')
 
-    await page.getByRole('checkbox', { name: 'Mark complete: Fork and clone your starter' }).check()
-    await expect(page.getByRole('checkbox', { name: 'Mark incomplete: Fork and clone your starter' })).toBeChecked()
+    await page.getByRole('checkbox', { name: 'Mark complete: Fork and clone the project repo' }).check()
+    await expect(page.getByRole('checkbox', { name: 'Mark incomplete: Fork and clone the project repo' })).toBeChecked()
 
     await page.reload({ waitUntil: 'domcontentloaded' })
-    await expect(page.getByRole('checkbox', { name: 'Mark incomplete: Fork and clone your starter' })).toBeChecked()
+    await expect(page.getByRole('checkbox', { name: 'Mark incomplete: Fork and clone the project repo' })).toBeChecked()
     await expect(page.getByText('1/6 steps · 17%')).toBeVisible()
   })
 
@@ -170,7 +170,7 @@ test.describe('signed-in learning journey', () => {
     await mockAppApi(page, true, ['junior-dev-fork-and-clone'])
     await gotoLearnerPage(page, '/capstone')
 
-    await expect(page.getByRole('checkbox', { name: 'Mark incomplete: Fork and clone your starter' })).toBeChecked()
+    await expect(page.getByRole('checkbox', { name: 'Mark incomplete: Fork and clone the project repo' })).toBeChecked()
     await expect(page.getByRole('checkbox', { name: 'Mark complete: Plan the board in an issue' })).not.toBeChecked()
   })
 
