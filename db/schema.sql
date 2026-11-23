@@ -1,9 +1,16 @@
 -- db/schema.sql
 --
 -- Run this once against your Postgres database (Vercel Postgres or Neon
--- both work — see the setup notes in api/_lib/db.ts). This is the only
--- SQL table in the project; everything else (users, reviews, tokens)
--- stays in Upstash Redis and is untouched.
+-- both work — see the setup notes in api/_lib/db.ts). It creates every
+-- SQL table the app uses, so a fresh setup needs only this file:
+-- leaderboard_entries, user_progress, lesson_progress and admin_actions.
+-- Everything else (users, reviews, tokens, sessions) lives in Upstash
+-- Redis and is untouched.
+--
+-- Every statement is idempotent (IF NOT EXISTS), so it is safe to re-run.
+-- The files in db/migrations/ hold the same definitions for 002 and 003,
+-- for databases that were set up before they were folded in here — an
+-- existing database does not need to be changed.
 --
 -- Why a real table instead of another Redis key:
 --   The leaderboard needs "sum points per user, ranked, for a given
@@ -42,3 +49,38 @@ CREATE TABLE IF NOT EXISTS user_progress (
   completed_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   PRIMARY KEY (user_id, module_id)
 );
+
+-- ----------------------------------------------------------------------
+-- Per-lesson progress (db/migrations/002_lesson_progress.sql). One level
+-- more granular than user_progress: a learner's spot is saved mid-module.
+-- A module gets a row in user_progress once every lesson in it is
+-- 'complete'. Only 'complete' rows count toward module completion.
+-- ----------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS lesson_progress (
+  user_id      TEXT NOT NULL,
+  module_id    TEXT NOT NULL,
+  lesson_id    TEXT NOT NULL,
+  step         TEXT NOT NULL CHECK (step IN ('video', 'quiz', 'sandbox', 'complete')),
+  completed_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  PRIMARY KEY (user_id, lesson_id)
+);
+
+-- "Which lessons have I finished in this module?" is the hot read path.
+CREATE INDEX IF NOT EXISTS idx_lesson_progress_user_module
+  ON lesson_progress (user_id, module_id);
+
+-- ----------------------------------------------------------------------
+-- Admin audit trail (db/migrations/003_admin_audit_log.sql). One row per
+-- destructive admin action, plus AI-rejected reviews (api/moderate-review.ts).
+-- ----------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS admin_actions (
+  id SERIAL PRIMARY KEY,
+  admin_user_id TEXT NOT NULL,
+  action TEXT NOT NULL,
+  target TEXT,
+  details JSONB,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_admin_actions_created
+  ON admin_actions (created_at DESC);
