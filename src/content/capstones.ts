@@ -26,9 +26,9 @@ export const CAPSTONE_PROJECTS: Record<LearningRole, CapstoneProject> = {
     steps: [
       {
         id: 'fork-and-clone',
-        title: 'Fork and clone your starter',
+        title: 'Fork and clone the project repo',
         instructions: [
-          'Fork the linked starter repository to your GitHub account.',
+          'Fork the linked project repository to your GitHub account.',
           'Clone your fork and check that origin points to your copy.',
           'Read the project brief and create a working branch for your first change.',
         ],
@@ -95,9 +95,9 @@ export const CAPSTONE_PROJECTS: Record<LearningRole, CapstoneProject> = {
     steps: [
       {
         id: 'fork-and-clone',
-        title: 'Fork and clone your starter',
+        title: 'Fork and clone the project repo',
         instructions: [
-          'Fork the linked starter repository to your GitHub account and clone your fork.',
+          'Fork the linked project repository to your GitHub account and clone your fork.',
           'Use Node.js 22 and confirm the repository is clean before starting.',
           'Create a branch named feature/health-check.',
         ],
@@ -164,9 +164,9 @@ export const CAPSTONE_PROJECTS: Record<LearningRole, CapstoneProject> = {
     steps: [
       {
         id: 'fork-and-personalize',
-        title: 'Fork and personalize your starter',
+        title: 'Fork and personalize the project repo',
         instructions: [
-          'Fork the linked starter repository to your GitHub account and clone your fork.',
+          'Fork the linked project repository to your GitHub account and clone your fork.',
           'Update the README title and project summary so they describe the work you want employers to see.',
           'Keep private client, employer, and personal information out of the public repository.',
         ],
