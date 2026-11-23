@@ -109,7 +109,7 @@ export default function CapstonePage() {
           <div className="cur-card mt-7 rounded-2xl p-5 md:p-7">
             <div className="flex flex-wrap items-start justify-between gap-5">
               <div>
-                <p className="font-accent text-xs uppercase tracking-[0.14em] cur-text-faint">Starter repository</p>
+                <p className="font-accent text-xs uppercase tracking-[0.14em] cur-text-faint">Project repository</p>
                 <h2 className="mt-1 font-display text-xl font-bold cur-text">{project.repositoryName}</h2>
                 <p className="mt-2 text-sm cur-text-soft">
                   Fork this exact repository, then follow the matching README and the steps below.
@@ -117,7 +117,7 @@ export default function CapstonePage() {
               </div>
               <a href={project.repositoryUrl} target="_blank" rel="noreferrer"
                 className="inline-flex items-center gap-2 rounded-xl bg-rose-punch px-4 py-2.5 font-display text-sm font-semibold text-[#1F1F1F] hover:opacity-90">
-                <GitFork className="h-4 w-4" /> Open starter repo <ArrowUpRight className="h-4 w-4" />
+                <GitFork className="h-4 w-4" /> Open project repo <ArrowUpRight className="h-4 w-4" />
               </a>
             </div>
 
